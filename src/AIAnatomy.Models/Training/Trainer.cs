@@ -3,60 +3,77 @@ using AIAnatomy.Models.Transformers;
 
 namespace AIAnatomy.Models.Training;
 
-/// <summary>Trains a transformer in place on a token list: random windows, cross-entropy, clipped gradients, Adam.</summary>
+/// <summary>Trains a transformer in place on windows from a batch source: cross-entropy, clipped gradients, Adam.</summary>
 public sealed class Trainer
 {
     public const string DivergedMessage = "Training stopped: the loss became too large (try a smaller learning rate)";
+    public const string AlreadyRunningMessage = "Training is already running";
     private const double DivergenceLimit = 1e4;
     private const double MaxGradientNorm = 1.0;
     private const int ValidationEvery = 25;
-    private const int MaxValidationWindows = 32;
 
     private readonly Transformer _model;
-    private readonly int[] _tokens;
+    private readonly IBatchSource _source;
     private readonly TrainingSettings _settings;
     private readonly SeededRandom _rng;
     private readonly Adam _optimizer;
     private readonly IReadOnlyList<Parameter> _parameters;
-    private readonly int _context;
-    private readonly int _trainWindowStarts;   // training windows start in [0, _trainWindowStarts)
-    private readonly int[] _validationStarts;
+    private readonly int[][] _validation;   // each window: inputs then targets shifted by one
     private readonly Transformer[] _slots;   // one model per batch sequence; slot 0 is the model itself
+    private int _running;                    // 1 while RunAsync is running
 
+    /// <summary>Trains on random windows of a text (see <see cref="CorpusBatchSource"/>).</summary>
     public Trainer(Transformer model, IReadOnlyList<int> corpusTokens, TrainingSettings settings)
+        : this(model, corpusTokens, settings, new SeededRandom(settings?.Seed ?? 0))
+    {
+    }
+
+    private Trainer(Transformer model, IReadOnlyList<int> corpusTokens, TrainingSettings settings, SeededRandom rng)
+        : this(model, MakeCorpusSource(model, corpusTokens, settings, rng), settings, rng)
+    {
+    }
+
+    /// <summary>Trains on windows from any source (the corpus, or generated sequences).</summary>
+    public Trainer(Transformer model, IBatchSource source, TrainingSettings settings)
+        : this(model, source, settings, new SeededRandom(settings?.Seed ?? 0))
+    {
+    }
+
+    private Trainer(Transformer model, IBatchSource source, TrainingSettings settings, SeededRandom rng)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(settings);
+        ValidateSettings(settings);
+        _model = model;
+        _source = source;
+        _settings = settings;
+        _rng = rng;
+        _parameters = model.Parameters().ToList();
+        _optimizer = new Adam(_parameters, settings.LearningRate);
+        _validation = source.ValidationWindows.Select(w => w.ToArray()).ToArray();
+        if (_validation.Length == 0) throw new ArgumentException("The batch source has no validation windows.", nameof(source));
+        _slots = new Transformer[settings.BatchSize];
+        _slots[0] = model;
+        for (int i = 1; i < _slots.Length; i++) _slots[i] = model.Clone();
+    }
+
+    private static CorpusBatchSource MakeCorpusSource(Transformer model, IReadOnlyList<int> corpusTokens, TrainingSettings settings, SeededRandom rng)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(corpusTokens);
         ArgumentNullException.ThrowIfNull(settings);
-        _context = model.Config.ContextLength;
-        if (CorpusValidator.ProblemForLength(corpusTokens.Count, _context) is { } problem)
-            throw new ArgumentException(problem, nameof(corpusTokens));
+        ValidateSettings(settings);
+        return new CorpusBatchSource(corpusTokens, model.Config.ContextLength, model.Config.VocabularySize, settings.ValidationFraction, rng);
+    }
+
+    private static void ValidateSettings(TrainingSettings settings)
+    {
         if (settings.BatchSize < 1) throw new ArgumentException("The batch size must be at least 1.", nameof(settings));
         if (!(settings.LearningRate > 0) || double.IsInfinity(settings.LearningRate))
             throw new ArgumentException("The learning rate must be a positive number.", nameof(settings));
         if (!(settings.ValidationFraction >= 0 && settings.ValidationFraction < 1))
             throw new ArgumentException("The validation fraction must be from 0 up to (not including) 1.", nameof(settings));
-        foreach (int id in corpusTokens)
-            if (id < 0 || id >= model.Config.VocabularySize)
-                throw new ArgumentException($"The text has a token ({id}) outside the model's vocabulary of {model.Config.VocabularySize}.", nameof(corpusTokens));
-
-        _model = model;
-        _tokens = corpusTokens.ToArray();
-        _settings = settings;
-        _rng = new SeededRandom(settings.Seed);
-        _parameters = model.Parameters().ToList();
-        _optimizer = new Adam(_parameters, settings.LearningRate);
-        _slots = new Transformer[settings.BatchSize];
-        _slots[0] = model;
-        for (int i = 1; i < _slots.Length; i++) _slots[i] = model.Clone();
-
-        int window = _context + 1;
-        int n = _tokens.Length;
-        int trainEnd = Math.Max(window, (int)Math.Floor(n * (1 - settings.ValidationFraction)));
-        _trainWindowStarts = trainEnd - window + 1;
-        // The last 10%; if that is shorter than one window it grows backwards just enough to hold one.
-        int validationStart = Math.Min(trainEnd, n - window);
-        _validationStarts = ChooseValidationStarts(validationStart, n - window - validationStart + 1);
     }
 
     public bool HasDiverged { get; private set; }
@@ -68,14 +85,20 @@ public sealed class Trainer
     /// <summary>One batch and one Adam step. Validation loss is measured at step 1 and every 25 steps.</summary>
     public TrainingStepReport Step()
     {
+        if (Volatile.Read(ref _running) != 0) throw new InvalidOperationException(AlreadyRunningMessage);
+        return StepCore();
+    }
+
+    private TrainingStepReport StepCore()
+    {
         if (HasDiverged) throw new InvalidOperationException(DivergedMessage);
 
         _optimizer.ZeroGrad();
         int batch = _settings.BatchSize;
         // Windows are drawn in order from the seeded generator; the sequences then run on separate threads,
         // each on its own copy of the weights, and their gradients are added together in sequence order.
-        var starts = new int[batch];
-        for (int b = 0; b < batch; b++) starts[b] = _rng.NextInt(_trainWindowStarts);
+        var windows = new int[batch][];
+        for (int b = 0; b < batch; b++) windows[b] = _source.NextTrainingWindow(_rng).ToArray();
         for (int b = 1; b < batch; b++)
         {
             CopyWeights(_model, _slots[b]);
@@ -86,8 +109,7 @@ public sealed class Trainer
         Parallel.For(0, batch, b =>
         {
             var slot = _slots[b];
-            var inputs = new ArraySegment<int>(_tokens, starts[b], _context);
-            var targets = new ArraySegment<int>(_tokens, starts[b] + 1, _context);
+            var (inputs, targets) = Split(windows[b]);
             var loss = Losses.CrossEntropy(slot.Forward(inputs).Logits, targets);
             losses[b] = loss.Item();
             loss.Backward();
@@ -99,13 +121,12 @@ public sealed class Trainer
         double trainLoss = total / batch;
         StepsTaken++;
 
-        if (double.IsNaN(trainLoss) || double.IsInfinity(trainLoss) || trainLoss > DivergenceLimit)
+        if (double.IsNaN(trainLoss) || double.IsInfinity(trainLoss) || trainLoss > DivergenceLimit
+            || !ScaleAndClipGradients(1.0 / batch))
         {
             HasDiverged = true;
             return new TrainingStepReport(StepsTaken, trainLoss, null, DivergedMessage);
         }
-
-        ScaleAndClipGradients(1.0 / batch);
         _optimizer.Step();
 
         double? validation = null;
@@ -121,15 +142,28 @@ public sealed class Trainer
     public Task RunAsync(int steps, IProgress<TrainingStepReport> progress, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(progress);
+        if (Interlocked.CompareExchange(ref _running, 1, 0) != 0) throw new InvalidOperationException(AlreadyRunningMessage);
         return Task.Run(() =>
         {
-            for (int i = 0; i < steps && !ct.IsCancellationRequested; i++)
+            try
             {
-                var report = Step();
-                progress.Report(report);
-                if (report.StoppedReason is not null) break;
+                for (int i = 0; i < steps && !ct.IsCancellationRequested; i++)
+                {
+                    var report = StepCore();
+                    progress.Report(report);
+                    if (report.StoppedReason is not null) break;
+                }
             }
+            finally { Volatile.Write(ref _running, 0); }
         }, CancellationToken.None);
+    }
+
+    /// <summary>A window holds n+1 tokens: the first n are the inputs, the last n are the targets (shifted by one).</summary>
+    private static (int[] Inputs, int[] Targets) Split(int[] window)
+    {
+        int n = window.Length - 1;
+        if (n < 1) throw new ArgumentException("A training window needs at least two tokens.");
+        return (window[..n], window[1..]);
     }
 
     private static void CopyWeights(Transformer from, Transformer to)
@@ -149,7 +183,8 @@ public sealed class Trainer
             }
     }
 
-    private void ScaleAndClipGradients(double scale)
+    /// <summary>Scales the gradients, then clips them to the maximum norm. False when the norm is not a finite number.</summary>
+    private bool ScaleAndClipGradients(double scale)
     {
         double sumSquares = 0;
         foreach (var p in _parameters)
@@ -162,35 +197,28 @@ public sealed class Trainer
             }
         }
         double norm = Math.Sqrt(sumSquares);
-        if (!(norm > MaxGradientNorm)) return;
+        if (!double.IsFinite(norm)) return false;
+        if (!(norm > MaxGradientNorm)) return true;
         double clip = MaxGradientNorm / norm;
         foreach (var p in _parameters)
         {
             if (p.Value.Grad is not { } g) continue;
             for (int i = 0; i < g.Length; i++) g[i] *= clip;
         }
+        return true;
     }
 
     private double ValidationLoss()
     {
         // Forward passes only read the weights, so the windows can run side by side; the losses are summed in order.
-        var losses = new double[_validationStarts.Length];
+        var losses = new double[_validation.Length];
         Parallel.For(0, losses.Length, w =>
         {
-            var inputs = new ArraySegment<int>(_tokens, _validationStarts[w], _context);
-            var targets = new ArraySegment<int>(_tokens, _validationStarts[w] + 1, _context);
+            var (inputs, targets) = Split(_validation[w]);
             losses[w] = Losses.CrossEntropy(_model.Forward(inputs).Logits, targets).Item();
         });
         double total = 0;
         foreach (double l in losses) total += l;
         return total / losses.Length;
-    }
-
-    private int[] ChooseValidationStarts(int first, int possible)
-    {
-        if (possible <= MaxValidationWindows) return Enumerable.Range(first, possible).ToArray();
-        var chosen = new SortedSet<int>();
-        while (chosen.Count < MaxValidationWindows) chosen.Add(first + _rng.NextInt(possible));
-        return chosen.ToArray();
     }
 }

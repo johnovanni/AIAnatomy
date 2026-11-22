@@ -137,6 +137,68 @@ public class TrainerTests
     }
 
     [Fact]
+    public void Trainer_NonFiniteGradientNorm_CountsAsDivergenceAndLeavesWeightsAlone()
+    {
+        // A huge second layer-norm gain keeps the loss finite (the output is normalised again) but overflows the gradients.
+        var (model, tokens) = Setup();
+        var gain = model.Parameters().First(p => p.Name == "blocks.0.ln2.gamma").Value;
+        for (int i = 0; i < gain.Size; i++) gain.Data[i] *= 1e160;
+        var before = model.Parameters().Select(p => (double[])p.Value.Data.Clone()).ToList();
+
+        var trainer = new Trainer(model, tokens, new TrainingSettings());
+        var report = trainer.Step();
+
+        Assert.True(double.IsFinite(report.TrainLoss) && report.TrainLoss < 1e4, $"loss {report.TrainLoss}");
+        Assert.Equal(Trainer.DivergedMessage, report.StoppedReason);
+        Assert.True(trainer.HasDiverged);
+        foreach (var (p, old) in model.Parameters().Zip(before)) Assert.Equal(old, p.Value.Data);
+    }
+
+    [Fact]
+    public async Task Trainer_StepOrRunAsync_WhileRunning_Throws()
+    {
+        var (model, tokens) = Setup();
+        var trainer = new Trainer(model, tokens, new TrainingSettings());
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var progress = new ListProgress { OnReport = _ => { started.Set(); release.Wait(); } };
+
+        var run = trainer.RunAsync(3, progress, CancellationToken.None);
+        Assert.True(started.Wait(TimeSpan.FromSeconds(30)));
+        var step = Assert.Throws<InvalidOperationException>(() => trainer.Step());
+        Assert.Equal("Training is already running", step.Message);
+        var again = Assert.Throws<InvalidOperationException>(() => { _ = trainer.RunAsync(1, progress, CancellationToken.None); });
+        Assert.Equal("Training is already running", again.Message);
+
+        release.Set();
+        await run;
+        Assert.Equal(3, trainer.StepsTaken);
+        Assert.Equal(4, trainer.Step().Step);   // free to use again
+    }
+
+    [Fact]
+    public void Trainer_FromBatchSource_TrainsOnItsWindows()
+    {
+        // Windows shorter than ContextLength + 1 are fine: inputs are all but the last token, targets all but the first.
+        var (model, _) = Setup();
+        var source = new RepeatingSource(new[] { 1, 2, 3, 1, 2, 3, 1, 2 });
+        var trainer = new Trainer(model, source, new TrainingSettings(BatchSize: 2));
+        var first = trainer.Step();
+        TrainingStepReport last = first;
+        for (int i = 0; i < 80; i++) last = trainer.Step();
+        Assert.True(last.TrainLoss < first.TrainLoss);
+        Assert.NotNull(first.ValidationLoss);
+    }
+
+    private sealed class RepeatingSource : IBatchSource
+    {
+        private readonly int[] _window;
+        public RepeatingSource(int[] window) { _window = window; }
+        public IReadOnlyList<IReadOnlyList<int>> ValidationWindows => new[] { (IReadOnlyList<int>)_window };
+        public IReadOnlyList<int> NextTrainingWindow(SeededRandom rng) => _window;
+    }
+
+    [Fact]
     public void Trainer_TooShortText_ThrowsWithMessage()
     {
         var (model, _) = Setup();
