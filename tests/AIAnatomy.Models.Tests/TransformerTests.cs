@@ -17,6 +17,17 @@ public class TransformerTests
             for (int i = 0; i < p.Value.Size; i++) p.Value.Data[i] = rng.NextGaussian() * 0.5;
     }
 
+    [Theory]
+    [InlineData(2, 0)]
+    [InlineData(0, 2)]
+    [InlineData(-1, 0)]
+    [InlineData(0, -1)]
+    public void Forward_DisabledHeadOutsideModel_Throws(int layer, int head)
+    {
+        var options = new ForwardOptions { DisabledHeads = new HashSet<(int, int)> { (layer, head) } };
+        Assert.Throws<ArgumentOutOfRangeException>(() => Make(Small).Forward(new[] { 1, 2 }, options));
+    }
+
     [Fact]
     public void Forward_LogitsShapeIsTByV()
     {

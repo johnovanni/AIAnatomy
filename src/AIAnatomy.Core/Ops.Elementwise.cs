@@ -36,8 +36,17 @@ public static partial class Ops
 
         int d = b.Size;
         var data = new double[a.Size];
-        for (int i = 0; i < data.Length; i++)
-            data[i] = forward(a.Data[i], b.Data[broadcast ? i % d : i]);
+        var ad = a.Data;
+        var bd = b.Data;
+        if (broadcast)
+        {
+            for (int row = 0; row < data.Length; row += d)
+                for (int j = 0; j < d; j++) data[row + j] = forward(ad[row + j], bd[j]);
+        }
+        else
+        {
+            for (int i = 0; i < data.Length; i++) data[i] = forward(ad[i], bd[i]);
+        }
 
         return new Tensor(data, (int[])a.Shape.Clone(), op, new[] { a, b }, self =>
         {
@@ -45,12 +54,28 @@ public static partial class Ops
             if (a.RequiresGrad)
             {
                 var ga = a.EnsureGrad();
-                for (int i = 0; i < g.Length; i++) ga[i] += gradA(g[i], a.Data[i], b.Data[broadcast ? i % d : i]);
+                if (broadcast)
+                {
+                    for (int row = 0; row < g.Length; row += d)
+                        for (int j = 0; j < d; j++) ga[row + j] += gradA(g[row + j], ad[row + j], bd[j]);
+                }
+                else
+                {
+                    for (int i = 0; i < g.Length; i++) ga[i] += gradA(g[i], ad[i], bd[i]);
+                }
             }
             if (b.RequiresGrad)
             {
                 var gb = b.EnsureGrad();
-                for (int i = 0; i < g.Length; i++) gb[broadcast ? i % d : i] += gradB(g[i], a.Data[i], b.Data[broadcast ? i % d : i]);
+                if (broadcast)
+                {
+                    for (int row = 0; row < g.Length; row += d)
+                        for (int j = 0; j < d; j++) gb[j] += gradB(g[row + j], ad[row + j], bd[j]);
+                }
+                else
+                {
+                    for (int i = 0; i < g.Length; i++) gb[i] += gradB(g[i], ad[i], bd[i]);
+                }
             }
         });
     }

@@ -27,6 +27,27 @@ public class OptimizerTests
     }
 
     [Fact]
+    public void Adam_TwoSteps_MatchesHandComputedValues()
+    {
+        // w = 1, learning rate 0.1, beta1 0.9, beta2 0.999, eps 1e-8. Gradients: step 1 is 2, step 2 is 4.
+        // Step 1 (t = 1): m = 0.1*2 = 0.2;  v = 0.001*4 = 0.004
+        //   m_hat = 0.2/(1-0.9) = 2;  v_hat = 0.004/(1-0.999) = 4;  w = 1 - 0.1*2/(sqrt(4)+1e-8) = 0.9000000005
+        // Step 2 (t = 2): m = 0.9*0.2 + 0.1*4 = 0.58;  v = 0.999*0.004 + 0.001*16 = 0.019996
+        //   m_hat = 0.58/(1-0.81) = 3.0526315789...;  v_hat = 0.019996/(1-0.998001) = 10.0030015007...
+        //   w = 0.9000000005 - 0.1*3.0526315789/(sqrt(10.0030015007)+1e-8) = 0.80348179822...
+        var w = Scalar("w", 1);
+        var adam = new Adam(new[] { w }, 0.1);
+        Ops.Scale(w.Value, 2).Backward();
+        adam.Step();
+        Assert.Equal(0.9000000005, w.Value.Item(), 12);
+
+        adam.ZeroGrad();
+        Ops.Scale(w.Value, 4).Backward();
+        adam.Step();
+        Assert.Equal(0.8034817982229947, w.Value.Item(), 10);
+    }
+
+    [Fact]
     public void Sgd_FitsLinearData()
     {
         var w = new Parameter("w", Tensor.Zeros(1, 1).AsParameter());

@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace AIAnatomy.Core;
 
 public static partial class Ops
@@ -8,39 +10,78 @@ public static partial class Ops
         if (a.Shape.Length != 2 || b.Shape.Length != 2 || a.Shape[1] != b.Shape[0])
             throw new ArgumentException($"matmul: shapes [{string.Join(", ", a.Shape)}] and [{string.Join(", ", b.Shape)}] cannot be multiplied.");
         int n = a.Shape[0], k = a.Shape[1], m = b.Shape[1];
+        bool parallel = (long)n * k * m > ParallelThreshold;
         var data = new double[n * m];
-        for (int i = 0; i < n; i++)
+        var ad = a.Data;
+        var bd = b.Data;
+
+        // Output rows are independent and each is summed in the same order, so threading never changes a bit of the result.
+        void ForwardRow(int i)
+        {
+            var row = new Span<double>(data, i * m, m);
             for (int p = 0; p < k; p++)
-            {
-                double av = a.Data[i * k + p];
-                for (int j = 0; j < m; j++) data[i * m + j] += av * b.Data[p * m + j];
-            }
+                AddScaled(row, new ReadOnlySpan<double>(bd, p * m, m), ad[i * k + p]);
+        }
+        RunRows(n, parallel, ForwardRow);
 
         return new Tensor(data, new[] { n, m }, "matmul", new[] { a, b }, self =>
         {
             if (self.Grad is not { } g) return;
             if (a.RequiresGrad)
             {
-                var ga = a.EnsureGrad();   // dA = dC · B transposed
-                for (int i = 0; i < n; i++)
-                    for (int p = 0; p < k; p++)
-                    {
-                        double sum = 0;
-                        for (int j = 0; j < m; j++) sum += g[i * m + j] * b.Data[p * m + j];
-                        ga[i * k + p] += sum;
-                    }
+                var ga = a.EnsureGrad();   // dA = dC · B transposed: row i of dA = sum over j of g[i,j] * (column j of B)
+                var bt = TransposeData(bd, k, m);
+                void RowOfA(int i)
+                {
+                    var sums = new double[k];
+                    for (int j = 0; j < m; j++)
+                        AddScaled(sums, new ReadOnlySpan<double>(bt, j * k, k), g[i * m + j]);
+                    for (int p = 0; p < k; p++) ga[i * k + p] += sums[p];
+                }
+                RunRows(n, parallel, RowOfA);
             }
             if (b.RequiresGrad)
             {
-                var gb = b.EnsureGrad();   // dB = A transposed · dC
-                for (int i = 0; i < n; i++)
-                    for (int p = 0; p < k; p++)
-                    {
-                        double av = a.Data[i * k + p];
-                        for (int j = 0; j < m; j++) gb[p * m + j] += av * g[i * m + j];
-                    }
+                var gb = b.EnsureGrad();   // dB = A transposed · dC; one task per row p of dB
+                void RowOfB(int p)
+                {
+                    var target = new Span<double>(gb, p * m, m);
+                    for (int i = 0; i < n; i++)
+                        AddScaled(target, new ReadOnlySpan<double>(g, i * m, m), ad[i * k + p]);
+                }
+                RunRows(k, parallel, RowOfB);
             }
         });
+    }
+
+    /// <summary>target[j] += scale * source[j], four or more at a time. Each element is one multiply then one add, exactly as the plain loop does.</summary>
+    private static void AddScaled(Span<double> target, ReadOnlySpan<double> source, double scale)
+    {
+        int j = 0;
+        if (Vector.IsHardwareAccelerated && target.Length >= Vector<double>.Count)
+        {
+            var s = new Vector<double>(scale);
+            int last = target.Length - Vector<double>.Count;
+            for (; j <= last; j += Vector<double>.Count)
+                (new Vector<double>(target.Slice(j)) + new Vector<double>(source.Slice(j)) * s).CopyTo(target.Slice(j));
+        }
+        for (; j < target.Length; j++) target[j] += scale * source[j];
+    }
+
+    private static double[] TransposeData(double[] data, int rows, int cols)
+    {
+        var t = new double[data.Length];
+        for (int i = 0; i < rows; i++)
+            for (int j = 0; j < cols; j++) t[j * rows + i] = data[i * cols + j];
+        return t;
+    }
+
+    private const long ParallelThreshold = 200_000;
+
+    private static void RunRows(int rows, bool parallel, Action<int> body)
+    {
+        if (parallel) Parallel.For(0, rows, body);
+        else for (int r = 0; r < rows; r++) body(r);
     }
 
     public static Tensor Transpose(Tensor a)

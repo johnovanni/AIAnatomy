@@ -41,6 +41,10 @@ public sealed class Transformer : Module
         if (t > Config.ContextLength)
             throw new ArgumentException($"{t} tokens do not fit in the context length of {Config.ContextLength}.", nameof(tokenIds));
 
+        foreach (var (layer, head) in options.DisabledHeads)
+            if (layer < 0 || layer >= Config.Layers || head < 0 || head >= Config.Heads)
+                throw new ArgumentOutOfRangeException(nameof(options), $"Head {head} of layer {layer} does not exist: the model has {Config.Layers} layers of {Config.Heads} heads.");
+
         var tokenEmbeddings = _tokens.Forward(tokenIds);
         Tensor positionEmbeddings, input;
         if (options.RemovePositions)
