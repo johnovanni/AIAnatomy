@@ -99,8 +99,9 @@ public sealed class ModelLibrary
             var info = ModelFile.Load(stream).Info;
             return new ModelEntry(string.IsNullOrWhiteSpace(info.Name) ? stem : info.Name, path, shipped, true, null);
         }
-        catch (Exception e) when (e is InvalidDataException or IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is not (OutOfMemoryException or StackOverflowException or ThreadAbortException))
         {
+            // A bad file must never stop the list: whatever went wrong, show it as unreadable.
             return new ModelEntry(stem, path, shipped, false, e.Message);
         }
     }

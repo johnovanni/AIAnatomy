@@ -91,6 +91,8 @@ public static class ModelFile
         var listed = header.Parameters!;
         if (listed.Count != parameters.Count)
             throw new InvalidDataException($"The model file lists {listed.Count} parameters but this model shape has {parameters.Count}.");
+        if (listed.Any(entry => entry is null || entry.Name is null || entry.Shape is null))
+            throw new InvalidDataException("The model file's parameter list has an incomplete entry.");
         for (int i = 0; i < parameters.Count; i++)
         {
             if (listed[i].Name != parameters[i].Name || listed[i].Shape is null || !listed[i].Shape.SequenceEqual(parameters[i].Value.Shape))
@@ -144,8 +146,13 @@ public static class ModelFile
 
     private static void CheckConfigSize(TransformerConfig c)
     {
-        int[] sizes = { c.VocabularySize, c.ContextLength, c.ModelWidth, c.Layers, c.Heads, c.FeedForwardWidth };
-        if (sizes.Any(v => v < 0 || v > MaxDimension) || c.CountParameters() > MaxParameters)
+        // Every size is checked before CountParameters runs, because it divides by the number of heads.
+        int[] positive = { c.VocabularySize, c.ContextLength, c.ModelWidth, c.Heads, c.FeedForwardWidth };
+        if (positive.Any(v => v < 1) || c.Layers < 0)
+            throw new InvalidDataException("The model file describes a model with an impossible shape.");
+        if (c.ModelWidth % c.Heads != 0)
+            throw new InvalidDataException($"The model file's width {c.ModelWidth} does not divide evenly into {c.Heads} heads.");
+        if (positive.Any(v => v > MaxDimension) || c.Layers > MaxDimension || c.CountParameters() > MaxParameters)
             throw new InvalidDataException("The model file describes a model that is too large to open.");
     }
 }

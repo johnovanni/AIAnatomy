@@ -111,6 +111,16 @@ public class ModelFileTests
         var bytes = Saved(SamplingTests.MakeModel());
         Assert.Throws<InvalidDataException>(() => Open(ReplaceInHeader(bytes, "\"heads\":2", "\"heads\":3")));
         Assert.Throws<InvalidDataException>(() => Open(ReplaceInHeader(bytes, "\"layers\":1", "\"layers\":-1")));
+        Assert.Throws<InvalidDataException>(() => Open(ReplaceInHeader(bytes, "\"heads\":2", "\"heads\":0")));
+        Assert.Throws<InvalidDataException>(() => Open(ReplaceInHeader(bytes, "\"modelWidth\":8", "\"modelWidth\":0")));
+    }
+
+    [Fact]
+    public void ModelFile_NullParameterEntry_ThrowsInvalidData()
+    {
+        var bytes = Saved(SamplingTests.MakeModel());
+        Assert.Throws<InvalidDataException>(() => Open(ReplaceInHeader(bytes, "\"parameters\":[{", "\"parameters\":[null,{")));
+        Assert.Throws<InvalidDataException>(() => Open(ReplaceInHeader(bytes, "\"name\":\"token_embedding\"", "\"name\":null")));
     }
 
     [Fact]
@@ -217,6 +227,21 @@ public class ModelLibraryTests : IDisposable
         Assert.False(list.Single(e => e.Name == "empty").IsReadable);
         Assert.True(list.Single(e => e.Name == "good").IsReadable);
         Assert.Throws<InvalidDataException>(() => library.Load(broken));
+    }
+
+    [Fact]
+    public void Library_CraftedHeaders_ListedUnreadableWithoutThrowing()
+    {
+        var library = Library();
+        var good = SamplingTests.MakeModel();
+        using var ms = new MemoryStream();
+        ModelFile.Save(good, ms);
+        string all = System.Text.Encoding.Latin1.GetString(ms.ToArray());
+        File.WriteAllBytes(Path.Combine(User, "zero-heads.aimodel"), System.Text.Encoding.Latin1.GetBytes(all.Replace("\"heads\":2", "\"heads\":0")));
+        File.WriteAllBytes(Path.Combine(User, "null-entry.aimodel"), System.Text.Encoding.Latin1.GetBytes(all.Replace("\"parameters\":[{", "\"parameters\":[null,{")));
+        var list = library.List();
+        Assert.Equal(2, list.Count);
+        Assert.All(list, e => Assert.False(e.IsReadable));
     }
 
     [Fact]
