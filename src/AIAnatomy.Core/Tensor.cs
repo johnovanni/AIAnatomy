@@ -87,6 +87,10 @@ public sealed class Tensor
             foreach (var p in node.Parents) if (!seen.Contains(p)) stack.Push((p, false));
         }
 
+        // Intermediate results start fresh each time; only leaves (parameters) keep accumulating across calls.
+        foreach (var node in order)
+            if (node.Parents.Count > 0) node.Grad = null;
+
         EnsureGrad()[0] += 1.0;
         for (int i = order.Count - 1; i >= 0; i--)
             if (order[i].RequiresGrad) order[i]._backward?.Invoke(order[i]);
