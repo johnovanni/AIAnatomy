@@ -23,10 +23,12 @@ public static class PngRenderer
     {
         double heading = Math.Round(options.TextSize * 1.4, MidpointRounding.AwayFromZero);
         ThemeManager.Apply(options.Theme, options.TextSize, heading);
-        // Fresh services (and in-memory settings) for each view, so one picture cannot change the next.
+        // Fresh services (in-memory settings, an empty temporary model folder) for each view, so one picture cannot change
+        // the next and none depends on the user's own models.
         foreach (string view in options.Views)
         {
-            var services = AppServices.Create(new InMemorySettings(new AppSettings(options.TextSize, heading, options.Theme)));
+            using var folder = new TemporaryFolder();
+            var services = AppServices.Create(new InMemorySettings(new AppSettings(options.TextSize, heading, options.Theme)), folder.Path);
             await RenderViewAsync(options, services, view, options.OutputFileFor(view));
         }
     }

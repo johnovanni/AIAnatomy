@@ -14,7 +14,8 @@ public sealed class LabFactory
 {
     private readonly Dictionary<string, Func<LabViewModel>> _creators = new(StringComparer.Ordinal);
 
-    public LabFactory(IActiveModelService models, LessonCatalog lessons, Func<string, Task> navigate, string contentFolder)
+    /// <param name="libraryChanged">Called after a lab saves a model to the library, so the model picker can list it.</param>
+    public LabFactory(IActiveModelService models, LessonCatalog lessons, Func<string, Task> navigate, string contentFolder, Action? libraryChanged = null)
     {
         ArgumentNullException.ThrowIfNull(models);
         ArgumentNullException.ThrowIfNull(lessons);
@@ -33,6 +34,7 @@ public sealed class LabFactory
         Register(ResidualLabViewModel.Id, () => new ResidualLabViewModel(models));
         Register(SamplingLabViewModel.Id, () => new SamplingLabViewModel(models));
         Register(LearningLabViewModel.Id, () => new LearningLabViewModel(models));
+        Register(TrainLabViewModel.Id, () => new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }
 
     public void Register(string labId, Func<LabViewModel> create)

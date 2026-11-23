@@ -320,4 +320,37 @@ public class MainViewModelTests : IDisposable
         Assert.Equal(before + 1, vm.ModelEntries.Count);
         Assert.False(vm.SelectedModelEntry!.IsShipped);
     }
+
+    [Fact]
+    public async Task Main_EveryRegisteredLab_ResetsAndDeactivatesWithoutThrowing()
+    {
+        // What --selftest all-labs does, without the window.
+        var vm = _env.NewMain();
+        foreach (var lesson in LessonCatalog.Load(TestEnvironment.Content).All.Where(l => vm.Labs.IsRegistered(l.LabId)))
+        {
+            await vm.NavigateToLesson(lesson.Id);
+            var lab = vm.CurrentLab!;
+            Assert.Equal(lesson.LabId, lab.LabId);
+            lab.Reset();
+            await lab.WorkCompleted.WaitAsync(TimeSpan.FromMinutes(2));
+            lab.Deactivate();
+        }
+    }
+
+    [Fact]
+    public async Task Main_TrainLabSave_ShowsTheNewModelInThePicker()
+    {
+        var vm = _env.NewMain();
+        await vm.NavigateToLesson("train");
+        var lab = Assert.IsType<TrainLabViewModel>(vm.CurrentLab);
+        lab.Width = 16; lab.LayersText = "1"; lab.HeadsText = "1"; lab.ContextText = "16"; lab.BatchText = "1"; lab.StepsText = "2";
+        await lab.StartCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromMinutes(2));
+        lab.SaveName = "Picker test";
+        await lab.SaveCommand.ExecuteAsync(null);
+        Assert.Contains(vm.ModelEntries, e => e.Name == "Picker test");
+        Assert.True(vm.SelectedModelEntry!.IsShipped);   // saving alone does not change the active model
+
+        await lab.UseInLabsCommand.ExecuteAsync(null);
+        Assert.Equal("Picker test", vm.SelectedModelEntry!.Name);
+    }
 }

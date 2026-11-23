@@ -7,6 +7,7 @@ public sealed record ModelEntry(string Name, string Path, bool IsShipped, bool I
 public sealed class ModelLibrary
 {
     public const string Extension = ".aimodel";
+    public const string NotFiniteMessage = "This model has numbers that are not finite, so it can't be saved.";
     private static readonly string[] ReservedNames =
         { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
 
@@ -41,16 +42,31 @@ public sealed class ModelLibrary
         }
     }
 
-    /// <summary>Saves into the user folder, replacing any model with the same file name (the caller confirms overwrites).</summary>
-    public ModelEntry Save(LanguageModel m, string name)
+    /// <summary>
+    /// The file <see cref="Save"/> writes for this name. Different names can share a file ("a/b" and "a_b"), so a caller
+    /// that wants to confirm an overwrite checks whether this file exists.
+    /// </summary>
+    public string PathFor(string name)
     {
-        ArgumentNullException.ThrowIfNull(m);
         ArgumentNullException.ThrowIfNull(name);
         name = name.Trim();
         if (name.Length == 0) throw new ArgumentException("Give the model a name.", nameof(name));
+        return Path.Combine(_userFolder, SafeFileName(name) + Extension);
+    }
+
+    /// <summary>
+    /// Saves into the user folder, replacing any model with the same file name (the caller confirms overwrites).
+    /// A model with a weight that is not a finite number is refused with <see cref="InvalidOperationException"/>.
+    /// </summary>
+    public ModelEntry Save(LanguageModel m, string name)
+    {
+        ArgumentNullException.ThrowIfNull(m);
+        string path = PathFor(name);
+        name = name.Trim();
+        if (m.Transformer.Parameters().Any(p => p.Value.Data.Any(v => !double.IsFinite(v))))
+            throw new InvalidOperationException(NotFiniteMessage);
 
         Directory.CreateDirectory(_userFolder);
-        string path = Path.Combine(_userFolder, SafeFileName(name) + Extension);
         string temp = path + ".tmp";
         try
         {

@@ -24,7 +24,7 @@ public sealed partial class MainViewModel : ObservableObject
         _models = models ?? throw new ArgumentNullException(nameof(models));
         Settings = settings ?? throw new ArgumentNullException(nameof(settings));
         // The factory is built here so it can be given our own NavigateToLesson (no construction cycle).
-        Labs = new LabFactory(models, lessons, NavigateToLesson, contentFolder ?? AppPaths.Content);
+        Labs = new LabFactory(models, lessons, NavigateToLesson, contentFolder ?? AppPaths.Content, RefreshModelEntries);
 
         Sections = Enum.GetValues<Section>();
         SettingsPage = new SettingsViewModel(settings);

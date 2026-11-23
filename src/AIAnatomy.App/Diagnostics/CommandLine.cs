@@ -15,7 +15,7 @@ public static class CommandLine
                     await PngRenderer.RenderAsync(options);
                     return 0;
                 case DiagnosticMode.SelfTest:
-                    return SelfTests.Run(options);
+                    return await SelfTests.RunAsync(options);
                 default:
                     throw new ArgumentException("Nothing to run.", nameof(options));
             }

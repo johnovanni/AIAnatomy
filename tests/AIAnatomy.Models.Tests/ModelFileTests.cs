@@ -190,6 +190,33 @@ public class ModelLibraryTests : IDisposable
     }
 
     [Fact]
+    public void Library_PathFor_IsTheFileSaveUses_AndSharedByNamesThatDifferOnlyInUnsafeCharacters()
+    {
+        var library = Library();
+        Assert.Equal(library.PathFor("a/b"), library.PathFor("a_b"));
+        Assert.Equal(library.PathFor("x"), library.PathFor("  x "));
+        Assert.Equal(Path.Combine(User, "a_b.aimodel"), library.PathFor("a/b"));
+        Assert.Equal(library.PathFor("a/b"), library.Save(SamplingTests.MakeModel(), "a/b").Path);
+        Assert.Throws<ArgumentException>(() => library.PathFor(" "));
+    }
+
+    [Fact]
+    public void Library_Save_RefusesNonFiniteWeights()
+    {
+        var library = Library();
+        var model = SamplingTests.MakeModel();
+        model.Transformer.Parameters().Last().Value.Data[0] = double.NaN;
+        var e = Assert.Throws<InvalidOperationException>(() => library.Save(model, "broken"));
+        Assert.Equal(ModelLibrary.NotFiniteMessage, e.Message);
+        Assert.Equal("This model has numbers that are not finite, so it can't be saved.", ModelLibrary.NotFiniteMessage);
+        Assert.Empty(Directory.GetFiles(User));
+
+        model.Transformer.Parameters().Last().Value.Data[0] = double.PositiveInfinity;
+        Assert.Throws<InvalidOperationException>(() => library.Save(model, "broken"));
+        Assert.Empty(Directory.GetFiles(User));
+    }
+
+    [Fact]
     public void Library_SaveSameNameTwice_Overwrites()
     {
         var library = Library();
