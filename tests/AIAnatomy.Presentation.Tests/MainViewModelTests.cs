@@ -87,6 +87,27 @@ public class MainViewModelTests : IDisposable
         Assert.Equal(26, MainViewModel.StackedLayoutFromSize);
     }
 
+    [Fact]
+    public void StackedLayout_PanePositionsComeOnlyFromTheirStyles()
+    {
+        // A local Grid.Row/Column/Span on a pane would beat the style trigger that moves it (the explanation once drew over the lab).
+        string? dir = AppContext.BaseDirectory;
+        while (dir != null && !File.Exists(Path.Combine(dir, "AIAnatomy.slnx"))) dir = Path.GetDirectoryName(dir);
+        string xaml = File.ReadAllText(Path.Combine(dir!, "src", "AIAnatomy.App", "MainWindow.xaml"));
+        foreach (string name in new[] { "Lab pane", "Explanation pane" })
+        {
+            int at = xaml.IndexOf($"AutomationProperties.Name=\"{name}\"", StringComparison.Ordinal);
+            Assert.True(at > 0, name);
+            string tag = xaml[xaml.LastIndexOf("<Border", at, StringComparison.Ordinal)..at];
+            Assert.DoesNotContain("Grid.", tag);
+            string style = xaml[at..xaml.IndexOf("</Border.Style>", at, StringComparison.Ordinal)];
+            foreach (string property in new[] { "Grid.Row", "Grid.RowSpan", "Grid.Column", "Grid.ColumnSpan" })
+                Assert.Contains($"Property=\"{property}\"", style);
+        }
+        Assert.Contains("<RowDefinition Height=\"3*\" />", xaml);
+        Assert.Contains("<RowDefinition Height=\"2*\" />", xaml);
+    }
+
     private static void CopyFolder(string from, string to)
     {
         Directory.CreateDirectory(to);

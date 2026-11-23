@@ -148,9 +148,14 @@
                     <RowDefinition Height="12" />
                     <RowDefinition Height="2*" />
                 </Grid.RowDefinitions>
-                <Border Grid.Column="0" Grid.RowSpan="3" AutomationProperties.Name="Lab pane">
+                <Border AutomationProperties.Name="Lab pane">
+                    <!-- Grid position comes only from this style (a local Grid.* value would beat the trigger). -->
                     <Border.Style>
                         <Style TargetType="Border" BasedOn="{StaticResource Pane}">
+                            <Setter Property="Grid.Row" Value="0" />
+                            <Setter Property="Grid.RowSpan" Value="3" />
+                            <Setter Property="Grid.Column" Value="0" />
+                            <Setter Property="Grid.ColumnSpan" Value="1" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding UseStackedLayout}" Value="True">
                                     <Setter Property="Grid.ColumnSpan" Value="3" />
@@ -167,9 +172,13 @@
                     </DockPanel>
                 </Border>
 
-                <Border Grid.Column="2" Grid.RowSpan="3" AutomationProperties.Name="Explanation pane">
+                <Border AutomationProperties.Name="Explanation pane">
                     <Border.Style>
                         <Style TargetType="Border" BasedOn="{StaticResource Pane}">
+                            <Setter Property="Grid.Row" Value="0" />
+                            <Setter Property="Grid.RowSpan" Value="3" />
+                            <Setter Property="Grid.Column" Value="2" />
+                            <Setter Property="Grid.ColumnSpan" Value="1" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding UseStackedLayout}" Value="True">
                                     <Setter Property="Grid.Column" Value="0" />
