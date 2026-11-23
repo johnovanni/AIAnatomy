@@ -162,7 +162,7 @@ public sealed partial class MultiHeadLabViewModel : LabViewModel
         }
         _syncing = false;
 
-        LayerCaption = $"Layer {Layer} of {config.Layers}: {config.Heads} heads, each reading {config.HeadWidth} of the model's {config.ModelWidth} numbers.";
+        LayerCaption = $"Layer {Layer} of {config.Layers}: {config.Heads} heads; each reads the whole {config.ModelWidth}-number vector and works with {config.HeadWidth} numbers of its own (query, key, value).";
         DisabledSummary = _disabled.Count == 0
             ? "No head is switched off."
             : "Switched off: " + string.Join(", ", _disabled.OrderBy(d => d.Layer).ThenBy(d => d.Head).Select(d => $"layer {d.Layer + 1} head {d.Head + 1}")) + ".";

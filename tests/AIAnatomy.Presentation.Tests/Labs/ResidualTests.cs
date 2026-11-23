@@ -1,5 +1,6 @@
 using AIAnatomy.Models.Language;
 using AIAnatomy.Presentation.Labs;
+using AIAnatomy.Presentation.Visuals;
 
 namespace AIAnatomy.Presentation.Tests.Labs;
 
@@ -51,6 +52,8 @@ public class ResidualTests : IDisposable
         double expected = Math.Sqrt(trace.Input.Row(p).Sum(v => v * v));
         Assert.Equal(expected, lab.Sizes[0].Value, 9);
         Assert.Contains("square root of the sum of squares", ResidualLabViewModel.SizeNote);
+        Assert.Contains("position vector", ResidualLabViewModel.SizeNote);
+        Assert.Equal(NumberText.Short(lab.Sizes[0].Value), lab.Sizes[0].ValueText);
         double last = Math.Sqrt(trace.Blocks[^1].ResidualOut.Row(p).Sum(v => v * v));
         Assert.Equal(last, lab.Sizes[^1].Value, 9);
     }
@@ -69,6 +72,7 @@ public class ResidualTests : IDisposable
         Assert.Equal(spread, lab.NormAfterSpread, 12);
         Assert.Equal(lab.NormBefore.Average(), lab.NormBeforeMean, 12);
         Assert.NotNull(lab.NormScaled);
+        Assert.Contains("0 (to rounding)", lab.NormAfterText);
         Assert.Contains("gamma", ResidualLabViewModel.NormNote);
         Assert.Contains("beta", ResidualLabViewModel.NormNote);
     }

@@ -63,6 +63,7 @@ public sealed partial class FeedForwardLabViewModel : LabViewModel
     [ObservableProperty] private IReadOnlyList<int> neuronNumbers = [];
     /// <summary>The neuron's activation at each token of the typed text.</summary>
     [ObservableProperty] private double[]? activations;
+    /// <summary>The characters in order, numbered from 0 like the numbers under the bars of the strip.</summary>
     [ObservableProperty] private string tokenKey = "";
     [ObservableProperty] private string activationCaption = "";
     [ObservableProperty] private IReadOnlyList<ContextRow> contexts = [];
@@ -132,7 +133,7 @@ public sealed partial class FeedForwardLabViewModel : LabViewModel
         Notice = prediction.WasTruncated ? LabText.TruncationNote(config.ContextLength) : null;
         var ids = prediction.UsedTokenIds;
         ShownText = LabText.ShowNewlines(model.Tokenizer.Decode(ids));
-        TokenKey = string.Join("   ", ids.Select((id, i) => $"{i + 1}:{LabText.Visible(model.Tokenizer.TokenText(id))}"));
+        TokenKey = string.Join("   ", ids.Select((id, i) => $"{i}:{LabText.Visible(model.Tokenizer.TokenText(id))}"));
         var hidden = prediction.Forward.Trace.Blocks[Layer - 1].FeedForwardHidden!;
         int width = hidden.Shape[1];
         Activations = Enumerable.Range(0, ids.Count).Select(t => hidden.Data[t * width + Neuron - 1]).ToArray();

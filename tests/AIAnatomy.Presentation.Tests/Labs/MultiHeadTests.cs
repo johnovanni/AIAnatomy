@@ -99,4 +99,11 @@ public class MultiHeadTests : IDisposable
         Assert.Equal(models.Current.Transformer.Config.Heads, lab.Heads.Count);
         Assert.Equal(models.Current.Transformer.Config.ModelWidth, lab.ConcatenatedVector!.Length);
     }
+
+    [Fact]
+    public void LayerCaption_SaysEachHeadReadsTheWholeVector()
+    {
+        var lab = NewLab();
+        Assert.Contains("each reads the whole 64-number vector and works with 16 numbers of its own", lab.LayerCaption);
+    }
 }

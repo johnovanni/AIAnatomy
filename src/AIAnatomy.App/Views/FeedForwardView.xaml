@@ -10,8 +10,8 @@
         <BooleanToVisibilityConverter x:Key="VisibleIfTrue" />
         <DataTemplate x:Key="ContextLine" DataType="{x:Type labs:ContextRow}">
             <StackPanel Orientation="Horizontal" Margin="0,2" AutomationProperties.Name="{Binding Description}">
-                <TextBlock Width="48" Text="{Binding Rank, StringFormat={}{0}.}" Style="{StaticResource MutedText}" />
-                <TextBlock Width="96" FontFamily="{StaticResource NumberFont}" Text="{Binding ValueText}" />
+                <TextBlock MinWidth="48" Margin="0,0,8,0" Text="{Binding Rank, StringFormat={}{0}.}" Style="{StaticResource MutedText}" />
+                <TextBlock MinWidth="96" Margin="0,0,8,0" FontFamily="{StaticResource NumberFont}" Text="{Binding ValueText}" />
                 <TextBlock FontFamily="{StaticResource NumberFont}" Text="{Binding Before}" />
                 <Border BorderBrush="{DynamicResource TextBrush}" BorderThickness="2" Padding="3,0" Margin="1,0">
                     <TextBlock FontFamily="{StaticResource NumberFont}" FontWeight="Bold" Text="{Binding Own}" />
@@ -21,7 +21,7 @@
     </UserControl.Resources>
     <StackPanel>
         <TextBlock Style="{StaticResource BodyText}"
-                   Text="After attention, every token's vector goes through a small network of its own: the feed-forward layer. It is made of many neurons, each a number that is high or low depending on the input. Pick one neuron and see where it fires." />
+                   Text="After attention, every token's vector goes, on its own, through the same small network: the feed-forward layer. It is made of many neurons, each giving a number that is high or low depending on the input. Pick one neuron and see where it fires." />
         <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
         <StackPanel Visibility="{Binding HasFeedForward, Converter={StaticResource VisibleIfTrue}}">
             <WrapPanel Margin="0,4,0,8">
@@ -37,7 +37,7 @@
             <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}" Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
             <TextBlock Style="{StaticResource MutedText}" Text="{Binding ActivationCaption}" />
             <c:VectorStrip Values="{Binding Activations}" AutomationProperties.Name="Activation of the chosen neuron along your text" />
-            <TextBlock Style="{StaticResource MutedText}" Text="The bars, left to right (␣ is a space, ↵ a new line, � a character the model has never seen):" Margin="0,4,0,0" />
+            <TextBlock Style="{StaticResource MutedText}" Text="The bars, left to right, numbered from 0 as under the bars (␣ is a space, ↵ a new line, � a character the model has never seen):" Margin="0,4,0,0" />
             <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding TokenKey}" />
 
             <TextBlock Style="{StaticResource SubheadingText}" Text="Where this neuron fires most" />

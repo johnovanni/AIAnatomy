@@ -8,6 +8,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AIAnatomy.Presentation.Labs;
 
+/// <summary>The length of the residual vector after one stage.</summary>
+public sealed record SizeRow(string Label, double Value)
+{
+    public string ValueText => NumberText.Short(Value);
+}
+
 /// <summary>One of the five best guesses at one stage of the logit lens.</summary>
 public sealed record LensGuess(string Token, double Probability, string PercentText)
 {
@@ -30,7 +36,7 @@ public sealed partial class ResidualLabViewModel : LabViewModel
     private const int TopCount = 5;
 
     public const string SizeNote =
-        "Size means the length of the vector (square root of the sum of squares), measured at the token you chose, after each stage.";
+        "Size means the length of the vector (square root of the sum of squares), measured at the token you chose, after each stage. \"After the embeddings\" means the token's vector plus its position vector, before block 1.";
 
     public const string LensNote =
         "This technique is called the “logit lens” (nostalgebraist, 2020). Each row reads the residual stream at that stage as if it were the last one: " +
@@ -60,7 +66,7 @@ public sealed partial class ResidualLabViewModel : LabViewModel
     [ObservableProperty] private int positionIndex;
     [ObservableProperty] private IReadOnlyList<string> positionChoices = [];
 
-    [ObservableProperty] private IReadOnlyList<LabeledValue> sizes = [];
+    [ObservableProperty] private IReadOnlyList<SizeRow> sizes = [];
     [ObservableProperty] private double sizeMaximum = 1;
     [ObservableProperty] private IReadOnlyList<LensRow> lensRows = [];
     [ObservableProperty] private string lensCaption = "";
@@ -83,7 +89,7 @@ public sealed partial class ResidualLabViewModel : LabViewModel
     [ObservableProperty] private string normScaledText = "";
 
     public const string NormNote =
-        "Layer norm moves a vector so its numbers average 0 and spread out by 1 (the spread is the standard deviation). " +
+        "Layer norm moves a vector so its numbers average 0 and have a spread of 1 (the spread is the standard deviation). " +
         "Then gamma and beta, two lists of learned numbers (one pair for each place in the vector), rescale and shift it: each number is multiplied by its gamma and its beta is added.";
 
     partial void OnTextChanged(string value) { _moveToEnd = true; Refresh(); }
@@ -143,7 +149,7 @@ public sealed partial class ResidualLabViewModel : LabViewModel
         // Stage 0 is the embeddings, stage i is after block i.
         var stages = new List<(string Label, double[] Vector)> { ("after the embeddings", trace.Input.Row(position)) };
         for (int i = 0; i < trace.Blocks.Count; i++) stages.Add(($"after block {i + 1}", trace.Blocks[i].ResidualOut.Row(position)));
-        var sizes = stages.Select(s => new LabeledValue(s.Label, Length(s.Vector))).ToList();
+        var sizes = stages.Select(s => new SizeRow(s.Label, Length(s.Vector))).ToList();
         Sizes = sizes;
         SizeMaximum = Math.Max(1e-12, sizes.Max(s => s.Value));
 
@@ -184,10 +190,13 @@ public sealed partial class ResidualLabViewModel : LabViewModel
         (NormBeforeMean, NormBeforeSpread) = MeanAndSpread(before);
         (NormAfterMean, NormAfterSpread) = MeanAndSpread(plain);
         (NormScaledMean, NormScaledSpread) = MeanAndSpread(scaled);
-        NormBeforeText = $"Before: mean {NumberText.Short(NormBeforeMean)}, spread {NumberText.Short(NormBeforeSpread)}";
-        NormAfterText = $"After layer norm: mean {NumberText.Short(NormAfterMean)}, spread {NumberText.Short(NormAfterSpread)}";
-        NormScaledText = $"After gamma and beta (what the model uses): mean {NumberText.Short(NormScaledMean)}, spread {NumberText.Short(NormScaledSpread)}";
+        NormBeforeText = $"Before: mean {Mean(NormBeforeMean)}, spread {NumberText.Short(NormBeforeSpread)}";
+        NormAfterText = $"After layer norm: mean {Mean(NormAfterMean)}, spread {NumberText.Short(NormAfterSpread)}";
+        NormScaledText = $"After gamma and beta (what the model uses): mean {Mean(NormScaledMean)}, spread {NumberText.Short(NormScaledSpread)}";
     }
+
+    /// <summary>A mean this close to zero is rounding error, not a number worth reading.</summary>
+    private static string Mean(double mean) => Math.Abs(mean) < 1e-9 ? "0 (to rounding)" : NumberText.Short(mean);
 
     /// <summary>Mean and standard deviation (the square root of the average squared distance from the mean).</summary>
     private static (double Mean, double Spread) MeanAndSpread(double[] v)

@@ -9,16 +9,16 @@
     <!-- DataContext: ResidualLabViewModel. -->
     <UserControl.Resources>
         <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
-        <DataTemplate x:Key="SizeRow" DataType="{x:Type vis:LabeledValue}">
+        <DataTemplate x:Key="SizeRow" DataType="{x:Type labs:SizeRow}">
             <Grid Margin="0,2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" MinWidth="200" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" MinWidth="90" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0" Text="{Binding Label}" />
-                <ProgressBar Grid.Column="1" Minimum="0" Height="20" Value="{Binding Value, Mode=OneWay}" AutomationProperties.Name="{Binding Label}"
+                <ProgressBar Grid.Column="1" Minimum="0" Height="20" Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource GridLineBrush}" BorderBrush="{DynamicResource BorderBrush}" Value="{Binding Value, Mode=OneWay}" AutomationProperties.Name="{Binding Label}"
                              Maximum="{Binding DataContext.SizeMaximum, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                 <TextBlock Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{StaticResource NumberFont}"
-                           Text="{Binding Value, StringFormat=0.###, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" />
+                           Text="{Binding ValueText}" />
             </Grid>
         </DataTemplate>
         <DataTemplate x:Key="Guess" DataType="{x:Type labs:LensGuess}">

@@ -108,4 +108,23 @@ public class FeedForwardTests : IDisposable
         await lab.WorkCompleted;
         Assert.Empty(lab.Contexts);
     }
+
+    [Fact]
+    public void ResearchNote_IsTheRuledWording()
+    {
+        Assert.Equal(
+            "Research suggests that feed-forward layers act partly like a store of patterns the model has learned (Geva et al., 2021). " +
+            "This is an active research area, not settled. A single neuron often does not have one tidy meaning.",
+            FeedForwardLabViewModel.ResearchNote);
+    }
+
+    [Fact]
+    public async Task TokenKey_IsNumberedFromZero_LikeTheStrip()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        Assert.StartsWith("0:t", lab.TokenKey);
+        Assert.Contains($"{lab.Activations!.Length - 1}:", lab.TokenKey);
+        Assert.DoesNotContain($"{lab.Activations.Length}:", lab.TokenKey);
+    }
 }
