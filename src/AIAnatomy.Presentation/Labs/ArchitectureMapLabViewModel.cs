@@ -87,14 +87,16 @@ public sealed partial class ArchitectureMapLabViewModel : LabViewModel
             new("position", "Position", 0.76, 0.18, $"{config.ContextLength} places", "position"),
             new("block", $"Block × {config.Layers}", 0.50, 0.30, layers, null),
             new("residual", "Residual stream", 0.50, 0.43, "runs through the block", "residual-stream"),
-            new("multihead", "Multi-head attention", 0.22, 0.57, "norm first", "multi-head"),
+            new("multihead", "Multi-head attention", 0.22, 0.57, $"{heads}, norm first", "multi-head"),
             new("attention", "Attention", 0.22, 0.71, "one head", "attention"),
         };
         var links = new List<NetworkEdge>
         {
             new("text", "tokens", "split"), new("tokens", "embed", "look up"), new("embed", "block", "add"),
             new("position", "block", "add"), new("block", "residual", "inside"),
-            new("attention", "multihead", $"× {heads} side by side"),
+            // The head count is in the Multi-head box itself: a label on this short arrow was pushed beside the
+            // "after the last block" arrow and seemed to name it.
+            new("attention", "multihead", null),
             // Each sublayer reads a normalised copy of the stream and adds its result back (final review M1); the diagram
             // draws a pair of opposite arrows side by side. They carry no text: on such short arrows the labels were pushed
             // beside other arrows and seemed to name them, so DiagramCaption says it instead (R37).

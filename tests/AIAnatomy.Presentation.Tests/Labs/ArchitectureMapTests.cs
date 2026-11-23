@@ -85,7 +85,8 @@ public class ArchitectureMapTests : IDisposable
         Assert.True(Edge("multihead", "residual"));     // each sublayer adds its result back into the residual stream
         Assert.True(Edge("feedforward", "residual"));
         Assert.True(Edge("attention", "multihead"));    // the heads sit side by side inside multi-head attention
-        Assert.Contains("side by side", lab.Edges.Single(e => e.FromId == "attention").Label);
+        Assert.Null(lab.Edges.Single(e => e.FromId == "attention").Label);   // short arrow: no label to stray
+        Assert.Contains("4 heads",lab.Nodes.Single(n => n.Id == "multihead").Value);
         Assert.False(Edge("multihead", "feedforward")); // not a chain: both sublayers work on the residual stream
         Assert.False(Edge("feedforward", "norm"));
         Assert.True(Edge("residual", "norm"));          // the final norm reads the residual stream after the last block
