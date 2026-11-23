@@ -94,10 +94,11 @@
             <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Status}" AutomationProperties.LiveSetting="Polite" />
             <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding LineText}" />
             <TextBlock Style="{StaticResource BodyText}" Text="{Binding WrongPoints}" />
+            <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:PerceptronPanelViewModel.RateNote}" />
             <c:ScatterPlot Points="{Binding Points}" Lines="{Binding Lines}" XAxisTitle="x1" YAxisTitle="x2" Height="380"
                            AutomationProperties.Name="The four input points and the decision line" />
             <TextBlock Style="{StaticResource MutedText}"
-                       Text="Circles are points that should give 0 and squares are points that should give 1. The dashed line is the decision line: the neuron answers 1 on the side away from the origin only if its sum is above 0 there." />
+                       Text="{x:Static labs:PerceptronPanelViewModel.LineCaption}" />
             <Border Style="{StaticResource Pane}" Padding="12" Margin="0,4,0,0" Visibility="{Binding IsXor, Converter={StaticResource VisibleIfTrue}}">
                 <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{x:Static labs:PerceptronPanelViewModel.XorNote}" />
             </Border>
@@ -163,7 +164,7 @@
                 </Grid>
                 <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource PathLine}" Focusable="False" />
             </StackPanel>
-            <TextBlock Style="{StaticResource MutedText}" Text="The first six steps and the last." />
+            <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:LossPanelViewModel.TableNote}" />
         </StackPanel>
 
         <!-- (c) Expression graph -->
@@ -173,13 +174,13 @@
                        Text="The graph computes L = (a·b + c)·f from four numbers. Change them: every value and every gradient is recomputed." />
             <WrapPanel Margin="0,4,0,4">
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="a" />
-                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding A, UpdateSourceTrigger=PropertyChanged, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="a" />
+                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding AText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="a" />
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="b" />
-                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding B, UpdateSourceTrigger=PropertyChanged, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="b" />
+                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding BText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="b" />
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="c" />
-                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding C, UpdateSourceTrigger=PropertyChanged, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="c" />
+                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding CText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="c" />
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="f" />
-                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding F, UpdateSourceTrigger=PropertyChanged, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="f" />
+                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding FText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="f" />
             </WrapPanel>
             <TextBlock Style="{StaticResource MutedText}" Text="Numbers from −100 to 100." />
             <c:NetworkDiagram Nodes="{Binding Nodes}" Edges="{Binding Edges}" Height="{DynamicResource DiagramHeight}" Margin="0,8,0,0" AutomationProperties.Name="Expression graph with the value and gradient of every node" />

@@ -23,14 +23,28 @@ public sealed class ProbabilityBars : ChartBase
     public static readonly DependencyProperty HighlightedLabelProperty = DependencyProperty.Register(nameof(HighlightedLabel), typeof(string),
         typeof(ProbabilityBars), new FrameworkPropertyMetadata(null, Relayout));
 
+    public static readonly DependencyProperty ScaleMaximumProperty = DependencyProperty.Register(nameof(ScaleMaximum), typeof(double),
+        typeof(ProbabilityBars), new FrameworkPropertyMetadata(1.0, Relayout));
+
+    public static readonly DependencyProperty KeepOrderProperty = DependencyProperty.Register(nameof(KeepOrder), typeof(bool),
+        typeof(ProbabilityBars), new FrameworkPropertyMetadata(false, Relayout));
+
     public ProbabilityBars() => ToolTipService.SetInitialShowDelay(this, 200);
 
     public IReadOnlyList<LabeledValue>? Items { get => (IReadOnlyList<LabeledValue>?)GetValue(ItemsProperty); set => SetValue(ItemsProperty, value); }
     /// <summary>The label of the chosen item, or null.</summary>
     public string? HighlightedLabel { get => (string?)GetValue(HighlightedLabelProperty); set => SetValue(HighlightedLabelProperty, value); }
 
-    /// <summary>The items in the order drawn: largest probability first (ties keep their order).</summary>
-    public IReadOnlyList<LabeledValue> Sorted => (Items ?? []).OrderByDescending(i => i.Value).ToList();
+    /// <summary>The value a full bar stands for (default 1, which is 100%). Charts that are compared side by side give the same value.</summary>
+    public double ScaleMaximum { get => (double)GetValue(ScaleMaximumProperty); set => SetValue(ScaleMaximumProperty, value); }
+    /// <summary>Draw the items in the order given instead of largest first, so two charts can line up row by row.</summary>
+    public bool KeepOrder { get => (bool)GetValue(KeepOrderProperty); set => SetValue(KeepOrderProperty, value); }
+
+    private double Scale => double.IsFinite(ScaleMaximum) && ScaleMaximum > 0 ? ScaleMaximum : 1;
+    private bool HasTag => !string.IsNullOrEmpty(HighlightedLabel);
+
+    /// <summary>The items in the order drawn: largest probability first (ties keep their order), or as given with <see cref="KeepOrder"/>.</summary>
+    public IReadOnlyList<LabeledValue> Sorted => KeepOrder ? (Items ?? []).ToList() : (Items ?? []).OrderByDescending(i => i.Value).ToList();
 
     private double RowHeight => Number("Ag", LabelSize, Foreground).Height * 1.6;
 
@@ -39,7 +53,7 @@ public sealed class ProbabilityBars : ChartBase
         var items = Sorted;
         double label = items.Max(i => Number(i.Label, LabelSize, Foreground, bold: true).Width) + 16;
         double percent = Number("100.00%", LabelSize, Foreground, bold: true).Width + 16;
-        double tag = Text(ChosenTag, LabelSize, Foreground, BoldFace).Width + 28;
+        double tag = HasTag ? Text(ChosenTag, LabelSize, Foreground, BoldFace).Width + 28 : 0;
         return (label, percent, tag);
     }
 
@@ -74,7 +88,7 @@ public sealed class ProbabilityBars : ChartBase
 
             var track = new Rect(barLeft, top + rowHeight * 0.18, barRoom, rowHeight * 0.64);
             dc.DrawRectangle(null, gridPen, track);
-            double p = double.IsFinite(item.Value) ? Math.Clamp(item.Value, 0, 1) : 0;
+            double p = double.IsFinite(item.Value) ? Math.Clamp(item.Value / Scale, 0, 1) : 0;
             dc.DrawRectangle(chosen ? Series2Brush : Series1Brush, null, new Rect(track.X, track.Y, track.Width * p, track.Height));
 
             var percent = Number(NumberText.Percent(item.Value), LabelSize, Foreground, bold: chosen);

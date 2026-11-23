@@ -135,7 +135,7 @@ public sealed partial class CrossEntropyPanelViewModel : ObservableObject
         Probability = p[actual];
         Loss = LossOf(Probability);
         string before = string.Concat(_ids.Take(i + 1).Select(id => Name(model, id)));
-        ContextText = $"After {PositionChoices[i]}, the text so far is: {before}";
+        ContextText = $"After place {i + 1} ({ActualOf(model, i)}), the text so far is: {before}";
         ActualText = Name(model, actual);
         ProbabilityText = NumberText.Percent(Probability);
         LossText = NumberText.Short(Loss);
@@ -150,6 +150,8 @@ public sealed partial class CrossEntropyPanelViewModel : ObservableObject
         BarsCaption = $"The model's {BarCount} most likely next characters" + (shown.Count > BarCount ? ", and the real one below them" : "") +
                       $". The bar marked “chosen” is the character that really came next; it was the model's number {rank} choice.";
     }
+
+    private string ActualOf(LanguageModel model, int i) => Name(model, _ids[i]);
 
     private static double LossOf(double p) => p > 0 ? -Math.Log(p) : double.PositiveInfinity;
 

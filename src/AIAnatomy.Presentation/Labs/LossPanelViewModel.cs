@@ -29,6 +29,8 @@ public sealed partial class LossPanelViewModel : ObservableObject
         "Along w2 the curve is steep, so each step multiplies w2 by (1 − 20 × rate). Above a rate of 0.1 that factor is below −1: " +
         "each step jumps over the bottom and lands further from it than before, so w2 grows instead of shrinking.";
 
+    public const string TableNote = "The start, the first five steps and the last.";
+
     public static IReadOnlyList<double> Levels { get; } = [1, 4, 10, 20, 40];
 
     public LossPanelViewModel()

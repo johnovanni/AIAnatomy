@@ -53,13 +53,26 @@ public class MainViewModelTests : IDisposable
     [Fact]
     public void Main_LabNotRegisteredYet_ShowsComingLater()
     {
-        var vm = _env.NewMain();
-        vm.SelectedSection = Section.Whole;
-        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "train");
+        // A copy of the content with one extra lesson whose lab will never be registered, so this test does not depend on which labs exist.
+        string content = Path.Combine(_env.Root, "content-copy");
+        CopyFolder(TestEnvironment.Content, content);
+        File.WriteAllText(Path.Combine(content, "lessons", "parts", "99-never.md"),
+            "---\nid: never-built\nsection: parts\norder: 99\ntitle: Never built\nlab: NeverRegisteredLab\nsources: textbook\n---\nA lesson for a test.\n");
+        var settings = _env.NewSettings();
+        var vm = new MainViewModel(LessonCatalog.Load(content), SourceList.Load(Path.Combine(content, "sources.json")), _env.NewActiveModels(settings), settings, content);
+        vm.SelectedSection = Section.Parts;
+        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "never-built");
 
         var lab = Assert.IsType<ComingLaterLabViewModel>(vm.CurrentLab);
         Assert.Equal("ComingLaterLab", lab.LabId);
         Assert.Equal("This lab is being built.", lab.Message);
+    }
+
+    private static void CopyFolder(string from, string to)
+    {
+        Directory.CreateDirectory(to);
+        foreach (string file in Directory.GetFiles(from)) File.Copy(file, Path.Combine(to, Path.GetFileName(file)));
+        foreach (string dir in Directory.GetDirectories(from)) CopyFolder(dir, Path.Combine(to, Path.GetFileName(dir)));
     }
 
     [Fact]

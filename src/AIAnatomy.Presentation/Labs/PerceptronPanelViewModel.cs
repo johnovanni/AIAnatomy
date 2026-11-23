@@ -33,6 +33,14 @@ public sealed partial class PerceptronPanelViewModel : ObservableObject
         "The neuron answers 1 when W1·x1 + W2·x2 + Bias is above 0, and 0 otherwise. The decision line is where that sum is exactly 0. " +
         "After each wrong answer, every weight is nudged by rate × (right answer − the neuron's answer) × its input.";
 
+    public const string RateNote =
+        "Starting from zero weights, the learning rate only scales the weights, so the decision line and the number of wrong points in each epoch do not change with it. " +
+        "The weights in the table just get bigger or smaller.";
+
+    public const string LineCaption =
+        "Circles are points that should give 0 and squares are points that should give 1. The dashed line is the decision line: " +
+        "the neuron answers 1 on the side of the line where the sum is above 0.";
+
     public static IReadOnlyList<string> DatasetNames { get; } = [AndName, OrName, XorName];
 
     private readonly Perceptron _perceptron = new();
@@ -140,11 +148,11 @@ public sealed partial class PerceptronPanelViewModel : ObservableObject
         else
         {
             var last = Epochs[^1];
+            string points = $"{last.Errors} {(last.Errors == 1 ? "point was" : "points were")} wrong";
             Status = last.Errors == 0
-                ? $"Done after {last.Epoch} {(last.Epoch == 1 ? "epoch" : "epochs")}: no point was wrong in the last pass."
-                : Epochs.Count >= EpochLimit
-                    ? $"Stopped at the limit of {EpochLimit} epochs, with {last.Errors} {(last.Errors == 1 ? "point" : "points")} still wrong."
-                    : $"Epoch {last.Epoch}: {last.Errors} {(last.Errors == 1 ? "point was" : "points were")} wrong in this pass.";
+                ? $"Done after {Epochs.Count} {(Epochs.Count == 1 ? "epoch" : "epochs")}: no point was wrong in the last pass."
+                : $"Epoch {Epochs.Count}: {points} in this pass." +
+                  (Epochs.Count >= EpochLimit ? $" The epoch limit is {EpochLimit}, so no more epochs will run." : "");
         }
     }
 

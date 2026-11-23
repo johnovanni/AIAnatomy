@@ -49,4 +49,14 @@ public static class AxisTicks
         double pad = (max - min) * 0.05;
         return (min - pad, max + pad);
     }
+
+    /// <summary>The smallest "nice" number (1, 2 or 5 times a power of ten) that is at least <paramref name="value"/>; 1 for a value that is not above 0 or not finite.</summary>
+    public static double NiceCeiling(double value)
+    {
+        if (!double.IsFinite(value) || value <= 0) return 1;
+        double power = Math.Pow(10, Math.Floor(Math.Log10(value)));
+        foreach (double m in new[] { 1.0, 2.0, 5.0, 10.0 })
+            if (m * power >= value * (1 - 1e-12)) return m * power;
+        return 10 * power;
+    }
 }

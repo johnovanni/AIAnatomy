@@ -26,7 +26,9 @@ public class SamplingTests : IDisposable
         lab.SampleHundredCommand.Execute(null);
         Assert.Equal(100, lab.SampleTotal);
         Assert.Equal(100, lab.SampleCounts.Sum(c => c.Count));
-        Assert.All(lab.Frequencies, f => Assert.Equal(lab.SampleCounts.Single(c => c.Token == f.Label).Count / 100.0, f.Value, 12));
+        Assert.All(lab.Frequencies.Where(f => f.Label != SamplingLabViewModel.OthersLabel),
+            f => Assert.Equal((lab.SampleCounts.SingleOrDefault(c => c.Token == f.Label)?.Count ?? 0) / 100.0, f.Value, 12));
+        Assert.Equal(1.0, lab.Frequencies.Sum(f => f.Value), 9);   // the rows plus "others" cover all 100 draws
     }
 
     [Fact]
@@ -128,6 +130,45 @@ public class SamplingTests : IDisposable
         Assert.Contains("same question can get different answers", SamplingLabViewModel.SamplingNote);
         Assert.Contains("not that the choice is correct", SamplingLabViewModel.ConfidenceNote);
         Assert.Contains("not what is true", SamplingLabViewModel.ConfidenceNote);
+    }
+
+    [Fact]
+    public void FrequencyRows_LineUpWithTheProbabilityRows()
+    {
+        var lab = new SamplingLabViewModel(_env.NewActiveModels());
+        lab.SampleHundredCommand.Execute(null);
+        Assert.Equal(lab.Bars.Select(b => b.Label), lab.Frequencies.Select(f => f.Label));
+        Assert.Equal(SamplingLabViewModel.OthersLabel, lab.Bars[^1].Label);
+        Assert.Equal(1.0, lab.Bars.Sum(b => b.Value), 9);
+    }
+
+    [Fact]
+    public void BothCharts_ShareOneScale_ThatFitsTheLongestBar()
+    {
+        var lab = new SamplingLabViewModel(_env.NewActiveModels()) { Temperature = 2 };
+        lab.SampleHundredCommand.Execute(null);
+        double longest = lab.Bars.Concat(lab.Frequencies).Max(b => b.Value);
+        Assert.True(lab.BarScaleMaximum >= longest - 1e-12);
+        Assert.Equal(AxisTicks.NiceCeiling(longest), lab.BarScaleMaximum, 12);
+        Assert.Contains($"a full bar is {NumberText.Percent(lab.BarScaleMaximum)}", lab.BarScaleCaption);
+        lab.Temperature = 0;   // one bar at 100%
+        Assert.Equal(1.0, lab.BarScaleMaximum, 12);
+    }
+
+    [Fact]
+    public void ShownText_ShowsTheTrailingSpaceAsAVisibleMark()
+    {
+        var lab = new SamplingLabViewModel(_env.NewActiveModels());
+        Assert.Equal("the␣fox␣and␣the␣", lab.ShownText);
+        lab.Text = "a\nb";
+        Assert.Equal("a↵b", lab.ShownText);
+    }
+
+    [Fact]
+    public void Wording_FollowsTheAccuracyRuling()
+    {
+        Assert.Contains("makes the top choice even more likely", SamplingLabViewModel.TemperatureNote);
+        Assert.Contains("built from random draws, one character at a time", SamplingLabViewModel.SamplingNote);
     }
 
     [Fact]

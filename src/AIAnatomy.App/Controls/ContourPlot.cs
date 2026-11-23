@@ -87,10 +87,12 @@ public sealed class ContourPlot : ChartBase
         }
 
         var pen = new Pen(Foreground, 1.5);
+        var contourHalo = new Pen(SurfaceBrush, 4);
         var labels = new List<(Point At, string Text)>();
         foreach (double level in Levels ?? [])
         {
             var segments = Contour(values, level);
+            foreach (var (p, q) in segments) dc.DrawLine(contourHalo, frame.Map(p.X, p.Y), frame.Map(q.X, q.Y));
             foreach (var (p, q) in segments) dc.DrawLine(pen, frame.Map(p.X, p.Y), frame.Map(q.X, q.Y));
             if (segments.Count > 0)
             {
@@ -115,36 +117,42 @@ public sealed class ContourPlot : ChartBase
     {
         var path = (Path ?? []).Where(p => double.IsFinite(p.X) && double.IsFinite(p.Y)).ToList();
         if (path.Count == 0) return;
-        var points = path.Select(p => frame.Map(p.X, p.Y)).ToList();
         var halo = new Pen(SurfaceBrush, 6) { LineJoin = PenLineJoin.Round };
         var line = new Pen(Foreground, 2.5) { DashStyle = new DashStyle(new DoubleCollection { 4, 2 }, 0), LineJoin = PenLineJoin.Round };
-        var geometry = new StreamGeometry();
-        using (var g = geometry.Open())
+
+        // Each step is cut to the axes (plus a small margin) in data coordinates first: a diverging path can be millions of
+        // pixels long, and only the visible part is drawn.
+        double mx = (XMax - XMin) * 0.02, my = (YMax - YMin) * 0.02;
+        double x0 = XMin - mx, x1 = XMax + mx, y0 = YMin - my, y1 = YMax + my;
+        for (int i = 1; i < path.Count; i++)
         {
-            g.BeginFigure(points[0], false, false);
-            if (points.Count > 1) g.PolyLineTo(points.Skip(1).ToList(), true, true);
+            if (SegmentClip.Clip(path[i - 1].X, path[i - 1].Y, path[i].X, path[i].Y, x0, x1, y0, y1) is not { } cut) continue;
+            var a = frame.Map(cut.From.X, cut.From.Y);
+            var b = frame.Map(cut.To.X, cut.To.Y);
+            dc.DrawLine(halo, a, b);
+            dc.DrawLine(line, a, b);
         }
-        geometry.Freeze();
-        dc.DrawGeometry(null, halo, geometry);
-        dc.DrawGeometry(null, line, geometry);
 
         double r = Math.Max(4, LabelSize * 0.25), big = Math.Max(8, LabelSize * 0.5);
         var ring = new Pen(SurfaceBrush, 1.5);
-        for (int i = 1; i < points.Count - 1; i++) dc.DrawEllipse(Foreground, ring, points[i], r, r);
-        if (points.Count > 1)
+        bool Visible(int i) => SegmentClip.Inside(path[i].X, path[i].Y, x0, x1, y0, y1);
+        for (int i = 1; i < path.Count - 1; i++)
+            if (Visible(i)) dc.DrawEllipse(Foreground, ring, frame.Map(path[i].X, path[i].Y), r, r);
+        if (path.Count > 1 && Visible(path.Count - 1))
+            dc.DrawGeometry(Foreground, ring, Diamond(frame.Map(path[^1].X, path[^1].Y), big * 1.15));
+        if (Visible(0))
         {
-            var e = points[^1];
-            dc.DrawGeometry(Foreground, ring, Diamond(e, big * 1.15));
+            var s = frame.Map(path[0].X, path[0].Y);
+            dc.DrawRectangle(Foreground, ring, new Rect(s.X - big * 0.85, s.Y - big * 0.85, big * 1.7, big * 1.7));
         }
-        var s = points[0];
-        dc.DrawRectangle(Foreground, ring, new Rect(s.X - big * 0.85, s.Y - big * 0.85, big * 1.7, big * 1.7));
 
         for (int i = 0; i < path.Count; i++)
         {
-            if (string.IsNullOrEmpty(path[i].Label)) continue;
+            if (string.IsNullOrEmpty(path[i].Label) || !Visible(i)) continue;
+            var at = frame.Map(path[i].X, path[i].Y);
             var text = Text(path[i].Label, LabelSize * 0.9, Foreground, BoldFace);
-            var plate = new Rect(points[i].X + big + 4, points[i].Y - text.Height / 2, text.Width + 6, text.Height);
-            if (plate.Right > frame.Plot.Right) plate.X = points[i].X - big - 4 - plate.Width;
+            var plate = new Rect(at.X + big + 4, at.Y - text.Height / 2, text.Width + 6, text.Height);
+            if (plate.Right > frame.Plot.Right) plate.X = at.X - big - 4 - plate.Width;
             dc.DrawRoundedRectangle(SurfaceBrush, null, plate, 3, 3);
             dc.DrawText(text, new Point(plate.X + 3, plate.Y));
         }

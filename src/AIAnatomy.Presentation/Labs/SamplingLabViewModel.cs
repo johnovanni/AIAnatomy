@@ -33,13 +33,14 @@ public sealed partial class SamplingLabViewModel : LabViewModel
     public const double MaxTemperature = 2.0;
     public const int MaxTopK = 50;
     public const double MinTopP = 0.1;
+    public const string OthersLabel = "others";
 
     public const string TemperatureNote =
-        "Temperature divides the scores before softmax turns them into probabilities. Below 1 it makes the top choices even more likely; above 1 it spreads the probability out. " +
+        "Temperature divides the scores before softmax turns them into probabilities. Below 1 it makes the top choice even more likely; above 1 it spreads the probability out. " +
         "At temperature 0 the model always takes its top choice.";
 
     public const string SamplingNote =
-        "Sampling is why the same question can get different answers: each answer is a random draw from these probabilities. " +
+        "Sampling is why the same question can get different answers: each answer is built from random draws, one character at a time. " +
         "The same seed gives the same draws every time; change the seed to get different ones.";
 
     public const string ConfidenceNote =
@@ -79,6 +80,9 @@ public sealed partial class SamplingLabViewModel : LabViewModel
     /// <summary>The most likely characters, as bars.</summary>
     [ObservableProperty] private IReadOnlyList<LabeledValue> bars = [];
     [ObservableProperty] private string barsCaption = "";
+    /// <summary>The value a full bar stands for, the same for the probability chart and the frequency chart so they can be compared.</summary>
+    [ObservableProperty] private double barScaleMaximum = 1;
+    [ObservableProperty] private string barScaleCaption = "";
     [ObservableProperty] private string topChoiceText = "";
 
     [ObservableProperty] private IReadOnlyList<SampleCount> sampleCounts = [];
@@ -141,9 +145,15 @@ public sealed partial class SamplingLabViewModel : LabViewModel
         var seen = Enumerable.Range(0, counts.Length).Where(i => counts[i] > 0).OrderByDescending(i => counts[i]).ThenBy(i => i).ToList();
         SampleCounts = seen.Select(i => new SampleCount(Name(model, i), counts[i])).ToList();
         SampleTotal = counts.Sum();
-        Frequencies = seen.Take(ShownCount).Select(i => new LabeledValue(Name(model, i), (double)counts[i] / SampleSize)).ToList();
-        SampleCaption = $"{SampleTotal} draws with seed {Seed}. Each bar is the share of the draws that gave that character, so 31% means 31 of the 100." +
-            (seen.Count > ShownCount ? $" Showing the {ShownCount} most often drawn of {seen.Count}." : "");
+        // The same characters in the same order as the probability bars, plus "others", so the rows line up.
+        var shown = _shownIds;
+        var rows = shown.Select(i => new LabeledValue(Name(model, i), (double)counts[i] / SampleSize)).ToList();
+        int other = counts.Sum() - shown.Sum(i => counts[i]);
+        if (shown.Count < counts.Length) rows.Add(new LabeledValue(OthersLabel, (double)other / SampleSize));
+        Frequencies = rows;
+        UpdateScale();
+        SampleCaption = $"{SampleTotal} draws with seed {Seed}. Each bar is the share of the draws that gave that character, so 31% means 31 of the 100. " +
+            $"The rows are the same characters as in the probability chart; “{OthersLabel}” adds up all the rest.";
     }
 
     /// <summary>Writes 200 characters after the typed text, one random draw at a time, using the seed.</summary>
@@ -173,9 +183,9 @@ public sealed partial class SamplingLabViewModel : LabViewModel
             GenerateStatus = $"{GenerateLength} new characters, written with seed {seed}. The same text, seed and settings always give the same writing.";
         }
         catch (OperationCanceledException) { /* a newer request, or leaving the lab */ }
-        catch (Exception e)
+        catch (Exception)
         {
-            if (generation == _generation) GenerateStatus = "The writing could not be done: " + e.Message;
+            if (generation == _generation) GenerateStatus = "The writing could not be done. Please try again.";
         }
         finally
         {
@@ -190,6 +200,7 @@ public sealed partial class SamplingLabViewModel : LabViewModel
         _generation++;
         SampleCounts = [];
         Frequencies = [];
+        UpdateScale();
         SampleTotal = 0;
         SampleCaption = "";
         Generated = "";
@@ -213,12 +224,14 @@ public sealed partial class SamplingLabViewModel : LabViewModel
             Probabilities = [];
             Scores = [];
             Bars = [];
+            _shownIds = [];
+            UpdateScale();
             return;
         }
         Message = null;
         var prediction = model.Predict(Text);
         Notice = prediction.WasTruncated ? LabText.TruncationNote(config.ContextLength) : null;
-        ShownText = LabText.ShowNewlines(model.Tokenizer.Decode(prediction.UsedTokenIds));
+        ShownText = LabText.Visible(model.Tokenizer.Decode(prediction.UsedTokenIds));
         var logits = prediction.Forward.Logits;
         var last = logits.Row(logits.Shape[0] - 1);
         var p = Probabilities = Sampling.Probabilities(last, Settings);
@@ -226,11 +239,25 @@ public sealed partial class SamplingLabViewModel : LabViewModel
         // Highest score first (ties keep the lower index), the same order Sampling uses, so scores and bars line up.
         var order = Enumerable.Range(0, last.Length).OrderByDescending(i => last[i]).ThenBy(i => i).Take(ShownCount).ToList();
         Scores = order.Select((i, rank) => new ScoreRow(rank + 1, Name(model, i), last[i], NumberText.Short(last[i]), NumberText.Percent(p[i]))).ToList();
-        Bars = order.Select(i => new LabeledValue(Name(model, i), p[i])).ToList();
+        _shownIds = order;
+        var bars = order.Select(i => new LabeledValue(Name(model, i), p[i])).ToList();
+        if (order.Count < p.Length) bars.Add(new LabeledValue(OthersLabel, Math.Max(0, 1 - order.Sum(i => p[i]))));
+        Bars = bars;
+        UpdateScale();
         int nonZero = p.Count(v => v > 0);
-        BarsCaption = $"The {order.Count} highest-scoring characters of {last.Length}. {nonZero} {(nonZero == 1 ? "character has" : "characters have")} a probability above 0 after your settings.";
+        BarsCaption = $"The {order.Count} highest-scoring characters of {last.Length}, and “{OthersLabel}” for all the rest. {nonZero} {(nonZero == 1 ? "character has" : "characters have")} a probability above 0 after your settings.";
         int top = Array.IndexOf(p, p.Max());
         TopChoiceText = $"Most likely next character: {Name(model, top)} at {NumberText.Percent(p[top])}.";
+    }
+
+    private IReadOnlyList<int> _shownIds = [];
+
+    /// <summary>Both charts get one scale: the largest bar in either, rounded up to a nice number.</summary>
+    private void UpdateScale()
+    {
+        double max = Bars.Concat(Frequencies).Select(b => b.Value).DefaultIfEmpty(0).Max();
+        BarScaleMaximum = AxisTicks.NiceCeiling(max);
+        BarScaleCaption = Bars.Count == 0 ? "" : $"Both charts use the same scale: a full bar is {NumberText.Percent(BarScaleMaximum)}.";
     }
 
     private static string Name(LanguageModel model, int id) => LabText.Visible(model.Tokenizer.TokenText(id));

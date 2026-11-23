@@ -311,6 +311,120 @@ public class LearningTests : IDisposable
     }
 
     [Fact]
+    public void CrossEntropy_ContextSentenceNamesThePlaceAndItsCharacter()
+    {
+        var ce = NewLab().CrossEntropy;
+        ce.Text = "abcabc";
+        ce.PositionIndex = 1;
+        Assert.StartsWith("After place 2 (b), the text so far is: ab", ce.ContextText);
+    }
+
+    [Fact]
+    public void LearningRate_OnlyScalesTheWeights_SoErrorsAndLineStay()
+    {
+        var p = NewLab().Perceptron;
+        p.Dataset = "OR";
+        p.RunCommand.Execute(null);
+        var errors = p.Epochs.Select(e => e.Errors).ToList();
+        var line = p.Lines[0].Points;
+        p.Rate = 0.5;
+        p.RunCommand.Execute(null);
+        Assert.Equal(errors, p.Epochs.Select(e => e.Errors).ToList());
+        for (int i = 0; i < 2; i++)
+        {
+            Assert.Equal(line[i].X, p.Lines[0].Points[i].X, 9);
+            Assert.Equal(line[i].Y, p.Lines[0].Points[i].Y, 9);
+        }
+        Assert.Contains("only scales the weights", PerceptronPanelViewModel.RateNote);
+    }
+
+    [Fact]
+    public void PerceptronStatus_UsesTheTableEpochCount_EvenAfterTheLimitIsLowered()
+    {
+        var p = NewLab().Perceptron;
+        p.Dataset = "XOR";
+        p.RunCommand.Execute(null);
+        p.EpochLimit = 10;
+        Assert.StartsWith("Epoch 100:", p.Status);
+        Assert.Contains("epoch limit is 10", p.Status);
+        Assert.Equal(100, p.Epochs[^1].Epoch);
+    }
+
+    [Fact]
+    public void Captions_FollowTheAccuracyRuling()
+    {
+        Assert.Contains("the neuron answers 1 on the side of the line where the sum is above 0", PerceptronPanelViewModel.LineCaption);
+        Assert.Equal("The start, the first five steps and the last.", LossPanelViewModel.TableNote);
+    }
+
+    [Theory]
+    [InlineData("0.", 0.0)]
+    [InlineData("0.5", 0.5)]
+    [InlineData("-0.5", -0.5)]
+    [InlineData("1e1", 10.0)]
+    [InlineData(" 7 ", 7.0)]
+    public void GraphBoxes_TakeDecimalsAsTheyAreTyped(string typed, double expected)
+    {
+        var g = NewLab().Graph;
+        g.AText = typed;
+        Assert.Equal(expected, g.A);
+        Assert.Equal(typed, g.AText);   // the box is not rewritten while typing
+    }
+
+    [Fact]
+    public void GraphBoxes_TypingMinusThenDigits_WorksStepByStep()
+    {
+        var g = NewLab().Graph;
+        foreach (string step in new[] { "-", "-0", "-0.", "-0.2" })
+        {
+            g.BText = step;
+            Assert.Equal(step, g.BText);
+        }
+        Assert.Equal(-0.2, g.B);
+        Assert.Equal(0.4, g.Rows.Single(r => r.Name == "a").Gradient, 9);   // dL/da = f * b = -2 * -0.2
+    }
+
+    [Fact]
+    public void GraphBoxes_TextThatIsNotANumberKeepsTheLastGoodNumber()
+    {
+        var g = NewLab().Graph;
+        g.BText = "-0.2";
+        g.BText = "-";
+        Assert.Equal(-0.2, g.B);
+        g.BText = "";
+        Assert.Equal(-0.2, g.B);
+        // dL/da = f * b = -2 * -0.2
+        Assert.Equal(0.4, g.Rows.Single(r => r.Name == "a").Gradient, 9);
+    }
+
+    [Fact]
+    public void GraphBoxes_LargeAndNotANumberTextAreCorrected()
+    {
+        var g = NewLab().Graph;
+        g.CText = "5000";
+        Assert.Equal(100, g.C);
+        Assert.Equal("100", g.CText);
+        g.FText = "NaN";
+        Assert.Equal(0, g.F);
+        Assert.Equal("0", g.FText);
+        g.Reset();
+        Assert.Equal("2", g.AText);
+        Assert.Equal("-3", g.BText);
+        Assert.Equal("10", g.CText);
+        Assert.Equal("-2", g.FText);
+    }
+
+    [Fact]
+    public void GraphBoxes_ProgrammaticChange_UpdatesTheBox()
+    {
+        var g = NewLab().Graph;
+        g.A = 0.25;
+        Assert.Equal("0.25", g.AText);
+        g.A = -4;
+        Assert.Equal("-4", g.AText);
+    }
+
+    [Fact]
     public void LabReset_RestoresAllFourParts()
     {
         var lab = NewLab();

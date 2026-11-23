@@ -1,3 +1,4 @@
+using System.Globalization;
 using AIAnatomy.Core;
 using AIAnatomy.Models.Toys;
 using AIAnatomy.Presentation.Visuals;
@@ -32,6 +33,12 @@ public sealed partial class GraphPanelViewModel : ObservableObject
     [ObservableProperty] private double b = DefaultB;
     [ObservableProperty] private double c = DefaultC;
     [ObservableProperty] private double f = DefaultF;
+    // What is typed in the four boxes. A number is read after every key; text that is not (yet) a number, such as "-" or "", is left alone
+    // and the last good number is kept, so "0." and "-0.5" can be typed. The box is rewritten only when the number used differs from what was typed.
+    [ObservableProperty] private string aText = "2";
+    [ObservableProperty] private string bText = "-3";
+    [ObservableProperty] private string cText = "10";
+    [ObservableProperty] private string fText = "-2";
     [ObservableProperty] private IReadOnlyList<GraphNodeRow> rows = [];
     [ObservableProperty] private IReadOnlyList<string> working = [];
     [ObservableProperty] private IReadOnlyList<NetworkNode> nodes = [];
@@ -41,10 +48,30 @@ public sealed partial class GraphPanelViewModel : ObservableObject
         new("a", "e", "×"), new("b", "e", "×"), new("e", "d", "+"), new("c", "d", "+"), new("d", "L", "×"), new("f", "L", "×"),
     ];
 
-    partial void OnAChanged(double value) => Changed(ref a, value, nameof(A));
-    partial void OnBChanged(double value) => Changed(ref b, value, nameof(B));
-    partial void OnCChanged(double value) => Changed(ref c, value, nameof(C));
-    partial void OnFChanged(double value) => Changed(ref f, value, nameof(F));
+    partial void OnAChanged(double value) { Changed(ref a, value, nameof(A)); SyncText(A, AText, t => AText = t); }
+    partial void OnBChanged(double value) { Changed(ref b, value, nameof(B)); SyncText(B, BText, t => BText = t); }
+    partial void OnCChanged(double value) { Changed(ref c, value, nameof(C)); SyncText(C, CText, t => CText = t); }
+    partial void OnFChanged(double value) { Changed(ref f, value, nameof(F)); SyncText(F, FText, t => FText = t); }
+
+    partial void OnATextChanged(string value) => Typed(value, A, v => A = v);
+    partial void OnBTextChanged(string value) => Typed(value, B, v => B = v);
+    partial void OnCTextChanged(string value) => Typed(value, C, v => C = v);
+    partial void OnFTextChanged(string value) => Typed(value, F, v => F = v);
+
+    private static bool TryRead(string? text, out double value) =>
+        double.TryParse(text?.Trim().Replace('−', '-'), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+
+    private static string Write(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+
+    private static void Typed(string text, double current, Action<double> set)
+    {
+        if (TryRead(text, out double v) && v != current) set(v);
+    }
+
+    private static void SyncText(double used, string text, Action<string> set)
+    {
+        if (!TryRead(text, out double typed) || typed != used) set(Write(used));
+    }
 
     /// <summary>Keeps a typed number usable: not-a-number is put back to 0 and large numbers are limited to ±100 (the box is told, so it shows the number used).</summary>
     private void Changed(ref double field, double value, string name)
@@ -69,6 +96,7 @@ public sealed partial class GraphPanelViewModel : ObservableObject
         C = DefaultC;
         F = DefaultF;
         _syncing = false;
+        AText = Write(A); BText = Write(B); CText = Write(C); FText = Write(F);
         Refresh();
     }
 
