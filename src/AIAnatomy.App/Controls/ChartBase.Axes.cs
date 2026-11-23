@@ -19,8 +19,8 @@ public abstract partial class ChartBase
     {
         double label = LabelSize;
         double tickCount = Math.Clamp(bounds.Width / (label * 6), 2, 8);
-        var yTicks = ChartMath.Ticks(yMin, yMax, Math.Clamp((int)(bounds.Height / (label * 3)), 2, 8));
-        var xTicks = ChartMath.Ticks(xMin, xMax, (int)tickCount);
+        var yTicks = AxisTicks.Ticks(yMin, yMax, Math.Clamp((int)(bounds.Height / (label * 3)), 2, 8));
+        var xTicks = AxisTicks.Ticks(xMin, xMax, (int)tickCount);
         double yLabelWidth = yTicks.Select(t => Number(NumberText.Tick(t), label, Foreground).Width).DefaultIfEmpty(0).Max();
         double lineHeight = Number("0", label, Foreground).Height;
         double titleHeight = string.IsNullOrWhiteSpace(yTitle) ? 0 : Text(yTitle, label, MutedBrush, maxWidth: bounds.Width).Height + 6;

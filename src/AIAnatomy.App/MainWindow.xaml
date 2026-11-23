@@ -92,51 +92,58 @@
                        FontWeight="SemiBold" AutomationProperties.LiveSetting="Assertive" />
         </Border>
 
-        <Grid Margin="12">
-            <!-- The lesson: lessons list, lab, explanation (spec 5.1). -->
-            <Grid x:Name="LessonPage" Visibility="{Binding IsShowingLesson, Converter={StaticResource Visible}}">
+        <!-- Spec 5.1: the lessons list always stays on the left; the lab and explanation (columns 2 to 4) are swapped
+             for the Sources or Settings page, so clicking a lesson there goes straight back to it. -->
+        <Grid x:Name="Body" Margin="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.75*" MinWidth="200" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="2*" MinWidth="360" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="1.25*" MinWidth="260" />
+            </Grid.ColumnDefinitions>
+
+            <Border x:Name="LessonsPane" Grid.Column="0" Style="{StaticResource Pane}" Padding="8,12">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource PaneTitle}" Text="Lessons" />
+                    <ListBox x:Name="LessonList" Style="{StaticResource PlainList}" ItemsSource="{Binding Lessons}"
+                             SelectedItem="{Binding SelectedLesson}" AutomationProperties.Name="Lessons">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource LessonItem}">
+                                <EventSetter Event="PreviewMouseLeftButtonUp" Handler="OnLessonClicked" />
+                                <EventSetter Event="KeyDown" Handler="OnLessonKey" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type lessons:Lesson}">
+                                <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <Grid x:Name="LessonPage" Grid.Column="2" Grid.ColumnSpan="3"
+                  Visibility="{Binding IsShowingLesson, Converter={StaticResource Visible}}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="0.75*" MinWidth="200" />
-                    <ColumnDefinition Width="12" />
                     <ColumnDefinition Width="2*" MinWidth="360" />
                     <ColumnDefinition Width="12" />
                     <ColumnDefinition Width="1.25*" MinWidth="260" />
                 </Grid.ColumnDefinitions>
-
-                <Border Grid.Column="0" Style="{StaticResource Pane}" Padding="8,12">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource PaneTitle}" Text="Lessons" />
-                        <ListBox x:Name="LessonList" Style="{StaticResource PlainList}" ItemsSource="{Binding Lessons}"
-                                 SelectedItem="{Binding SelectedLesson}" AutomationProperties.Name="Lessons">
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource LessonItem}">
-                                    <EventSetter Event="PreviewMouseLeftButtonUp" Handler="OnLessonClicked" />
-                                    <EventSetter Event="KeyDown" Handler="OnLessonKey" />
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="{x:Type lessons:Lesson}">
-                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </DockPanel>
-                </Border>
-
-                <Border Grid.Column="2" Style="{StaticResource Pane}">
+                <Border Grid.Column="0" Style="{StaticResource Pane}">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource HeadingText}" Text="{Binding SelectedLesson.Title}" />
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                        <ScrollViewer Style="{StaticResource PaneScroller}" AutomationProperties.Name="Lab">
                             <ContentControl Content="{Binding CurrentLab}" Focusable="False" IsTabStop="False" />
                         </ScrollViewer>
                     </DockPanel>
                 </Border>
 
-                <Border Grid.Column="4" Style="{StaticResource Pane}">
+                <Border Grid.Column="2" Style="{StaticResource Pane}">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource PaneTitle}" Text="Explanation" />
-                        <ScrollViewer x:Name="ExplanationScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                      Focusable="False" Padding="0,0,8,0">
+                        <ScrollViewer x:Name="ExplanationScroller" Style="{StaticResource PaneScroller}" Padding="0,0,8,0"
+                                      AutomationProperties.Name="Explanation">
                             <StackPanel>
                                 <c:MarkdownView Document="{Binding Explanation}" />
                                 <Expander Header="Show formula" Margin="0,12,0,0" AutomationProperties.Name="Show formula"
@@ -157,11 +164,11 @@
                 </Border>
             </Grid>
 
-            <v:SourcesView Visibility="{Binding IsShowingSources, Converter={StaticResource Visible}}" />
-            <v:SettingsView Visibility="{Binding IsShowingSettings, Converter={StaticResource Visible}}" />
+            <v:SourcesView Grid.Column="2" Grid.ColumnSpan="3" Visibility="{Binding IsShowingSources, Converter={StaticResource Visible}}" />
+            <v:SettingsView Grid.Column="2" Grid.ColumnSpan="3" Visibility="{Binding IsShowingSettings, Converter={StaticResource Visible}}" />
 
-            <!-- Used only by the render-png gallery diagnostic. -->
-            <ContentControl x:Name="DiagnosticPage" Visibility="Collapsed" Focusable="False" />
+            <!-- Used only by the render-png gallery diagnostic; it covers the whole width. -->
+            <ContentControl x:Name="DiagnosticPage" Grid.ColumnSpan="5" Visibility="Collapsed" Focusable="False" />
         </Grid>
     </DockPanel>
 </Window>

@@ -51,9 +51,9 @@ public sealed class LineChart : ChartBase
     private AxisFrame Frame(double legendHeight)
     {
         var points = AllPoints.ToList();
-        var (xMin, xMax) = points.Count > 1 && points.Max(p => p.X) > points.Min(p => p.X)
-            ? (points.Min(p => p.X), points.Max(p => p.X)) : ChartMath.Pad(points.Min(p => p.X), points.Max(p => p.X));
-        var (yMin, yMax) = ChartMath.Pad(points.Min(p => p.Y), points.Max(p => p.Y));
+        // The x axis starts and ends at the data (widened only when all x are nearly equal); y gets 5% room.
+        var (xMin, xMax) = AxisTicks.Widen(points.Min(p => p.X), points.Max(p => p.X));
+        var (yMin, yMax) = AxisTicks.Pad(points.Min(p => p.Y), points.Max(p => p.Y));
         var bounds = new Rect(0, legendHeight + Gap, ActualWidth, Math.Max(40, ActualHeight - legendHeight - Gap));
         return LayoutAxes(bounds, xMin, xMax, yMin, yMax, XAxisTitle, YAxisTitle);
     }

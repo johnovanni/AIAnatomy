@@ -109,15 +109,6 @@ public sealed class NetworkDiagram : ChartBase
             var end = EdgePoint(to, Centre(from));
             dc.DrawLine(arrowPen, start, end);
             DrawArrowHead(dc, start, end);
-            if (!string.IsNullOrEmpty(edge.Label))
-            {
-                var text = Text(edge.Label, LabelSize * 0.85 * scale, MutedBrush);
-                var mid = new Point((start.X + end.X) / 2, (start.Y + end.Y) / 2);
-                if ((end - start).Length < text.Width + 16) mid.Y -= text.Height * 0.9;   // too short to sit on: put it above
-                var plate = new Rect(mid.X - text.Width / 2 - 4, mid.Y - text.Height / 2 - 1, text.Width + 8, text.Height + 2);
-                dc.DrawRoundedRectangle(SurfaceBrush, null, plate, 4, 4);
-                dc.DrawText(text, new Point(plate.X + 4, plate.Y + 1));
-            }
         }
 
         var linked = Linked;
@@ -135,6 +126,38 @@ public sealed class NetworkDiagram : ChartBase
                 dc.DrawRoundedRectangle(null, new Pen(FocusBrush, 3), Inflated(ring, 5), 10, 10);
             }
         }
+
+        // Arrow labels last, so no box paints over them, and placed clear of every box.
+        foreach (var edge in Edges ?? [])
+        {
+            if (string.IsNullOrEmpty(edge.Label) || !boxes.TryGetValue(edge.FromId, out var from) || !boxes.TryGetValue(edge.ToId, out var to)) continue;
+            var text = Text(edge.Label, LabelSize * 0.85 * scale, MutedBrush);
+            var plate = LabelPlate(EdgePoint(from, Centre(to)), EdgePoint(to, Centre(from)), text, boxes.Values);
+            dc.DrawRoundedRectangle(SurfaceBrush, null, plate, 4, 4);
+            dc.DrawText(text, new Point(plate.X + 4, plate.Y + 1));
+        }
+    }
+
+    /// <summary>
+    /// Where an arrow's label goes: on the middle of the arrow if that is clear of all boxes, otherwise moved
+    /// sideways from the arrow, step by step on alternate sides, to the first place that touches no box.
+    /// </summary>
+    private static Rect LabelPlate(Point start, Point end, FormattedText text, IEnumerable<Rect> boxes)
+    {
+        var mid = new Point((start.X + end.X) / 2, (start.Y + end.Y) / 2);
+        var along = end - start;
+        var side = along.Length < 1e-9 ? new Vector(0, -1) : new Vector(along.Y, -along.X) / along.Length;
+        if (side.Y > 0 || (side.Y == 0 && side.X < 0)) side = -side;   // try above (or right of) the arrow first
+        double w = text.Width + 8, h = text.Height + 2;
+        double step = Math.Abs(side.X) * w + Math.Abs(side.Y) * h;   // the plate's size across the arrow
+        var all = boxes.ToList();
+        Rect At(Point c) => new(c.X - w / 2, c.Y - h / 2, w, h);
+        foreach (int k in new[] { 0, 1, -1, 2, -2, 3, -3 })
+        {
+            var plate = At(mid + side * (k * step * 0.75));
+            if (!all.Any(b => Inflated(b, 2).IntersectsWith(plate))) return plate;
+        }
+        return At(mid);
     }
 
     private static Point Centre(Rect r) => new(r.X + r.Width / 2, r.Y + r.Height / 2);

@@ -156,8 +156,8 @@ public sealed class MarkdownView : Decorator
             case BoldRun b: return new Bold(new Run(b.Text));
             case ItalicRun i: return new Italic(new Run(i.Text));
             case LessonLink link:
+                // Colour and the keyboard-focus look come from the Hyperlink style in Shared.xaml.
                 var hyperlink = new Hyperlink(new Run(link.Text)) { ToolTip = "Opens that lesson" };
-                hyperlink.SetResourceReference(TextElement.ForegroundProperty, "LinkBrush");
                 hyperlink.Click += (_, _) => RaiseEvent(new NavigateRequestedEventArgs(NavigateRequestedEvent, this, link.LessonId));
                 return hyperlink;
             default: return new Run(inline.ToString());

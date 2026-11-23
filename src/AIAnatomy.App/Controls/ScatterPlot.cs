@@ -53,8 +53,8 @@ public sealed class ScatterPlot : ChartBase
         double legend = DrawLegend(null);
         double readout = ReadoutText().Height;
         var points = Points!;
-        var (xMin, xMax) = ChartMath.Pad(points.Min(p => p.X), points.Max(p => p.X));
-        var (yMin, yMax) = ChartMath.Pad(points.Min(p => p.Y), points.Max(p => p.Y));
+        var (xMin, xMax) = AxisTicks.Pad(points.Min(p => p.X), points.Max(p => p.X));
+        var (yMin, yMax) = AxisTicks.Pad(points.Min(p => p.Y), points.Max(p => p.Y));
         var bounds = new Rect(0, legend + Gap, ActualWidth, Math.Max(40, ActualHeight - legend - Gap - readout - Gap));
         return (legend, readout, LayoutAxes(bounds, xMin, xMax, yMin, yMax, XAxisTitle, YAxisTitle), bounds);
     }

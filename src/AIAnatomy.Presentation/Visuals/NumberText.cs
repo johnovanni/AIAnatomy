@@ -21,15 +21,20 @@ public static class NumberText
     }
 
     /// <summary>
-    /// Three decimals; whole numbers from 1 up, and anything from 1,000 up, without decimals; very small numbers as 1.23e−5.
+    /// Three decimals; whole numbers from 1 up, and anything from 1,000 up, without decimals; very small numbers as
+    /// 1.23e−5. (One parameter only, so <c>values.Select(NumberText.Short)</c> can never pick up the index.)
     /// </summary>
-    public static string Short(double value)
+    public static string Short(double value) => ShortWithDecimals(value, 3);
+
+    /// <summary><see cref="Short"/> with a chosen number of decimals (for squares too small for three).</summary>
+    public static string ShortWithDecimals(double value, int decimals)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(decimals);
         if (!double.IsFinite(value)) return Exact(value);
         double size = Math.Abs(value);
         string text = size >= 1000 || (size >= 1 && value == Math.Round(value)) ? value.ToString("#,0", Invariant)
-            : size != 0 && size < 0.0005 ? value.ToString("0.##e0", Invariant)
-            : value.ToString("0.000", Invariant);
+            : size != 0 && size < 0.5 * Math.Pow(10, -decimals) ? value.ToString("0.##e0", Invariant)
+            : value.ToString(decimals == 0 ? "0" : "0." + new string('0', decimals), Invariant);
         return WithMinus(text);
     }
 

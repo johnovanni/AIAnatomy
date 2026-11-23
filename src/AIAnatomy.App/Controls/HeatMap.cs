@@ -100,7 +100,9 @@ public sealed class HeatMap : ChartBase
         var caption = CaptionText(width);
         double captionHeight = caption == null ? 0 : caption.Height + Gap;
         double rowLabelWidth = Enumerable.Range(0, rows).Max(r => Text(RowName(r), label, Foreground, BoldFace).Width) + 12;
-        double cell = double.IsFinite(width) ? Math.Clamp((width - rowLabelWidth - 2) / cols, 4, MaxCell) : UnboundedCell;
+        // The largest square grows with the text, so the numbers inside still fit at large text sizes.
+        double maxCell = Math.Max(MaxCell, ValueWidth(3) + 8);
+        double cell = double.IsFinite(width) ? Math.Clamp((width - rowLabelWidth - 2) / cols, 4, maxCell) : Math.Max(UnboundedCell, ValueWidth(3) + 8);
         double columnLabelWidth = Enumerable.Range(0, cols).Max(c => Text(ColumnName(c), label, Foreground, BoldFace).Width);
         bool rotate = columnLabelWidth > cell - 4;
         double columnLabelHeight = (rotate ? columnLabelWidth : Text("Ag", label, Foreground).Height) + 8;
@@ -156,8 +158,10 @@ public sealed class HeatMap : ChartBase
         }
 
         // The squares.
-        double valueSize = label * 0.8;
-        bool writeValues = ShowCellValues && Number(NumberText.Short(-0.5), valueSize, Foreground).Width + 6 <= l.Cell;
+        double valueSize = ValueSize;
+        // Three decimals if they fit, else two; otherwise no numbers in the squares (the readout always has the exact value).
+        int decimals = ValueWidth(3) + 6 <= l.Cell ? 3 : ValueWidth(2) + 6 <= l.Cell ? 2 : -1;
+        bool writeValues = ShowCellValues && decimals >= 0;
         for (int r = 0; r < rows; r++)
         for (int c = 0; c < cols; c++)
         {
@@ -168,7 +172,7 @@ public sealed class HeatMap : ChartBase
             dc.DrawRectangle(new SolidColorBrush(colour), null, rect);
             if (writeValues)
             {
-                var text = Number(NumberText.Short(v), valueSize, ChartMath.TextOn(colour));
+                var text = Number(NumberText.ShortWithDecimals(v, decimals), valueSize, ChartMath.TextOn(colour));
                 dc.DrawText(text, new Point(rect.X + (rect.Width - text.Width) / 2, rect.Y + (rect.Height - text.Height) / 2));
             }
         }
@@ -262,6 +266,11 @@ public sealed class HeatMap : ChartBase
         }
         return formatted;
     }
+
+    private double ValueSize => LabelSize * 0.8;
+
+    /// <summary>Width of a typical number written in a square with this many decimals (a negative one, the widest).</summary>
+    private double ValueWidth(int decimals) => Number(NumberText.ShortWithDecimals(-0.5, decimals), ValueSize, Foreground).Width;
 
     private (double Min, double Max) Range(double[,] values)
     {

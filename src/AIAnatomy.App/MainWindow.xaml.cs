@@ -30,6 +30,7 @@ public partial class MainWindow : Window
         DiagnosticPage.Content = page;
         DiagnosticPage.Visibility = Visibility.Visible;
         LessonPage.Visibility = Visibility.Collapsed;
+        LessonsPane.Visibility = Visibility.Collapsed;
     }
 
     // A click on a lesson, even the one already selected, opens it (and leaves Sources or Settings).

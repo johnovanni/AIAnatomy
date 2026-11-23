@@ -8,7 +8,7 @@
             <Setter Property="Margin" Value="0,0,12,12" />
         </Style>
     </UserControl.Resources>
-    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+    <ScrollViewer x:Name="Scroller" Style="{StaticResource PaneScroller}" AutomationProperties.Name="Gallery">
         <StackPanel x:Name="Panel">
             <TextBlock Style="{StaticResource HeadingText}" Text="Control gallery" />
             <TextBlock Style="{StaticResource MutedText}" Text="Every chart and view with fixed sample numbers." />

@@ -2,32 +2,9 @@ using System.Windows.Media;
 
 namespace AIAnatomy.App.Controls;
 
-/// <summary>Small helpers shared by the charts: axis ticks and colour mixing.</summary>
+/// <summary>Colour helpers shared by the charts (axis maths is in Presentation.Visuals.AxisTicks).</summary>
 internal static class ChartMath
 {
-    /// <summary>"Nice" tick values (steps of 1, 2 or 5 times a power of ten) covering min..max, about <paramref name="count"/> of them.</summary>
-    public static IReadOnlyList<double> Ticks(double min, double max, int count)
-    {
-        if (!double.IsFinite(min) || !double.IsFinite(max)) return [];
-        if (max <= min) return [min];
-        double rough = (max - min) / Math.Max(1, count);
-        double power = Math.Pow(10, Math.Floor(Math.Log10(rough)));
-        double step = new[] { 1.0, 2.0, 5.0, 10.0 }.Select(m => m * power).First(s => s >= rough);
-        var ticks = new List<double>();
-        for (double t = Math.Ceiling(min / step) * step; t <= max + step * 1e-9; t += step)
-            ticks.Add(Math.Abs(t) < step * 1e-9 ? 0 : t);
-        return ticks;
-    }
-
-    /// <summary>Widens a range so it has room and is never empty.</summary>
-    public static (double Min, double Max) Pad(double min, double max)
-    {
-        if (!double.IsFinite(min) || !double.IsFinite(max)) return (0, 1);
-        if (max - min < 1e-12) return (min - 1, max + 1);
-        double pad = (max - min) * 0.05;
-        return (min - pad, max + pad);
-    }
-
     public static Color Mix(Color a, Color b, double t)
     {
         t = Math.Clamp(t, 0, 1);

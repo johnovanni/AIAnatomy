@@ -33,6 +33,23 @@ public class NumberTextTests
     public void Short_IsCompact(double value, string text) => Assert.Equal(text, NumberText.Short(value));
 
     [Theory]
+    [InlineData(0.41273849201, 2, "0.41")]
+    [InlineData(-0.455, 2, "−0.46")]
+    [InlineData(21, 2, "21")]
+    public void ShortWithDecimals_CanUseFewerDecimals(double value, int decimals, string text) =>
+        Assert.Equal(text, NumberText.ShortWithDecimals(value, decimals));
+
+    [Fact]
+    public void Short_AsAMethodGroup_IgnoresTheIndex()
+    {
+        // Select(NumberText.Short) once bound to Select((value, index) => ...) and used the index as the decimals.
+        Assert.Equal(new[] { "0.412", "−0.873", "0.051" }, new[] { 0.412, -0.873, 0.051 }.Select(NumberText.Short));
+    }
+
+    [Fact]
+    public void Short_RoundsHalfAwayFromZero() => Assert.Equal("0.063", NumberText.Short(0.0625));
+
+    [Theory]
     [InlineData(2, "2")]
     [InlineData(-0.5, "\u22120.5")]
     [InlineData(3000, "3,000")]

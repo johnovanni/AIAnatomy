@@ -18,20 +18,30 @@ public static class PngRenderer
 {
     private const double MaxGalleryHeight = 12000;
 
+    /// <summary>Renders every view named in the options (one or several) with the same theme, text size and window size.</summary>
     public static async Task RenderAsync(DiagnosticOptions options)
     {
         double heading = Math.Round(options.TextSize * 1.4, MidpointRounding.AwayFromZero);
         ThemeManager.Apply(options.Theme, options.TextSize, heading);
-        var services = AppServices.Create(new InMemorySettings(new AppSettings(options.TextSize, heading, options.Theme)));
+        // Fresh services (and in-memory settings) for each view, so one picture cannot change the next.
+        foreach (string view in options.Views)
+        {
+            var services = AppServices.Create(new InMemorySettings(new AppSettings(options.TextSize, heading, options.Theme)));
+            await RenderViewAsync(options, services, view, options.OutputFileFor(view));
+        }
+    }
+
+    private static async Task RenderViewAsync(DiagnosticOptions options, AppServices services, string view, string file)
+    {
         var viewModel = services.NewMainViewModel();
         var window = new MainWindow(viewModel);
-        Show(window, viewModel, services, options.View!);
+        Show(window, viewModel, services, view);
 
         // The window is never shown: its content is laid out and drawn on its own, at exactly the size asked for.
         var content = window.Shell;
         double height = options.Height;
         await SettleAsync(content, options.Width, height);
-        if (options.View == DiagnosticOptions.Gallery)
+        if (view == DiagnosticOptions.Gallery)
         {
             // The gallery is drawn at its full height so every control is in the picture.
             content.Measure(new Size(options.Width, double.PositiveInfinity));
@@ -43,10 +53,10 @@ public static class PngRenderer
         bitmap.Render(content);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(options.OutputFile!))!);
-        await using var stream = File.Create(options.OutputFile!);
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(file))!);
+        await using var stream = File.Create(file);
         encoder.Save(stream);
-        Console.WriteLine($"Saved {options.OutputFile} ({options.Width} x {(int)height}, {ThemeManager.Theme}, {options.TextSize} pt).");
+        Console.WriteLine($"Saved {file} ({options.Width} x {(int)height}, {ThemeManager.Theme}, {options.TextSize} pt).");
     }
 
     private static void Show(MainWindow window, MainViewModel viewModel, AppServices services, string view)

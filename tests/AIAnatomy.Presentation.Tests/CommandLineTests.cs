@@ -82,4 +82,30 @@ public class CommandLineTests
         }
         finally { System.Globalization.CultureInfo.CurrentCulture = culture; }
     }
+
+    [Fact]
+    public void SeveralViews_InOneLaunch()
+    {
+        var o = DiagnosticOptions.Parse(["--render-png", "gallery,sources,settings", @"C:\temp\dark.png", "--theme", "Dark"]);
+
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "gallery", "sources", "settings" }, o.Views);
+        Assert.Equal(@"C:\temp\dark-gallery.png", o.OutputFileFor("gallery"));
+        Assert.Equal(@"C:\temp\dark-settings.png", o.OutputFileFor("settings"));
+    }
+
+    [Fact]
+    public void OneView_KeepsTheFileName()
+    {
+        var o = DiagnosticOptions.Parse(["--render-png", "gallery", "g.png"]);
+        Assert.Equal(new[] { "gallery" }, o.Views);
+        Assert.Equal("g.png", o.OutputFileFor("gallery"));
+    }
+
+    [Fact]
+    public void EmptyViewInList_GivesError()
+    {
+        var o = DiagnosticOptions.Parse(["--render-png", "gallery,,sources", "g.png"]);
+        Assert.Equal("--render-png needs a view and a .png file.", o.Error);
+    }
 }

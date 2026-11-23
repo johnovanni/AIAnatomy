@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- DataContext: MainViewModel; the settings themselves are MainViewModel.SettingsPage. -->
     <Border Style="{StaticResource Pane}" Padding="24,16">
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+        <ScrollViewer Style="{StaticResource PaneScroller}" AutomationProperties.Name="Settings">
             <StackPanel MaxWidth="1000" HorizontalAlignment="Left">
                 <DockPanel Margin="0,0,0,8">
                     <Button DockPanel.Dock="Right" Content="Back to the lesson" VerticalAlignment="Top" Command="{Binding BackToLessonCommand}" />
@@ -33,8 +33,8 @@
 
                     <TextBlock Style="{StaticResource SubheadingText}" Text="Colours" />
                     <StackPanel Orientation="Horizontal">
-                        <RadioButton Content="Light" GroupName="Theme" IsChecked="{Binding IsLightTheme}" />
-                        <RadioButton Content="Dark" GroupName="Theme" IsChecked="{Binding IsDarkTheme}" />
+                        <RadioButton Content="Light" IsChecked="{Binding IsLightTheme}" />
+                        <RadioButton Content="Dark" IsChecked="{Binding IsDarkTheme}" />
                     </StackPanel>
                 </StackPanel>
             </StackPanel>

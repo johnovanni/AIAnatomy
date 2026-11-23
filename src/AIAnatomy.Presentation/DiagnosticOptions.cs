@@ -8,7 +8,8 @@ public enum DiagnosticMode { Normal, RenderPng, SelfTest }
 /// The app's command line, for checks and diagnostics only:
 /// <c>--render-png &lt;lessonId|gallery|sources|settings&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000]</c>
 /// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 20 pt unless
-/// told otherwise, so pictures do not depend on the user's own settings. Bad input sets <see cref="Error"/>.
+/// told otherwise, so pictures do not depend on the user's own settings. Several views may be given as
+/// <c>gallery,sources,settings</c>; each then goes to "file-view.png". Bad input sets <see cref="Error"/>.
 /// </summary>
 public sealed record DiagnosticOptions(
     DiagnosticMode Mode,
@@ -26,6 +27,18 @@ public sealed record DiagnosticOptions(
     public const string SettingsView = "settings";
     public const string AllLabsTest = "all-labs";
     public const string TrainTest = "train";
+
+    /// <summary>The views to render: <see cref="View"/> may list several, separated by commas, in one launch.</summary>
+    public IReadOnlyList<string> Views => View?.Split(',') ?? [];
+
+    /// <summary>The file for one view: the given file when there is one view, otherwise "name-view.png" beside it.</summary>
+    public string OutputFileFor(string view)
+    {
+        ArgumentNullException.ThrowIfNull(OutputFile);
+        if (Views.Count <= 1) return OutputFile;
+        string folder = Path.GetDirectoryName(OutputFile) ?? "";
+        return Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(OutputFile)}-{view}{Path.GetExtension(OutputFile)}");
+    }
 
     private const double MinTextSize = 16, MaxTextSize = 32;
     private const int MinPixels = 400, MaxPixels = 8000;
@@ -53,7 +66,8 @@ public sealed record DiagnosticOptions(
                 case "--render-png":
                     render = true;
                     if (i + 2 < args.Length && args[i + 2].EndsWith(".png", StringComparison.OrdinalIgnoreCase)
-                        && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
+                        && !args[i + 1].StartsWith("--", StringComparison.Ordinal)
+                        && args[i + 1].Split(',').All(v => v.Trim().Length > 0))
                     {
                         view = args[i + 1];
                         file = args[i + 2];

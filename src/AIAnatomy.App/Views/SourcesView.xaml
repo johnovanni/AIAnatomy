@@ -14,7 +14,7 @@
             </DockPanel>
             <TextBlock DockPanel.Dock="Top" Style="{StaticResource BodyText}" MaxWidth="1100" HorizontalAlignment="Left"
                        Text="The papers and books behind the claims in the lessons. Standard textbook material is marked in each lesson." />
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+            <ScrollViewer Style="{StaticResource PaneScroller}" AutomationProperties.Name="Sources">
                 <ItemsControl ItemsSource="{Binding Sources.All}" Focusable="False" MaxWidth="1100" HorizontalAlignment="Left">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
