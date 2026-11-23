@@ -19,6 +19,8 @@ public sealed class SettingsService : ISettingsService
     }
 
     public AppSettings Current { get; private set; }
+    public string? LastSaveProblem { get; private set; }
+    public event EventHandler? SaveFailed;
 
     public void Save(AppSettings settings)
     {
@@ -27,11 +29,23 @@ public sealed class SettingsService : ISettingsService
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_filePath))!);
-            File.WriteAllText(_filePath, JsonSerializer.Serialize(Current, Json));
+            string temp = _filePath + ".tmp";
+            try
+            {
+                File.WriteAllText(temp, JsonSerializer.Serialize(Current, Json));
+                File.Move(temp, _filePath, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(temp)) File.Delete(temp);
+            }
+            LastSaveProblem = null;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // Settings are a convenience: if the disk refuses, keep them for this run instead of failing the action.
+            // Keep the settings for this run, but say so: the caller shows the problem to the user.
+            LastSaveProblem = e.Message;
+            SaveFailed?.Invoke(this, EventArgs.Empty);
         }
     }
 

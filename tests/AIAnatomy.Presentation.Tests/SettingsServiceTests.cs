@@ -50,6 +50,31 @@ public class SettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void Settings_SaveFails_KeepsCurrent_ReportsProblem_AndRaisesEvent()
+    {
+        Directory.CreateDirectory(_env.SettingsFile);   // a folder where the file should be
+        var service = new SettingsService(_env.SettingsFile);
+        int raised = 0;
+        service.SaveFailed += (_, _) => raised++;
+
+        service.Save(new AppSettings(Theme: "Dark"));
+
+        Assert.Equal("Dark", service.Current.Theme);
+        Assert.False(string.IsNullOrWhiteSpace(service.LastSaveProblem));
+        Assert.Equal(1, raised);
+        Assert.False(File.Exists(_env.SettingsFile + ".tmp"));
+    }
+
+    [Fact]
+    public void Settings_SaveSucceeds_ClearsProblem_AndLeavesNoTempFile()
+    {
+        var service = new SettingsService(_env.SettingsFile);
+        service.Save(new AppSettings(Theme: "Dark"));
+        Assert.Null(service.LastSaveProblem);
+        Assert.False(File.Exists(_env.SettingsFile + ".tmp"));
+    }
+
+    [Fact]
     public void Settings_SaveCreatesMissingFolder()
     {
         var path = Path.Combine(_env.Root, "deeper", "settings.json");

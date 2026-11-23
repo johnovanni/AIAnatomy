@@ -148,6 +148,20 @@ public class MainViewModelTests : IDisposable
     }
 
     [Fact]
+    public void Main_SettingsSaveFails_ShowsPlainMessage()
+    {
+        Directory.CreateDirectory(_env.SettingsFile);   // a folder where the file should be
+        var settings = _env.NewSettings();
+        var vm = _env.NewMain(settings: settings);
+
+        settings.Save(settings.Current with { Theme = "Dark" });
+
+        Assert.StartsWith("Your settings couldn't be saved: ", vm.StatusMessage);
+        Assert.EndsWith(". They'll apply until you close the app.", vm.StatusMessage);
+        Assert.Contains(settings.LastSaveProblem!, vm.StatusMessage);
+    }
+
+    [Fact]
     public void LabFactory_UnknownId_Throws()
     {
         var vm = _env.NewMain();

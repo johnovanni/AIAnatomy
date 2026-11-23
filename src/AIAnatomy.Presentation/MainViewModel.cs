@@ -28,6 +28,8 @@ public sealed partial class MainViewModel : ObservableObject
         Sections = Enum.GetValues<Section>();
         RefreshModelEntries();
         _models.Changed += (_, _) => CurrentLab?.OnActiveModelChanged();
+        settings.SaveFailed += (_, _) =>
+            StatusMessage = $"Your settings couldn't be saved: {settings.LastSaveProblem}. They'll apply until you close the app.";
 
         var first = lessons.InSection(Section.Map).FirstOrDefault();
         if (first != null) Show(first.Section, first);
