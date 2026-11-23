@@ -54,7 +54,11 @@ public sealed partial class AttentionLabViewModel : LabViewModel
     partial void OnLayerChanged(int value) => Refresh();
     partial void OnHeadChanged(int value) => Refresh();
 
-    protected override void OnSeedEdited() => Induction.Seed = Seed;
+    protected override void OnSeedEdited()
+    {
+        Induction.Seed = Seed;
+        if (Seed != Induction.Seed) Seed = Induction.Seed;   // refused while training
+    }
 
     public override Task WorkCompleted => Induction.WorkCompleted;
 
@@ -62,7 +66,7 @@ public sealed partial class AttentionLabViewModel : LabViewModel
     {
         Toy.Reset();
         Induction.Reset();
-        Induction.ShowDemoCommand.Execute(null);
+        Induction.ShowDemoCommand.Execute(null);   // the measuring runs in the background
         _refreshing = true;
         Seed = 1;
         Layer = 1;

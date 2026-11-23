@@ -160,12 +160,12 @@ public class AttentionTests : IDisposable
     }
 
     [Fact]
-    public void Induction_DemoShowsHeadAbove0_6()
+    public async Task Induction_DemoShowsHeadAbove0_6()
     {
         var models = _env.NewActiveModels();
         var before = models.Current;
         var lab = new AttentionLabViewModel(models);
-        lab.Induction.ShowDemoCommand.Execute(null);
+        await lab.Induction.ShowDemoCommand.ExecuteAsync(null);
 
         var induction = lab.Induction;
         Assert.Equal(4, induction.Scores.Count);   // every head of both layers
@@ -221,6 +221,62 @@ public class AttentionTests : IDisposable
     }
 
     [Fact]
+    public async Task Induction_ShowDemoWhileTraining_IsNotOverwrittenByTheTraining()
+    {
+        var lab = NewLab();
+        var induction = lab.Induction;
+        induction.Steps = 100_000;
+        var run = induction.TrainCommand.ExecuteAsync(null);
+        await Task.Delay(300);
+        await induction.ShowDemoCommand.ExecuteAsync(null);
+        await run.WaitAsync(TimeSpan.FromSeconds(60));
+        await lab.WorkCompleted;
+
+        Assert.False(induction.IsTraining);
+        Assert.Contains("trained demo", induction.Source);
+        Assert.Null(induction.Message);   // no "Training was stopped" note
+        Assert.Contains(induction.Scores, s => s.Layer == 2 && s.Induction > 0.6);   // the demo's scores, not a half-trained model's
+    }
+
+    [Fact]
+    public async Task Induction_SeedIsRefusedWhileTraining_AndAppliesAfterwards()
+    {
+        var lab = NewLab();
+        var induction = lab.Induction;
+        induction.Steps = 100_000;
+        var run = induction.TrainCommand.ExecuteAsync(null);
+        await Task.Delay(200);
+        var cells = induction.SequenceCells.Select(c => c.Letter).ToList();
+        lab.Seed = 9;
+        Assert.Equal(1, induction.Seed);
+        Assert.Equal(1, lab.Seed);   // the lab's box goes back too
+        Assert.Equal(cells, induction.SequenceCells.Select(c => c.Letter).ToList());
+        induction.TrainCancelCommand.Execute(null);
+        await run.WaitAsync(TimeSpan.FromSeconds(60));
+
+        lab.Seed = 9;
+        Assert.Equal(9, induction.Seed);
+        await lab.WorkCompleted;
+        Assert.NotEqual(cells, induction.SequenceCells.Select(c => c.Letter).ToList());
+    }
+
+    [Fact]
+    public void Toy_MovingAPoint_KeepsTheSameHandleLists()
+    {
+        var toy = new AttentionToyViewModel();
+        var keys = toy.ActiveKeys;
+        var keyPlot = toy.KeyPlotHandles;
+        var valuePlot = toy.ValuePlotHandles;
+        toy.Query.X = 2; toy.AllKeys[0].Y = -1; toy.AllValues[1].X = 0.5;
+        Assert.Same(keys, toy.ActiveKeys);   // a box being typed in is not rebuilt, so it keeps the keyboard focus
+        Assert.Same(keyPlot, toy.KeyPlotHandles);
+        Assert.Same(valuePlot, toy.ValuePlotHandles);
+        toy.AddKeyCommand.Execute(null);
+        Assert.NotSame(keys, toy.ActiveKeys);
+        Assert.Equal(4, toy.ActiveKeys.Count);
+    }
+
+    [Fact]
     public void Induction_WordingDoesNotOverclaim()
     {
         Assert.Contains("similar to the sudden improvement", InductionPanelViewModel.LossNote);
@@ -232,12 +288,13 @@ public class AttentionTests : IDisposable
     }
 
     [Fact]
-    public void Reset_PutsEverythingBack()
+    public async Task Reset_PutsEverythingBack()
     {
         var lab = NewLab();
         lab.Text = "x"; lab.Layer = 2; lab.Seed = 5;
         lab.Toy.Query.X = 2;
         lab.Reset();
+        await lab.WorkCompleted;
         Assert.Equal(AttentionLabViewModel.DefaultText, lab.Text);
         Assert.Equal(1, lab.Layer);
         Assert.Equal(1, lab.Seed);
@@ -256,15 +313,18 @@ public class AttentionTests : IDisposable
         await Task.Delay(200);
         lab.Reset();
         await run.WaitAsync(TimeSpan.FromSeconds(60));
+        await lab.WorkCompleted;
         Assert.False(lab.Induction.IsTraining);
         Assert.Contains("trained demo", lab.Induction.Source);
         Assert.Empty(lab.Induction.LossSeries);
     }
 
     [Fact]
-    public void Induction_OpensWithTheDemoOnShow()
+    public async Task Induction_OpensWithTheDemoOnShow()
     {
-        var induction = NewLab().Induction;
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        var induction = lab.Induction;
         Assert.True(induction.HasModel);
         Assert.Contains("trained demo", induction.Source);
     }

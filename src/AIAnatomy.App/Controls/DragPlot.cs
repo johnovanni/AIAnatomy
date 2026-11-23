@@ -199,6 +199,12 @@ public sealed class DragPlot : ChartBase
         if (_dragging >= 0) { _dragging = -1; ReleaseMouseCapture(); }
     }
 
+    protected override void OnLostMouseCapture(MouseEventArgs e)
+    {
+        base.OnLostMouseCapture(e);
+        _dragging = -1;   // the capture was taken away (window deactivated, popup, ...): the drag is over
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);

@@ -10,10 +10,13 @@ using CommunityToolkit.Mvvm.Input;
 namespace AIAnatomy.Presentation.Labs;
 
 /// <summary>One letter of the experiment's sequence, with which copy of the repeated segment it belongs to (if any).</summary>
+/// <summary>Where a copy of the repeated segment sits: 0-based first column, how many letters, and its name.</summary>
+public sealed record CopySpan(int Column, int Length, string Name);
+
 public sealed record SequenceCell(int Position, string Letter, string Copy)
 {
-    /// <summary>A short tag shown under the letter: 1st or 2nd for the two copies, nothing for the other letters.</summary>
-    public string Tag => Copy switch { "first copy" => "1st", "second copy" => "2nd", _ => "" };
+    /// <summary>The 0-based column of this letter.</summary>
+    public int Index => Position - 1;
 }
 
 /// <summary>How strongly one head behaves like an induction head and like a previous-token head (both are averages from 0 to 1).</summary>
@@ -51,6 +54,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
     private readonly object _gate = new();
     private CancellationTokenSource? _training;
     private Task _work = Task.CompletedTask;
+    private Task _background = Task.CompletedTask;
     private int _generation;
     private bool _applying;
     private int _seed = 1;
@@ -78,18 +82,24 @@ public sealed partial class InductionPanelViewModel : ObservableObject
         get => _seed;
         set
         {
-            if (!SetProperty(ref _seed, value) || IsTraining) return;
+            if (IsTraining)
+            {
+                OnPropertyChanged(nameof(Seed));   // refused: the number shown goes back to the one in use
+                return;
+            }
+            if (!SetProperty(ref _seed, value)) return;
             BuildSequence();
-            if (_snapshot?.Model is { } model) Apply(Measure(model));
+            if (_snapshot?.Model is { } model) Remeasure(model);
         }
     }
 
-    public Task WorkCompleted => _work;
+    public Task WorkCompleted => Task.WhenAll(_work, _background, ShowDemoCommand.ExecutionTask ?? Task.CompletedTask);
 
     public IReadOnlyList<int> LayerNumbers { get; }
     public IReadOnlyList<int> HeadNumbers { get; }
 
     [ObservableProperty] private IReadOnlyList<SequenceCell> sequenceCells = [];
+    [ObservableProperty] private IReadOnlyList<CopySpan> copySpans = [];
     [ObservableProperty] private IReadOnlyList<HeadScore> scores = [];
     [ObservableProperty] private IReadOnlyList<LabeledValue> inductionBars = [];
     [ObservableProperty] private IReadOnlyList<LabeledValue> previousTokenBars = [];
@@ -111,28 +121,37 @@ public sealed partial class InductionPanelViewModel : ObservableObject
     partial void OnLayerChanged(int value) => ShowHeat();
     partial void OnHeadChanged(int value) => ShowHeat();
 
-    /// <summary>Loads the shipped trained model (it does not become the app's active model).</summary>
-    [RelayCommand]
-    private void ShowDemo()
+    /// <summary>Loads the shipped trained model (it does not become the app's active model). The measuring runs off the UI thread.</summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task ShowDemoAsync()
     {
-        StopTraining();
+        Deactivate();   // any training stops and its later reports are not shown
+        int generation;
+        lock (_gate) generation = _generation;
         var entry = _models.Library.List().FirstOrDefault(e => e.Name == DemoName && e.IsReadable);
         if (entry == null)
         {
             Message = "The trained demo model could not be found, so it cannot be shown. You can still train one yourself.";
             return;
         }
+        var sequence = _sequence;
+        int seed = Seed;
         try
         {
-            var model = _models.Library.Load(entry);
+            var (info, snapshot) = await Task.Run(() =>
+            {
+                var model = _models.Library.Load(entry);   // this model is not shared with anything else
+                return (model.Info, Measure(model.Transformer, sequence, seed, retain: true));
+            });
+            if (generation != _generation) return;
             Message = null;
             ClearTraining();
-            Source = $"The trained demo ({NumberText.Short(model.Info.StepsTrained)} training steps)";
-            Apply(Measure(model.Transformer), chooseBestHead: true);
+            Source = $"The trained demo ({NumberText.Short(info.StepsTrained)} training steps)";
+            Apply(snapshot, chooseBestHead: true);
         }
         catch (InvalidDataException e)
         {
-            Message = $"The trained demo model could not be read: {e.Message}";
+            if (generation == _generation) Message = $"The trained demo model could not be read: {e.Message}";
         }
     }
 
@@ -152,6 +171,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
 
         int steps = Math.Max(1, Steps);
         int seed = Seed;
+        var sequence = _sequence;
         ClearTraining();
         Message = null;
         IsTraining = true;
@@ -165,7 +185,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
         {
             if (report.Step % LossEvery != 0 && report.Step != steps && report.StoppedReason == null) return;
             var point = (X: (double)report.Step, Y: report.TrainLoss);
-            var snapshot = report.Step % ScoreEvery == 0 ? Measure(model!) : null;
+            var snapshot = report.Step % ScoreEvery == 0 ? Measure(model!, sequence, seed, retain: false) : null;
             OnUi(() =>
             {
                 if (double.IsFinite(point.Y)) _loss.Add(point);
@@ -185,7 +205,9 @@ public sealed partial class InductionPanelViewModel : ObservableObject
             _work = run;
             var trained = await run;
             if (generation != _generation) return;
-            Apply(Measure(trained));
+            var final = await Task.Run(() => Measure(trained, sequence, seed, retain: true));
+            if (generation != _generation) return;
+            Apply(final);
             if (linked.IsCancellationRequested) Message = "Training was stopped. What is shown is the model as it was then.";
             else Progress = 1;
         }
@@ -239,8 +261,12 @@ public sealed partial class InductionPanelViewModel : ObservableObject
     {
         _sequence = InductionExperiment.MakeSequence(new SeededRandom(Seed));
         SequenceCells = Cells(_sequence);
+        CopySpans = Spans(_sequence);
         TokenLabels = Labels(_sequence);
     }
+
+    private static IReadOnlyList<CopySpan> Spans(InductionSequence s) =>
+        [new CopySpan(s.FirstStart, s.Length, "first copy"), new CopySpan(s.SecondStart, s.Length, "second copy")];
 
     private static IReadOnlyList<SequenceCell> Cells(InductionSequence s) =>
         s.Tokens.Select((id, i) => new SequenceCell(i + 1, InductionExperiment.Tokenizer.TokenText(id),
@@ -251,12 +277,14 @@ public sealed partial class InductionPanelViewModel : ObservableObject
         s.Tokens.Take(ShownTokens).Select((id, i) => $"{i + 1}:{InductionExperiment.Tokenizer.TokenText(id)}").ToList();
 
     /// <summary>One measurement of a model: its scores and every head's attention over the example sequence.</summary>
-    private sealed record Snapshot(Transformer Model, InductionSequence Sequence, int Seed, IReadOnlyList<HeadScore> Scores, double[][][,] Heat);
+    private sealed record Snapshot(Transformer? Model, InductionSequence Sequence, int Seed, IReadOnlyList<HeadScore> Scores, double[][][,] Heat);
 
-    private Snapshot Measure(Transformer model)
+    /// <summary>
+    /// Measures a model whose weights are not changing right now. <paramref name="retain"/> keeps the model in the snapshot so a
+    /// seed change can measure it again; a model that is still training is never kept.
+    /// </summary>
+    private static Snapshot Measure(Transformer model, InductionSequence sequence, int seed, bool retain)
     {
-        var sequence = _sequence;
-        int seed = Seed;
         var config = model.Config;
         var scores = new List<HeadScore>();
         for (int l = 0; l < config.Layers; l++)
@@ -265,7 +293,23 @@ public sealed partial class InductionPanelViewModel : ObservableObject
                     InductionExperiment.InductionScore(model, l, h, seed), InductionExperiment.PreviousTokenScore(model, l, h, seed)));
         var trace = model.Forward(sequence.Tokens.Take(ShownTokens).ToArray()).Trace;
         var heat = trace.Blocks.Select(b => b.Heads.Select(hd => Grid(hd.Weights)).ToArray()).ToArray();
-        return new Snapshot(model, sequence, seed, scores, heat);
+        return new Snapshot(retain ? model : null, sequence, seed, scores, heat);
+    }
+
+    /// <summary>Measures a finished model again (after a seed change) off the UI thread, then shows it unless something newer happened.</summary>
+    private void Remeasure(Transformer model)
+    {
+        int generation;
+        lock (_gate) generation = _generation;
+        var sequence = _sequence;
+        int seed = Seed;
+        _background = RemeasureAsync(model, sequence, seed, generation);
+    }
+
+    private async Task RemeasureAsync(Transformer model, InductionSequence sequence, int seed, int generation)
+    {
+        var snapshot = await Task.Run(() => Measure(model, sequence, seed, retain: true));
+        if (generation == _generation && seed == Seed) Apply(snapshot);
     }
 
     private void Apply(Snapshot snapshot, bool chooseBestHead = false)
@@ -302,6 +346,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
         int h = Math.Clamp(Head, 1, snapshot.Heat[l].Length) - 1;
         HeatMap = snapshot.Heat[l][h];
         SequenceCells = Cells(snapshot.Sequence);
+        CopySpans = Spans(snapshot.Sequence);
         TokenLabels = Labels(snapshot.Sequence);
         OutlinedCells = InductionCells(snapshot.Sequence);
     }

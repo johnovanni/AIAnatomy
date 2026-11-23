@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:AIAnatomy.App.Controls"
              xmlns:v="clr-namespace:AIAnatomy.App.Views"
+             xmlns:glob="clr-namespace:System.Globalization;assembly=System.Runtime"
              xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation"
              xmlns:vis="clr-namespace:AIAnatomy.Presentation.Visuals;assembly=AIAnatomy.Presentation">
     <!-- DataContext: AttentionLabViewModel. -->
@@ -15,9 +16,9 @@
             <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
                 <TextBlock MinWidth="48" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Label}" />
                 <TextBlock VerticalAlignment="Center" Margin="0,0,4,0" Text="x" />
-                <TextBox Width="84" Text="{Binding X, StringFormat=0.##, ConverterCulture=en-US}" AutomationProperties.Name="{Binding Label, StringFormat={}{0} x}" />
+                <TextBox Width="84" Text="{Binding X, StringFormat=0.##, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="{Binding Label, StringFormat={}{0} x}" />
                 <TextBlock VerticalAlignment="Center" Margin="12,0,4,0" Text="y" />
-                <TextBox Width="84" Text="{Binding Y, StringFormat=0.##, ConverterCulture=en-US}" AutomationProperties.Name="{Binding Label, StringFormat={}{0} y}" />
+                <TextBox Width="84" Text="{Binding Y, StringFormat=0.##, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="{Binding Label, StringFormat={}{0} y}" />
             </StackPanel>
         </DataTemplate>
 
@@ -34,24 +35,22 @@
             <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Margin="0,0,0,2" Text="{Binding ShareLine}" />
         </DataTemplate>
 
-        <!-- One letter of the induction sequence: the two copies are underlined and named, so colour is not needed. -->
+        <!-- The 17 letters in equal-width columns; a bracket over each copy names it. -->
+        <ItemsPanelTemplate x:Key="SeventeenColumns">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /><ColumnDefinition Width="*" MinWidth="44" /></Grid.ColumnDefinitions>
+            </Grid>
+        </ItemsPanelTemplate>
         <DataTemplate x:Key="SequenceCell" DataType="{x:Type labs:SequenceCell}">
-            <StackPanel Margin="0,0,4,4" MinWidth="34">
-                <Border x:Name="Underline" BorderBrush="{DynamicResource TextBrush}" BorderThickness="0,0,0,0" Padding="4,2">
-                    <TextBlock FontFamily="{StaticResource NumberFont}" FontWeight="SemiBold" HorizontalAlignment="Center" Text="{Binding Letter}" />
-                </Border>
-                <TextBlock FontSize="{DynamicResource SmallFontSize}" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center"
-                           Text="{Binding Position}" />
-                <TextBlock x:Name="Role" FontSize="{DynamicResource SmallFontSize}" HorizontalAlignment="Center" Text="{Binding Tag}" />
+            <StackPanel>
+                <TextBlock FontFamily="{StaticResource NumberFont}" FontWeight="SemiBold" HorizontalAlignment="Center" Text="{Binding Letter}" />
+                <TextBlock FontSize="{DynamicResource SmallFontSize}" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" Text="{Binding Position}" />
             </StackPanel>
-            <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Copy}" Value="first copy">
-                    <Setter TargetName="Underline" Property="BorderThickness" Value="0,0,0,3" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Copy}" Value="second copy">
-                    <Setter TargetName="Underline" Property="BorderThickness" Value="0,0,0,6" />
-                </DataTrigger>
-            </DataTemplate.Triggers>
+        </DataTemplate>
+        <DataTemplate x:Key="CopyBracket" DataType="{x:Type labs:CopySpan}">
+            <Border BorderBrush="{DynamicResource TextBrush}" BorderThickness="3,3,3,0" Margin="3,0" Padding="0,0,0,2">
+                <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource SmallFontSize}" FontWeight="SemiBold" Text="{Binding Name}" />
+            </Border>
         </DataTemplate>
         <ItemsPanelTemplate x:Key="Wrap"><WrapPanel /></ItemsPanelTemplate>
     </UserControl.Resources>
@@ -138,9 +137,27 @@
             </StackPanel>
 
             <TextBlock Style="{StaticResource PaneTitle}" Margin="0,12,0,4" Text="An example sequence (letters A to O)" />
-            <ItemsControl ItemsSource="{Binding SequenceCells}" ItemTemplate="{StaticResource SequenceCell}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Focusable="False">
+                <StackPanel>
+                    <ItemsControl ItemsSource="{Binding CopySpans}" ItemTemplate="{StaticResource CopyBracket}" ItemsPanel="{StaticResource SeventeenColumns}" Focusable="False">
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Grid.Column" Value="{Binding Column}" />
+                                <Setter Property="Grid.ColumnSpan" Value="{Binding Length}" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding SequenceCells}" ItemTemplate="{StaticResource SequenceCell}" ItemsPanel="{StaticResource SeventeenColumns}" Focusable="False">
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Grid.Column" Value="{Binding Index}" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
             <TextBlock Style="{StaticResource MutedText}"
-                       Text="A stretch of letters appears twice. 1st = first copy (thin underline), 2nd = second copy (thick underline). The small numbers are positions." />
+                       Text="A stretch of letters appears twice; a bracket over each copy names it. The small numbers are positions." />
 
             <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding ScoreSummary}" Visibility="{Binding ScoreSummary, Converter={StaticResource VisibleIfSet}}" />
             <StackPanel Visibility="{Binding HasModel, Converter={StaticResource VisibleIfTrue}}">

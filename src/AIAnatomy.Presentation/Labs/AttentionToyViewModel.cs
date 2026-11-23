@@ -37,6 +37,7 @@ public sealed partial class AttentionToyViewModel : ObservableObject
     private readonly DragHandle[] _keys = new DragHandle[MaxKeys];
     private readonly DragHandle[] _values = new DragHandle[MaxKeys];
     private bool _updating;
+    private int _listedKeys = -1;
 
     public AttentionToyViewModel()
     {
@@ -139,7 +140,7 @@ public sealed partial class AttentionToyViewModel : ObservableObject
         Rows = list;
         Weights = softmax.Data.ToArray();
         WeightBars = list.Select(r => new LabeledValue(r.Name, r.Weight)).ToList();
-        ScaleText = $"Divide each dot product by √{Width} (the size of each vector is d = {Width}): multiply by 1/√{Width} = {NumberText.Short(ScaleFactor)}.";
+        ScaleText = $"Divide each dot product by √{Width} (each vector has d = {Width} numbers): multiply by 1/√{Width} = {NumberText.Short(ScaleFactor)}.";
         SoftmaxText = $"Softmax: raise e to each score, then divide by their total, {NumberText.Short(sumOfExponentials)}. The weights add up to {NumberText.Short(softmax.Data.Sum())}.";
         AnswerX = answer.Data[0];
         AnswerY = answer.Data[1];
@@ -147,10 +148,15 @@ public sealed partial class AttentionToyViewModel : ObservableObject
         Output.X = AnswerX;
         Output.Y = AnswerY;
 
-        ActiveKeys = _keys.Take(n).ToList();
-        ActiveValues = _values.Take(n).ToList();
-        KeyPlotHandles = new[] { Query }.Concat(ActiveKeys).ToList();
-        ValuePlotHandles = ActiveValues.Concat(new[] { Output }).ToList();
+        // The lists of handles change only when the number of keys does, so a box being typed in keeps its focus.
+        if (_listedKeys != n)
+        {
+            _listedKeys = n;
+            ActiveKeys = _keys.Take(n).ToList();
+            ActiveValues = _values.Take(n).ToList();
+            KeyPlotHandles = new[] { Query }.Concat(ActiveKeys).ToList();
+            ValuePlotHandles = ActiveValues.Concat(new[] { Output }).ToList();
+        }
         AddKeyCommand.NotifyCanExecuteChanged();
         RemoveKeyCommand.NotifyCanExecuteChanged();
     }

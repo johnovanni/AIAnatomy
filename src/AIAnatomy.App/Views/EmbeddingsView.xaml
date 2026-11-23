@@ -5,7 +5,7 @@
     <!-- DataContext: EmbeddingsLabViewModel. -->
     <StackPanel>
         <TextBlock Style="{StaticResource BodyText}"
-                   Text="Every token has a list of numbers, its embedding. To draw them, each list is squashed onto a flat picture so that tokens with similar lists land near each other. Click a point (or use the arrow keys) to see its numbers." />
+                   Text="Every token has a list of numbers, its embedding. To draw them, each list is squashed onto a flat picture that keeps as much of the spread as two directions can. Tokens that look close here may still be far apart in the full list of numbers: the percentage under each picture says how much of the spread the picture keeps. Click a point (or use the arrow keys) to see its numbers." />
         <TextBlock Style="{StaticResource PaneTitle}" Text="{Binding TrainedTitle}" />
         <c:ScatterPlot Points="{Binding TrainedPoints}" SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}" Height="480"
                        XAxisTitle="first direction of spread" YAxisTitle="second direction"
@@ -17,7 +17,7 @@
                        AutomationProperties.Name="Embedding picture of the untrained model" />
         <TextBlock Style="{StaticResource MutedText}" Text="{Binding UntrainedSpreadText}" />
         <TextBlock Style="{StaticResource MutedText}"
-                   Text="␣ is a space, ↵ a new line, � a character the model has never seen. Each group has its own marker shape. The picture on the right is a model of this shape before it has learned anything; the picture on the left is after training." />
+                   Text="␣ is a space, ↵ a new line, � a character the model has never seen. Each group has its own marker shape. The lower picture is a model of this shape before it has learned anything; the upper picture is the model after training." />
 
         <TextBlock Style="{StaticResource SubheadingText}" Text="One token's numbers" />
         <TextBlock Style="{StaticResource BodyText}" Text="{Binding SelectedSummary}" />
