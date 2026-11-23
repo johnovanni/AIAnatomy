@@ -1,0 +1,18 @@
+THIRD-PARTY NOTICES
+
+Training text: content/texts/aesop-fables.txt
+  Title:       Three Hundred Aesop's Fables (the title page prints it with the ligature "AE")
+  Translator:  Rev. George Fyler Townsend, M.A., "literally translated from the Greek"
+  Edition:     London: George Routledge and Sons (the 1867 edition, as stated on the title page of the source)
+  Licence:     Public domain.
+  Source:      Project Gutenberg eBook #21, https://www.gutenberg.org/ebooks/21
+  Edits made:  Kept only the fables themselves (from the heading "AESOP'S FABLES" to the last fable, "The Brazier and
+               His Dog"). Removed the Project Gutenberg header, footer and licence, the contents list, the preface,
+               the Life of Aesop, the footnotes and the index. Line endings are "\n". Curly quotation marks and
+               apostrophes became straight ones. Runs of three or more blank lines became two, and trailing spaces
+               were removed. The wording of the fables is unchanged.
+  This copy does not use the Project Gutenberg trademark and is not distributed under the Project Gutenberg
+  licence; the text itself is in the public domain.
+
+Models: content/models/fables-small.aimodel and content/models/induction-demo.aimodel
+  Trained by this project's own code (tools/AIAnatomy.Pretrain). The fables model was trained on the text above.

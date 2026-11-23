@@ -5,6 +5,7 @@ using AIAnatomy.Models.Transformers;
 
 namespace AIAnatomy.Models.Tests;
 
+[Collection(TrainingCollection.Name)]
 public class TrainerTests
 {
     private const string CatText = "the cat sat on the mat. the cat sat on the mat. the cat sat on the mat. the cat sat on the mat. ";

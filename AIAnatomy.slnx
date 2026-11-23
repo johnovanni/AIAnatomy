@@ -6,6 +6,9 @@
     <Project Path="src/AIAnatomy.Models/AIAnatomy.Models.csproj" />
     <Project Path="src/AIAnatomy.Presentation/AIAnatomy.Presentation.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/AIAnatomy.Pretrain/AIAnatomy.Pretrain.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AIAnatomy.Core.Tests/AIAnatomy.Core.Tests.csproj" />
     <Project Path="tests/AIAnatomy.Lessons.Tests/AIAnatomy.Lessons.Tests.csproj" />

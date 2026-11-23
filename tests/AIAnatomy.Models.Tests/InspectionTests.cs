@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 
 namespace AIAnatomy.Models.Tests;
 
+[Collection(TrainingCollection.Name)]
 public class InspectionTests
 {
     private readonly ITestOutputHelper _output;
@@ -161,7 +162,11 @@ public class InspectionTests
         Assert.True(best < 0.3, $"best untrained score {best}");
     }
 
+#if DEBUG
+    [Fact(Skip = "Slow: run with dotnet test -c Release --filter Category=Slow")]
+#else
     [Fact]
+#endif
     [Trait("Category", "Slow")]
     public async Task Induction_TrainedModelHasInductionHead()
     {
