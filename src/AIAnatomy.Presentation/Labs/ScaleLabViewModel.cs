@@ -48,6 +48,8 @@ public sealed partial class ScaleLabViewModel : LabViewModel
     [ObservableProperty] private int axisHigh;
     /// <summary>The value of each faint line, from the left; the right edge is 10^AxisHigh.</summary>
     [ObservableProperty] private IReadOnlyList<string> decadeLabels = [];
+    /// <summary>The same lines in short form (10K, 1M, 1B), the text written at the gridlines.</summary>
+    [ObservableProperty] private IReadOnlyList<string> shortDecadeLabels = [];
     [ObservableProperty] private string ratioSentence = "";
 
     public override void Reset() => Refresh();
@@ -77,8 +79,16 @@ public sealed partial class ScaleLabViewModel : LabViewModel
             new(ClaudeLabel, null, "No bar is drawn.", null, null),
         ];
         DecadeLabels = Enumerable.Range(low, high - low).Select(Power).ToList();
-        AxisText = $"Each faint line is a power of ten. From the left they are {string.Join(", ", DecadeLabels)}; the right edge is {Power(high)}.";
+        ShortDecadeLabels = Enumerable.Range(low, high - low).Select(ShortPower).ToList();
+        AxisText = $"Each faint line is a power of ten. From the left they are {string.Join(", ", DecadeLabels)}; the right edge is {Power(high)}. (K = thousand, M = million, B = billion, T = trillion.)";
         RatioSentence = $"GPT-3 has about {Times(Gpt3Count / (double)OurCount)} times as many parameters as this model.";
+    }
+
+    /// <summary>1, 10, 100, 1K, 10K, 100K, 1M ... 1B ... 1T.</summary>
+    public static string ShortPower(int exponent)
+    {
+        (string unit, int shift) = exponent switch { < 3 => ("", 0), < 6 => ("K", 3), < 9 => ("M", 6), < 12 => ("B", 9), _ => ("T", 12) };
+        return $"{(long)Math.Pow(10, exponent - shift)}{unit}";
     }
 
     private static string Power(int exponent) =>

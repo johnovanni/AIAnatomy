@@ -62,4 +62,16 @@ public class ScaleTests : IDisposable
         Assert.DoesNotContain("Claude", lab.RatioSentence);
         Assert.True(ratio > 1000);
     }
+
+    [Fact]
+    public void ShortDecadeLabels_AreShortAndMatchTheWordedDecades()
+    {
+        var lab = new ScaleLabViewModel(_env.NewActiveModels());
+        Assert.Equal(["10K", "100K", "1M", "10M", "100M", "1B", "10B", "100B"], lab.ShortDecadeLabels);
+        Assert.Equal(lab.DecadeLabels.Count, lab.ShortDecadeLabels.Count);
+        Assert.All(lab.ShortDecadeLabels, l => Assert.DoesNotContain(' ', l));
+        Assert.Contains("K = thousand, M = million, B = billion", lab.AxisText);
+        Assert.Contains("10 thousand", lab.AxisText);
+        Assert.Equal(["1", "10", "100", "1K", "1M", "1B", "1T"], new[] { 0, 1, 2, 3, 6, 9, 12 }.Select(ScaleLabViewModel.ShortPower));
+    }
 }
