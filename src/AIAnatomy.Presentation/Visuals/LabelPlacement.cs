@@ -44,6 +44,33 @@ public static class LabelPlacement
         return best;
     }
 
+    /// <summary>
+    /// Where an arrow's label goes (top-left of a <paramref name="width"/> × <paramref name="height"/> plate). Places are
+    /// tried at the middle of the arrow and at 0.35 and 0.65 of its length, each on the arrow and then moved sideways step
+    /// by step on alternate sides; nearer the arrow comes first. The first place that touches no box wins; if none is
+    /// clear, the one that covers boxes least is used, never simply the middle.
+    /// </summary>
+    public static (double X, double Y) ForArrow((double X, double Y) start, (double X, double Y) end, double width, double height,
+        double areaWidth, double areaHeight, IEnumerable<LabelBox> boxes)
+    {
+        double ax = end.X - start.X, ay = end.Y - start.Y, length = Math.Sqrt(ax * ax + ay * ay);
+        // Across the arrow, trying above (or right of) it first.
+        double sx = length < 1e-9 ? 0 : ay / length, sy = length < 1e-9 ? -1 : -ax / length;
+        if (sy > 0 || (sy == 0 && sx < 0)) { sx = -sx; sy = -sy; }
+        double step = (Math.Abs(sx) * width + Math.Abs(sy) * height) * 0.75;   // most of the plate's size across the arrow
+        var candidates = new List<(double X, double Y)>();
+        foreach (int k in ArrowOffsets)
+            foreach (double t in ArrowPlaces)
+            {
+                double cx = start.X + ax * t + sx * k * step, cy = start.Y + ay * t + sy * k * step;
+                candidates.Add((cx - width / 2, cy - height / 2));
+            }
+        return Choose(candidates, width, height, areaWidth, areaHeight, boxes, []);
+    }
+
+    private static readonly int[] ArrowOffsets = [0, 1, -1, 2, -2, 3, -3];
+    private static readonly double[] ArrowPlaces = [0.5, 0.35, 0.65];
+
     private static double LengthInside(LabelLine line, LabelBox box)
     {
         if (SegmentClip.Clip(line.X0, line.Y0, line.X1, line.Y1, box.X, box.Right, box.Y, box.Bottom) is not { } cut) return 0;

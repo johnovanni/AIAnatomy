@@ -134,7 +134,7 @@ public sealed class NetworkDiagram : ChartBase
             if (string.IsNullOrEmpty(edge.Label) || !boxes.TryGetValue(edge.FromId, out var from) || !boxes.TryGetValue(edge.ToId, out var to)) continue;
             var text = Text(edge.Label, LabelSize * 0.85 * scale, MutedBrush);
             var (start, end) = Ends(edge, edges, from, to, scale);
-            var plate = LabelPlate(start, end, text, placed);
+            var plate = LabelPlate(start, end, text, placed, ActualWidth, ActualHeight);
             placed.Add(plate);
             dc.DrawRoundedRectangle(SurfaceBrush, null, plate, 4, 4);
             dc.DrawText(text, new Point(plate.X + 4, plate.Y + 1));
@@ -158,25 +158,18 @@ public sealed class NetworkDiagram : ChartBase
     }
 
     /// <summary>
-    /// Where an arrow's label goes: on the middle of the arrow if that is clear of all boxes, otherwise moved
-    /// sideways from the arrow, step by step on alternate sides, to the first place that touches no box.
+    /// Where an arrow's label goes: at the middle of the arrow or at 0.35 or 0.65 of its length, on it or moved sideways
+    /// step by step, nearest first, at the first place that touches no box; if none is clear, the place that covers boxes
+    /// least (never simply the middle, which at 32 pt put a label over the Feed-forward box).
     /// </summary>
-    private static Rect LabelPlate(Point start, Point end, FormattedText text, IEnumerable<Rect> boxes)
+    private static Rect LabelPlate(Point start, Point end, FormattedText text, IEnumerable<Rect> boxes, double areaWidth, double areaHeight)
     {
-        var mid = new Point((start.X + end.X) / 2, (start.Y + end.Y) / 2);
-        var along = end - start;
-        var side = along.Length < 1e-9 ? new Vector(0, -1) : new Vector(along.Y, -along.X) / along.Length;
-        if (side.Y > 0 || (side.Y == 0 && side.X < 0)) side = -side;   // try above (or right of) the arrow first
         double w = text.Width + 8, h = text.Height + 2;
-        double step = Math.Abs(side.X) * w + Math.Abs(side.Y) * h;   // the plate's size across the arrow
-        var all = boxes.ToList();
-        Rect At(Point c) => new(c.X - w / 2, c.Y - h / 2, w, h);
-        foreach (int k in new[] { 0, 1, -1, 2, -2, 3, -3 })
-        {
-            var plate = At(mid + side * (k * step * 0.75));
-            if (!all.Any(b => Inflated(b, 2).IntersectsWith(plate))) return plate;
-        }
-        return At(mid);
+        // The search is WPF-free (LabelPlacement.ForArrow, tested): along the arrow and sideways, clear of every box
+        // (each kept 2 px away), or else the place that covers least.
+        var obstacles = boxes.Select(b => Inflated(b, 2)).Select(b => new LabelBox(b.X, b.Y, b.Width, b.Height));
+        var (x, y) = LabelPlacement.ForArrow((start.X, start.Y), (end.X, end.Y), w, h, areaWidth, areaHeight, obstacles);
+        return new Rect(x, y, w, h);
     }
 
     private static Point Centre(Rect r) => new(r.X + r.Width / 2, r.Y + r.Height / 2);
