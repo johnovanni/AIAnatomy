@@ -1,0 +1,91 @@
+<UserControl x:Class="AIAnatomy.App.Views.ControlGallery"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls">
+    <!-- Every drawn control with fixed sample data, for checking the look with the render-png gallery diagnostic. -->
+    <UserControl.Resources>
+        <Style x:Key="Sample" TargetType="Border" BasedOn="{StaticResource Pane}">
+            <Setter Property="Margin" Value="0,0,12,12" />
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+        <StackPanel x:Name="Panel">
+            <TextBlock Style="{StaticResource HeadingText}" Text="Control gallery" />
+            <TextBlock Style="{StaticResource MutedText}" Text="Every chart and view with fixed sample numbers." />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="HeatMap (attention weights, future positions blocked)" />
+                        <c:HeatMap x:Name="Heat" RowAxisTitle="looking from" ColumnAxisTitle="looking at" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="ProbabilityBars (sorted, one chosen)" />
+                        <c:ProbabilityBars x:Name="Bars" />
+                        <TextBlock Style="{StaticResource PaneTitle}" Margin="4,16,0,8" Text="VectorStrip (an embedding)" />
+                        <c:VectorStrip x:Name="Vector" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="ScatterPlot (three groups)" />
+                        <c:ScatterPlot x:Name="Scatter" XAxisTitle="direction 1" YAxisTitle="direction 2" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="LineChart (two series)" />
+                        <c:LineChart x:Name="Lines" XAxisTitle="training step" YAxisTitle="loss" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="NetworkDiagram (boxes link to lessons)" />
+                        <c:NetworkDiagram x:Name="Network" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="PipelineView (step 2 is current)" />
+                        <c:PipelineView x:Name="Pipeline" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="MarkdownView (with a formula that cannot be read)" />
+                        <c:MarkdownView x:Name="Markdown" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="Empty charts" />
+                        <c:HeatMap />
+                        <c:LineChart />
+                        <TextBlock Style="{StaticResource PaneTitle}" Margin="4,16,0,8" Text="Buttons" />
+                        <WrapPanel>
+                            <Button Content="A button" />
+                            <Button Content="Another button" />
+                            <Button Content="Turned off" IsEnabled="False" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

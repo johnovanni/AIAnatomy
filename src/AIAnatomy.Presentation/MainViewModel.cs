@@ -26,8 +26,9 @@ public sealed partial class MainViewModel : ObservableObject
         Labs = new LabFactory(models, lessons, NavigateToLesson);
 
         Sections = Enum.GetValues<Section>();
+        SettingsPage = new SettingsViewModel(settings);
         RefreshModelEntries();
-        _models.Changed += (_, _) => CurrentLab?.OnActiveModelChanged();
+        _models.Changed += (_, _) => OnActiveModelChanged();
         settings.SaveFailed += (_, _) =>
             StatusMessage = $"Your settings couldn't be saved: {settings.LastSaveProblem}. They'll apply until you close the app.";
 
@@ -41,6 +42,9 @@ public sealed partial class MainViewModel : ObservableObject
     public ISettingsService Settings { get; }
     public SourceList Sources { get; }
 
+    /// <summary>The Settings page (text size and theme).</summary>
+    public SettingsViewModel SettingsPage { get; }
+
     /// <summary>The lab registry; labs not registered here show as "coming later".</summary>
     public LabFactory Labs { get; }
 
@@ -51,7 +55,16 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private MarkdownDocument? explanation;
     [ObservableProperty] private MarkdownDocument? formula;
     [ObservableProperty] private MarkdownDocument? brainsAndModels;
-    [ObservableProperty] private bool isShowingSources;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShowingLesson))]
+    private bool isShowingSources;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShowingLesson))]
+    private bool isShowingSettings;
+
+    /// <summary>True when the lesson (lab and explanation) is showing, not the Sources or Settings page.</summary>
+    public bool IsShowingLesson => !IsShowingSources && !IsShowingSettings;
     [ObservableProperty] private string? statusMessage;
 
     /// <summary>Re-reads the library (after a save or delete) and selects the active model's entry.</summary>
@@ -76,7 +89,43 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowSources() => IsShowingSources = true;
+    private void ShowSources()
+    {
+        IsShowingSettings = false;
+        IsShowingSources = true;
+    }
+
+    [RelayCommand]
+    private void ShowSettings()
+    {
+        IsShowingSources = false;
+        IsShowingSettings = true;
+    }
+
+    /// <summary>Leaves the Sources or Settings page and shows the current lesson again.</summary>
+    [RelayCommand]
+    private void BackToLesson()
+    {
+        IsShowingSources = false;
+        IsShowingSettings = false;
+    }
+
+    /// <summary>What a click on a lesson in the list does: shows it, or (if it is already selected) just goes back to it.</summary>
+    [RelayCommand]
+    private void OpenLesson(Lesson? lesson)
+    {
+        if (lesson == null) return;
+        if (lesson == SelectedLesson) BackToLesson();
+        else Show(lesson.Section, lesson);
+    }
+
+    /// <summary>What a click on a section tab (or Ctrl+1 to Ctrl+5) does: shows it, or goes back to its current lesson.</summary>
+    [RelayCommand]
+    private void ShowSection(Section section)
+    {
+        if (section == SelectedSection) BackToLesson();
+        else SelectedSection = section;
+    }
 
     [RelayCommand]
     private void ResetLab() => CurrentLab?.Reset();
@@ -110,6 +159,13 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    // The active model may change from elsewhere (the Train lab's "Use in the labs"): keep the picker truthful.
+    private void OnActiveModelChanged()
+    {
+        if (SelectedModelEntry == null || !IsActive(SelectedModelEntry)) RefreshModelEntries();
+        CurrentLab?.OnActiveModelChanged();
+    }
+
     private bool IsActive(ModelEntry e) => e.Name == _models.Current.Info.Name && e.IsShipped == _models.Current.Info.IsShipped;
 
     private ModelEntry? ActiveEntry() => ModelEntries.FirstOrDefault(e => e.IsReadable && IsActive(e));
@@ -128,6 +184,7 @@ public sealed partial class MainViewModel : ObservableObject
             }
             SelectedLesson = lesson;
             IsShowingSources = false;
+            IsShowingSettings = false;
             Explanation = lesson?.Explanation;
             Formula = lesson?.Formula;
             BrainsAndModels = lesson?.BrainsAndModels;

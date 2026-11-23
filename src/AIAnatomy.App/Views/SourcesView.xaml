@@ -1,0 +1,38 @@
+<UserControl x:Class="AIAnatomy.App.Views.SourcesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views">
+    <!-- DataContext: MainViewModel. -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+    </UserControl.Resources>
+    <Border Style="{StaticResource Pane}" Padding="24,16">
+        <DockPanel>
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <Button DockPanel.Dock="Right" Content="Back to the lesson" Command="{Binding BackToLessonCommand}" VerticalAlignment="Top" />
+                <TextBlock Style="{StaticResource HeadingText}" Text="Sources" />
+            </DockPanel>
+            <TextBlock DockPanel.Dock="Top" Style="{StaticResource BodyText}" MaxWidth="1100" HorizontalAlignment="Left"
+                       Text="The papers and books behind the claims in the lessons. Standard textbook material is marked in each lesson." />
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <ItemsControl ItemsSource="{Binding Sources.All}" Focusable="False" MaxWidth="1100" HorizontalAlignment="Left">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="{DynamicResource GridLineBrush}" BorderThickness="0,0,0,1" Padding="0,10">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Citation}" TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,4,0,0" FontSize="{DynamicResource SmallFontSize}" TextWrapping="Wrap"
+                                               Visibility="{Binding Url, Converter={StaticResource VisibleIfSet}}">
+                                        <Hyperlink NavigateUri="{Binding Url}" RequestNavigate="OnOpenLink" ToolTip="Opens in your web browser">
+                                            <Run Text="{Binding Url, Mode=OneWay}" FontFamily="{StaticResource NumberFont}" />
+                                        </Hyperlink>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</UserControl>

@@ -1,0 +1,34 @@
+<!-- Light theme. Text on every background here is at least 7:1 (WCAG AAA), muted text at least 7:1, links 6.6:1. Brushes are swapped by ThemeManager; the HeatMap ramp (RampLow/Mid/High) is the same in both themes. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="WindowBrush" Color="#F6F5F2" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="HeaderBrush" Color="#E9E7E2" />
+    <SolidColorBrush x:Key="TextBrush" Color="#1A1A1A" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#4D4B47" />
+    <SolidColorBrush x:Key="BorderBrush" Color="#7D7A73" />
+    <SolidColorBrush x:Key="GridLineBrush" Color="#DDDAD3" />
+    <SolidColorBrush x:Key="FocusBrush" Color="#0B57A4" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#1D5A92" />
+    <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ButtonBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ButtonTextBrush" Color="#1A1A1A" />
+    <SolidColorBrush x:Key="StatusBrush" Color="#FFF1C7" />
+    <SolidColorBrush x:Key="StatusTextBrush" Color="#3A2B00" />
+    <SolidColorBrush x:Key="LinkBrush" Color="#0B57A4" />
+    <SolidColorBrush x:Key="Series1Brush" Color="#1D5A92" />
+    <SolidColorBrush x:Key="Series2Brush" Color="#A84B12" />
+    <SolidColorBrush x:Key="Series3Brush" Color="#2E7D32" />
+    <SolidColorBrush x:Key="Series4Brush" Color="#6A3D9A" />
+    <SolidColorBrush x:Key="AxisBrush" Color="#5F5C56" />
+    <SolidColorBrush x:Key="BlockedBrush" Color="#C9C9C9" />
+    <SolidColorBrush x:Key="BlockedLineBrush" Color="#6E6E6E" />
+    <SolidColorBrush x:Key="ScrollTrackBrush" Color="#E9E7E2" />
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#8F8C85" />
+    <SolidColorBrush x:Key="HighlightBrush" Color="#1A1A1A" />
+    <SolidColorBrush x:Key="LabelPlateBrush" Color="#FFFFFF" />
+    <!-- Single-hue sequential ramp for heat maps, light (small) to dark (large). -->
+    <Color x:Key="RampLowColor">#F1F6FB</Color>
+    <Color x:Key="RampMidColor">#6BAED6</Color>
+    <Color x:Key="RampHighColor">#08306B</Color>
+</ResourceDictionary>

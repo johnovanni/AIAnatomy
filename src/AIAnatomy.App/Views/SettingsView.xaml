@@ -1,0 +1,43 @@
+<UserControl x:Class="AIAnatomy.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- DataContext: MainViewModel; the settings themselves are MainViewModel.SettingsPage. -->
+    <Border Style="{StaticResource Pane}" Padding="24,16">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+            <StackPanel MaxWidth="1000" HorizontalAlignment="Left">
+                <DockPanel Margin="0,0,0,8">
+                    <Button DockPanel.Dock="Right" Content="Back to the lesson" VerticalAlignment="Top" Command="{Binding BackToLessonCommand}" />
+                    <TextBlock Style="{StaticResource HeadingText}" Text="Settings" />
+                </DockPanel>
+                <StackPanel DataContext="{Binding SettingsPage}">
+                    <TextBlock Style="{StaticResource MutedText}" Text="Changes show straight away and are saved for next time." />
+
+                    <TextBlock Style="{StaticResource SubheadingText}" Text="Text size" />
+                    <DockPanel Margin="0,0,0,8">
+                        <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0" FontFamily="{StaticResource NumberFont}"
+                                   MinWidth="90" Text="{Binding BodyFontSize, StringFormat={}{0:0} pt}" />
+                        <Slider Minimum="{Binding MinimumFontSize}" Maximum="{Binding MaximumFontSize}"
+                                Value="{Binding BodyFontSize}" SmallChange="1" LargeChange="2" TickFrequency="1"
+                                IsSnapToTickEnabled="True" AutomationProperties.Name="Text size" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock Style="{StaticResource MutedText}" Text="From 16 pt to 32 pt. Headings are 1.4 times larger." />
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,4,0,0">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource HeadingText}" Margin="0,0,0,4" Text="A heading looks like this" />
+                            <TextBlock Style="{StaticResource BodyText}" Margin="0">
+                                <Run Text="Lesson text looks like this. Numbers look like this:" />
+                                <Run Text="0.41273849201" FontFamily="{StaticResource NumberFont}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource SubheadingText}" Text="Colours" />
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Content="Light" GroupName="Theme" IsChecked="{Binding IsLightTheme}" />
+                        <RadioButton Content="Dark" GroupName="Theme" IsChecked="{Binding IsDarkTheme}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

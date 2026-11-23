@@ -10,4 +10,11 @@
   <ItemGroup>
     <ProjectReference Include="..\AIAnatomy.Presentation\AIAnatomy.Presentation.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="WpfMath" Version="2.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Lessons, sources, texts and shipped models sit beside the exe (AppPaths.Content). -->
+    <None Include="..\..\content\**\*" Link="content\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

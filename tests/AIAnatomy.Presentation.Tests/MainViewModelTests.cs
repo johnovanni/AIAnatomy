@@ -169,4 +169,102 @@ public class MainViewModelTests : IDisposable
         Assert.Throws<ArgumentException>(() => vm.Labs.Create("NopeLab"));
         Assert.True(vm.Labs.IsRegistered("ComingLaterLab"));
     }
+
+    [Fact]
+    public void Main_BackToLesson_LeavesSources()
+    {
+        var vm = _env.NewMain();
+        vm.ShowSourcesCommand.Execute(null);
+        Assert.False(vm.IsShowingLesson);
+
+        vm.BackToLessonCommand.Execute(null);
+
+        Assert.False(vm.IsShowingSources);
+        Assert.True(vm.IsShowingLesson);
+    }
+
+    [Fact]
+    public void Main_OpeningTheCurrentLesson_LeavesSources_WithoutRecreatingTheLab()
+    {
+        var vm = _env.NewMain();
+        var lab = vm.CurrentLab;
+        vm.ShowSourcesCommand.Execute(null);
+
+        vm.OpenLessonCommand.Execute(vm.SelectedLesson);
+
+        Assert.False(vm.IsShowingSources);
+        Assert.Same(lab, vm.CurrentLab);
+    }
+
+    [Fact]
+    public void Main_OpeningAnotherLesson_ShowsIt()
+    {
+        var vm = _env.NewMain();
+        vm.ShowSettingsCommand.Execute(null);
+
+        vm.OpenLessonCommand.Execute(vm.Lessons[1]);
+
+        Assert.Same(vm.Lessons[1], vm.SelectedLesson);
+        Assert.False(vm.IsShowingSettings);
+        Assert.True(vm.IsShowingLesson);
+    }
+
+    [Fact]
+    public void Main_ShowSettings_AndShowSources_AreExclusive()
+    {
+        var vm = _env.NewMain();
+        vm.ShowSettingsCommand.Execute(null);
+        Assert.True(vm.IsShowingSettings);
+
+        vm.ShowSourcesCommand.Execute(null);
+
+        Assert.True(vm.IsShowingSources);
+        Assert.False(vm.IsShowingSettings);
+        Assert.False(vm.IsShowingLesson);
+    }
+
+    [Fact]
+    public void Main_ShowSection_CurrentSection_LeavesSources()
+    {
+        var vm = _env.NewMain();
+        vm.ShowSourcesCommand.Execute(null);
+
+        vm.ShowSectionCommand.Execute(Section.Map);
+
+        Assert.True(vm.IsShowingLesson);
+        Assert.Equal("rules-vs-learning", vm.SelectedLesson!.Id);
+    }
+
+    [Fact]
+    public void Main_ShowSection_OtherSection_SwitchesSection()
+    {
+        var vm = _env.NewMain();
+        vm.ShowSectionCommand.Execute(Section.Whole);
+        Assert.Equal(Section.Whole, vm.SelectedSection);
+        Assert.Equal("train", vm.SelectedLesson!.Id);
+    }
+
+    [Fact]
+    public void Main_ModelChangedElsewhere_ResyncsPicker()
+    {
+        var models = _env.NewActiveModels();
+        var vm = _env.NewMain(models);
+
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+
+        Assert.Equal("Induction demo", vm.SelectedModelEntry!.Name);
+    }
+
+    [Fact]
+    public void Main_ModelSavedAndActivatedElsewhere_AppearsInPicker()
+    {
+        var models = _env.NewActiveModels();
+        var vm = _env.NewMain(models);
+        int before = vm.ModelEntries.Count;
+
+        models.SetActive(models.Library.Save(models.Current, "My copy"));   // as the Train lab's "Use in the labs" will
+
+        Assert.Equal(before + 1, vm.ModelEntries.Count);
+        Assert.False(vm.SelectedModelEntry!.IsShipped);
+    }
 }

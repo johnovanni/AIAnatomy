@@ -1,6 +1,167 @@
 <Window x:Class="AIAnatomy.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="AI Anatomy" Width="1100" Height="700">
-    <Grid />
+        xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation"
+        xmlns:lessons="clr-namespace:AIAnatomy.Lessons;assembly=AIAnatomy.Lessons"
+        xmlns:models="clr-namespace:AIAnatomy.Models.Language;assembly=AIAnatomy.Models"
+        xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+        xmlns:v="clr-namespace:AIAnatomy.App.Views"
+        x:Name="Root"
+        Title="AIAnatomy" Width="1600" Height="1000" MinWidth="900" MinHeight="600"
+        Background="{DynamicResource WindowBrush}" Foreground="{DynamicResource TextBrush}"
+        FontFamily="{StaticResource BodyFont}" FontSize="{DynamicResource BodyFontSize}"
+        TextOptions.TextFormattingMode="Ideal" UseLayoutRounding="True">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="Visible" />
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+
+        <!-- Lab views, chosen by view-model type. Each later lab adds its DataTemplate here. -->
+        <DataTemplate DataType="{x:Type labs:ComingLaterLabViewModel}">
+            <v:ComingLaterView />
+        </DataTemplate>
+
+        <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">
+            <TextBlock TextTrimming="CharacterEllipsis">
+                <Run Text="{Binding Name, Mode=OneWay}" /><Run x:Name="Note" Text="" />
+            </TextBlock>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsReadable}" Value="False">
+                    <Setter TargetName="Note" Property="Text" Value=" (cannot be used)" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Window.InputBindings>
+        <KeyBinding Key="D1" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Map}" />
+        <KeyBinding Key="D2" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Parts}" />
+        <KeyBinding Key="D3" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Whole}" />
+        <KeyBinding Key="D4" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Family}" />
+        <KeyBinding Key="D5" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Beyond}" />
+        <KeyBinding Key="NumPad1" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Map}" />
+        <KeyBinding Key="NumPad2" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Parts}" />
+        <KeyBinding Key="NumPad3" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Whole}" />
+        <KeyBinding Key="NumPad4" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Family}" />
+        <KeyBinding Key="NumPad5" Modifiers="Control" Command="{Binding ShowSectionCommand}" CommandParameter="{x:Static lessons:Section.Beyond}" />
+    </Window.InputBindings>
+
+    <DockPanel x:Name="Shell" Background="{DynamicResource WindowBrush}">
+
+        <!-- Header: section tabs, then the model picker and the Reset, Sources and Settings buttons (they wrap when the text is large). -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1" Padding="12,8,12,0">
+            <WrapPanel>
+                <ListBox x:Name="SectionTabs" Style="{StaticResource PlainList}" ItemsSource="{Binding Sections}"
+                         SelectedItem="{Binding SelectedSection}" AutomationProperties.Name="Sections" Margin="0,0,24,0"
+                         VerticalAlignment="Bottom">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource SectionTab}">
+                            <EventSetter Event="PreviewMouseLeftButtonUp" Handler="OnSectionClicked" />
+                            <EventSetter Event="KeyDown" Handler="OnSectionKey" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
+                    <TextBlock Text="Model" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="{DynamicResource SmallFontSize}"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <ComboBox x:Name="ModelPicker" Width="340" ItemsSource="{Binding ModelEntries}" SelectedItem="{Binding SelectedModelEntry}"
+                              ItemTemplate="{StaticResource ModelEntryTemplate}" AutomationProperties.Name="Model"
+                              ToolTip="The model the labs use">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                <Setter Property="IsEnabled" Value="{Binding IsReadable}" />
+                                <Setter Property="ToolTip" Value="{Binding Problem}" />
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
+                    <Button Content="Reset" Command="{Binding ResetLabCommand}" ToolTip="Put this lab back to how it started" Margin="16,4,4,4" />
+                    <Button Content="Sources" Command="{Binding ShowSourcesCommand}" ToolTip="The papers and books behind the lessons" />
+                    <Button Content="Settings" Command="{Binding ShowSettingsCommand}" ToolTip="Text size and colours" />
+                </StackPanel>
+            </WrapPanel>
+        </Border>
+
+        <!-- Status messages (such as a model that could not be used) are shown here, never only as a sound. -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource StatusBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1" Padding="16,8"
+                Visibility="{Binding StatusMessage, Converter={StaticResource VisibleIfSet}}">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource StatusTextBrush}" TextWrapping="Wrap"
+                       FontWeight="SemiBold" AutomationProperties.LiveSetting="Assertive" />
+        </Border>
+
+        <Grid Margin="12">
+            <!-- The lesson: lessons list, lab, explanation (spec 5.1). -->
+            <Grid x:Name="LessonPage" Visibility="{Binding IsShowingLesson, Converter={StaticResource Visible}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="0.75*" MinWidth="200" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="2*" MinWidth="360" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="1.25*" MinWidth="260" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource Pane}" Padding="8,12">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource PaneTitle}" Text="Lessons" />
+                        <ListBox x:Name="LessonList" Style="{StaticResource PlainList}" ItemsSource="{Binding Lessons}"
+                                 SelectedItem="{Binding SelectedLesson}" AutomationProperties.Name="Lessons">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource LessonItem}">
+                                    <EventSetter Event="PreviewMouseLeftButtonUp" Handler="OnLessonClicked" />
+                                    <EventSetter Event="KeyDown" Handler="OnLessonKey" />
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type lessons:Lesson}">
+                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource Pane}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource HeadingText}" Text="{Binding SelectedLesson.Title}" />
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                            <ContentControl Content="{Binding CurrentLab}" Focusable="False" IsTabStop="False" />
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Column="4" Style="{StaticResource Pane}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource PaneTitle}" Text="Explanation" />
+                        <ScrollViewer x:Name="ExplanationScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                      Focusable="False" Padding="0,0,8,0">
+                            <StackPanel>
+                                <c:MarkdownView Document="{Binding Explanation}" />
+                                <Expander Header="Show formula" Margin="0,12,0,0" AutomationProperties.Name="Show formula"
+                                          Visibility="{Binding Formula, Converter={StaticResource VisibleIfSet}}">
+                                    <c:MarkdownView Document="{Binding Formula}" />
+                                </Expander>
+                                <Border Margin="0,20,0,0" Padding="14,10" CornerRadius="8" BorderThickness="6,1,1,1"
+                                        BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource WindowBrush}"
+                                        Visibility="{Binding BrainsAndModels, Converter={StaticResource VisibleIfSet}}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="Brains and models" />
+                                        <c:MarkdownView Document="{Binding BrainsAndModels}" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <v:SourcesView Visibility="{Binding IsShowingSources, Converter={StaticResource Visible}}" />
+            <v:SettingsView Visibility="{Binding IsShowingSettings, Converter={StaticResource Visible}}" />
+
+            <!-- Used only by the render-png gallery diagnostic. -->
+            <ContentControl x:Name="DiagnosticPage" Visibility="Collapsed" Focusable="False" />
+        </Grid>
+    </DockPanel>
 </Window>

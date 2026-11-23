@@ -1,6 +1,14 @@
 <Application x:Class="AIAnatomy.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml">
-    <Application.Resources />
+             ShutdownMode="OnExplicitShutdown">
+    <!-- No StartupUri: App.OnStartup builds the services and the window (or runs a diagnostic). ThemeManager adds the
+         Light or Dark dictionary next to Shared.xaml. -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Shared.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>
