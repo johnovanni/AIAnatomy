@@ -1,0 +1,32 @@
+<UserControl x:Class="AIAnatomy.App.Views.StepThroughView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views">
+    <!-- DataContext: StepThroughLabViewModel. -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+    </UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="Follow one token through the whole model, one step at a time. Every number shown is the real number the model computed for the token you choose." />
+        <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
+        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MaxLength="300" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" AutomationProperties.Name="Your text" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}" Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
+        <TextBlock Style="{StaticResource MutedText}" Text="␣ is a space, ↵ a new line, � a character the model has never seen. Each token is numbered by its position, starting at 1." />
+        <WrapPanel Margin="0,0,0,8">
+            <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Token to follow" />
+            <ComboBox Width="120" Margin="0,0,16,4" ItemsSource="{Binding PositionChoices}" SelectedIndex="{Binding PositionIndex}" AutomationProperties.Name="Token to follow" />
+        </WrapPanel>
+        <WrapPanel Margin="0,0,0,8">
+            <Button Content="Previous" Command="{Binding PreviousCommand}" Margin="0,0,8,4" Padding="12,4" AutomationProperties.Name="Previous step" />
+            <Button Content="Next" Command="{Binding NextCommand}" Margin="0,0,16,4" Padding="12,4" AutomationProperties.Name="Next step" />
+            <TextBlock VerticalAlignment="Center" Margin="0,0,0,4" FontWeight="SemiBold" Text="{Binding StageCaption}" />
+        </WrapPanel>
+        <TextBlock Style="{StaticResource MutedText}"
+                   Text="With the steps selected (click them), the Left and Right arrow keys or Page Up and Page Down also move between steps. The step you are on is marked &quot;current step&quot;." />
+        <c:PipelineView Stages="{Binding Stages}" SelectedIndex="{Binding StageIndex, Mode=TwoWay}" KeyDown="OnPipelineKeyDown"
+                        AutomationProperties.Name="The steps of one prediction" />
+    </StackPanel>
+</UserControl>

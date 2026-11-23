@@ -32,6 +32,8 @@
         <DataTemplate DataType="{x:Type labs:SamplingLabViewModel}"><v:SamplingView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:LearningLabViewModel}"><v:LearningView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:TrainLabViewModel}"><v:TrainView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:StepThroughLabViewModel}"><v:StepThroughView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:ScaleLabViewModel}"><v:ScaleView /></DataTemplate>
 
         <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">
             <TextBlock TextTrimming="CharacterEllipsis">

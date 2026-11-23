@@ -1,0 +1,94 @@
+using System.Globalization;
+using AIAnatomy.Presentation.Services;
+using AIAnatomy.Presentation.Visuals;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace AIAnatomy.Presentation.Labs;
+
+/// <summary>One row of the size chart. <c>Count</c> and <c>BarFraction</c> are null when the size is not published.</summary>
+public sealed record ScaleRow(string Label, long? Count, string CountText, string? Source, double? BarFraction)
+{
+    public string Description => Source == null ? $"{Label}: {CountText}" : $"{Label}: {CountText}. Source: {Source}";
+}
+
+/// <summary>How big our model is, by part, next to published sizes of real models on a logarithmic scale.</summary>
+public sealed partial class ScaleLabViewModel : LabViewModel
+{
+    public const string Id = "ScaleLab";
+    public const long Gpt3Count = 175_000_000_000, Gpt2Count = 124_000_000;
+
+    public static IReadOnlyList<string> PartOrder => TrainSettingsPanelViewModel.PartOrder;
+
+    public const string ScaleNote =
+        "The bars use a logarithmic scale: each step along it is 10 times bigger than the one before. " +
+        "That is why a bar for a model a million times larger is only a few steps longer.";
+
+    public const string Gpt2Text =
+        "124 million (the GPT-2 paper's table lists 117 million; the released model has 124 million)";
+
+    public const string ClaudeLabel = "Claude: size not published";
+
+    private readonly IActiveModelService _models;
+
+    public ScaleLabViewModel(IActiveModelService models)
+    {
+        _models = models ?? throw new ArgumentNullException(nameof(models));
+        Refresh();
+    }
+
+    public override string LabId => Id;
+
+    [ObservableProperty] private long ourCount;
+    [ObservableProperty] private string ourDescription = "";
+    [ObservableProperty] private IReadOnlyList<ParameterRow> parts = [];
+    [ObservableProperty] private IReadOnlyList<ScaleRow> models = [];
+    [ObservableProperty] private string axisText = "";
+    [ObservableProperty] private string ratioSentence = "";
+
+    public override void Reset() => Refresh();
+
+    public override void OnActiveModelChanged() => Refresh();
+
+    private void Refresh()
+    {
+        var model = _models.Current;
+        var counts = model.Transformer.ParameterCountsByPart();
+        Parts = PartOrder.Select(p => new ParameterRow(p, counts[p], NumberText.Short(counts[p]))).ToList();
+        OurCount = Parts.Sum(p => p.Count);
+        var config = model.Transformer.Config;
+        string layers = config.Layers == 1 ? "1 layer" : $"{config.Layers} layers";
+        string heads = config.Heads == 1 ? "1 head" : $"{config.Heads} heads";
+        OurDescription = $"This model: {NumberText.Short(OurCount)} numbers to learn ({layers}, {heads} each, width {config.ModelWidth}).";
+
+        // The scale runs from one step (power of ten) below our model to the first one above GPT-3, so every bar is visible.
+        int low = (int)Math.Floor(Math.Log10(Math.Max(1, OurCount))) - 1;
+        int high = (int)Math.Ceiling(Math.Log10(Gpt3Count));
+        double Fraction(long n) => (Math.Log10(n) - low) / (high - low);
+        Models =
+        [
+            new("This model", OurCount, NumberText.Short(OurCount), null, Fraction(OurCount)),
+            new("GPT-2 small", Gpt2Count, Gpt2Text, "radford2019 (Radford et al., 2019)", Fraction(Gpt2Count)),
+            new("GPT-3", Gpt3Count, "175 billion", "brown2020 (Brown et al., 2020)", Fraction(Gpt3Count)),
+            new(ClaudeLabel, null, "not published, so there is no bar", null, null),
+        ];
+        AxisText = "Along the scale: " + string.Join(" → ", Enumerable.Range(low, high - low + 1).Select(e => Power(e)));
+        RatioSentence = $"GPT-3 has about {Times(Gpt3Count / (double)OurCount)} times as many parameters as this model.";
+    }
+
+    private static string Power(int exponent) =>
+        exponent < 3 ? ((long)Math.Pow(10, exponent)).ToString(CultureInfo.InvariantCulture) : Word(exponent);
+
+    private static string Word(int exponent)
+    {
+        (string unit, int shift) = exponent switch { < 6 => ("thousand", 3), < 9 => ("million", 6), < 12 => ("billion", 9), _ => ("trillion", 12) };
+        return $"{(long)Math.Pow(10, exponent - shift)} {unit}";
+    }
+
+    /// <summary>A ratio in words with two significant figures, such as "5.5 million".</summary>
+    private static string Times(double ratio)
+    {
+        if (ratio >= 1e6) return $"{(ratio / 1e6).ToString("0.#", CultureInfo.InvariantCulture)} million";
+        if (ratio >= 1e3) return $"{(ratio / 1e3).ToString("0.#", CultureInfo.InvariantCulture)} thousand";
+        return ratio.ToString("0.#", CultureInfo.InvariantCulture);
+    }
+}

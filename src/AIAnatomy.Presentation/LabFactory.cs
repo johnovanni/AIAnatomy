@@ -34,6 +34,8 @@ public sealed class LabFactory
         Register(ResidualLabViewModel.Id, () => new ResidualLabViewModel(models));
         Register(SamplingLabViewModel.Id, () => new SamplingLabViewModel(models));
         Register(LearningLabViewModel.Id, () => new LearningLabViewModel(models));
+        Register(StepThroughLabViewModel.Id, () => new StepThroughLabViewModel(models));
+        Register(ScaleLabViewModel.Id, () => new ScaleLabViewModel(models));
         Register(TrainLabViewModel.Id, () => new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }
 

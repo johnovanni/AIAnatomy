@@ -22,9 +22,24 @@ public sealed class PipelineView : ChartBase
         typeof(PipelineView), new FrameworkPropertyMetadata(null, Relayout));
 
     public static readonly DependencyProperty SelectedIndexProperty = DependencyProperty.Register(nameof(SelectedIndex), typeof(int),
-        typeof(PipelineView), new FrameworkPropertyMetadata(-1, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault | Relayout));
+        typeof(PipelineView), new FrameworkPropertyMetadata(-1, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault | Relayout, OnSelectedChanged));
 
-    public PipelineView() => ToolTipService.SetInitialShowDelay(this, 300);
+    public PipelineView()
+    {
+        ToolTipService.SetInitialShowDelay(this, 300);
+        Focusable = true;
+    }
+
+    /// <summary>Scrolls the newly marked step into view, so stepping with the keyboard never leaves it off screen.</summary>
+    private static void OnSelectedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var view = (PipelineView)d;
+        view.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (view.Stages is not { Count: > 0 } stages || view.SelectedIndex < 0 || view.SelectedIndex >= stages.Count || view.ActualWidth <= 0) return;
+            view.BringIntoView(view.ComputeLayout(view.ActualWidth)[view.SelectedIndex].Box);
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
 
     public IReadOnlyList<PipelineStage>? Stages { get => (IReadOnlyList<PipelineStage>?)GetValue(StagesProperty); set => SetValue(StagesProperty, value); }
     /// <summary>The step to mark as current, or −1.</summary>
@@ -122,6 +137,12 @@ public sealed class PipelineView : ChartBase
                 dc.DrawGeometry(AxisBrush, null, head);
             }
         }
+    }
+
+    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(e);
+        Focus();
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
