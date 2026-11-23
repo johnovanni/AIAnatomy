@@ -26,6 +26,9 @@
         <DataTemplate DataType="{x:Type labs:PositionLabViewModel}"><v:PositionView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:EmbeddingsLabViewModel}"><v:EmbeddingsView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:AttentionLabViewModel}"><v:AttentionView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:MultiHeadLabViewModel}"><v:MultiHeadView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:FeedForwardLabViewModel}"><v:FeedForwardView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:ResidualLabViewModel}"><v:ResidualView /></DataTemplate>
 
         <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">
             <TextBlock TextTrimming="CharacterEllipsis">

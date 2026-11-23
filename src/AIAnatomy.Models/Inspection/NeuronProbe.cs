@@ -13,9 +13,9 @@ public static class NeuronProbe
 
     /// <summary>
     /// Runs <paramref name="text"/> through the model (in consecutive windows of the model's context length) and returns the
-    /// <paramref name="count"/> positions where the chosen feed-forward neuron was most active, strongest first.
+    /// <paramref name="count"/> positions where the chosen feed-forward neuron was most active, strongest first. Throws <see cref="OperationCanceledException"/> if <paramref name="cancel"/> is signalled.
     /// </summary>
-    public static IReadOnlyList<NeuronActivation> TopContexts(LanguageModel m, string text, int layer, int neuron, int count)
+    public static IReadOnlyList<NeuronActivation> TopContexts(LanguageModel m, string text, int layer, int neuron, int count, CancellationToken cancel = default)
     {
         ArgumentNullException.ThrowIfNull(m);
         ArgumentNullException.ThrowIfNull(text);
@@ -35,6 +35,7 @@ public static class NeuronProbe
         var found = new List<NeuronActivation>(ids.Count);
         for (int start = 0; start < ids.Count; start += config.ContextLength)
         {
+            cancel.ThrowIfCancellationRequested();
             var window = ids.Skip(start).Take(config.ContextLength).ToArray();
             var hidden = m.Transformer.Forward(window).Trace.Blocks[layer].FeedForwardHidden
                 ?? throw new InvalidOperationException("The block recorded no feed-forward activations.");

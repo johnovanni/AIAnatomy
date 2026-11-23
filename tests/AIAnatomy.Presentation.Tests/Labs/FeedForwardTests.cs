@@ -1,0 +1,111 @@
+using AIAnatomy.Models.Inspection;
+using AIAnatomy.Presentation.Labs;
+
+namespace AIAnatomy.Presentation.Tests.Labs;
+
+public class FeedForwardTests : IDisposable
+{
+    private readonly TestEnvironment _env = new();
+    public void Dispose() => _env.Dispose();
+
+    private static readonly string Fables = new string(
+        File.ReadAllText(Path.Combine(TestEnvironment.Content, "texts", "aesop-fables.txt")).Take(2500).ToArray());
+
+    private FeedForwardLabViewModel NewLab() => new(_env.NewActiveModels(), () => Fables);
+
+    [Fact]
+    public async Task TopContextsSortedDescending()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        Assert.Equal(10, lab.Contexts.Count);
+        Assert.Equal(lab.Contexts.OrderByDescending(c => c.Value).Select(c => c.Value), lab.Contexts.Select(c => c.Value));
+        Assert.Equal(Enumerable.Range(1, 10), lab.Contexts.Select(c => c.Rank));
+        Assert.All(lab.Contexts, c => Assert.False(string.IsNullOrEmpty(c.Own)));
+    }
+
+    [Fact]
+    public async Task ChangingNeuron_UpdatesContexts()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        var first = lab.Contexts.Select(c => c.Value).ToArray();
+        lab.Neuron = 7;
+        await lab.WorkCompleted;
+        var second = lab.Contexts.Select(c => c.Value).ToArray();
+        Assert.NotEqual(first, second);
+        var direct = NeuronProbe.TopContexts(_env.NewActiveModels().Current, Fables, 0, 6, 10);
+        Assert.Equal(direct.Select(d => d.Value), second);
+    }
+
+    [Fact]
+    public async Task ContextsAreCachedPerLayerAndNeuron()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        var contexts = lab.Contexts;
+        lab.Neuron = 2;
+        await lab.WorkCompleted;
+        lab.Neuron = 1;
+        Assert.Same(contexts, lab.Contexts);   // straight from the cache, no new search
+    }
+
+    [Fact]
+    public async Task ActivationStrip_HasOneNumberPerToken()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        Assert.Equal(LabText.DefaultText.Length, lab.Activations!.Length);
+        lab.Text = "";
+        Assert.Equal("Type some text to begin", lab.Message);
+        Assert.Null(lab.Activations);
+        lab.Text = new string('a', 70);
+        Assert.Equal("Only the last 64 characters are used: that is this model's context length.", lab.Notice);
+    }
+
+    [Fact]
+    public async Task ContextsShowMarksAndKeepOwnCharacter()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        Assert.All(lab.Contexts, c => Assert.DoesNotContain(' ', c.Before + c.Own));
+        Assert.All(lab.Contexts, c => Assert.DoesNotContain('\n', c.Before + c.Own));
+    }
+
+    [Fact]
+    public async Task ChangingLayer_RunsANewSearch()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        var layer1 = lab.Contexts.Select(c => c.Value).ToArray();
+        lab.Layer = 2;
+        await lab.WorkCompleted;
+        Assert.NotEqual(layer1, lab.Contexts.Select(c => c.Value).ToArray());
+    }
+
+    [Fact]
+    public async Task InductionDemo_ShowsNoteAndDoesNotThrow()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new FeedForwardLabViewModel(models, () => Fables);
+        await lab.WorkCompleted;
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+        lab.OnActiveModelChanged();
+        await lab.WorkCompleted;
+        Assert.False(lab.HasFeedForward);
+        Assert.Equal("This model has no feed-forward layers (it is attention-only).", lab.Message);
+        Assert.Empty(lab.Contexts);
+        lab.Reset();
+        await lab.WorkCompleted;
+        Assert.False(lab.HasFeedForward);
+    }
+
+    [Fact]
+    public async Task Deactivate_CancelsTheSearch()
+    {
+        var lab = new FeedForwardLabViewModel(_env.NewActiveModels(), () => new string('a', 20000));
+        lab.Deactivate();
+        await lab.WorkCompleted;
+        Assert.Empty(lab.Contexts);
+    }
+}

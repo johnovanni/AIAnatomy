@@ -1,0 +1,75 @@
+<UserControl x:Class="AIAnatomy.App.Views.ResidualView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views"
+             xmlns:glob="clr-namespace:System.Globalization;assembly=System.Runtime"
+             xmlns:vis="clr-namespace:AIAnatomy.Presentation.Visuals;assembly=AIAnatomy.Presentation"
+             xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation">
+    <!-- DataContext: ResidualLabViewModel. -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+        <DataTemplate x:Key="SizeRow" DataType="{x:Type vis:LabeledValue}">
+            <Grid Margin="0,2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" MinWidth="200" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" MinWidth="90" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0" Text="{Binding Label}" />
+                <ProgressBar Grid.Column="1" Minimum="0" Height="20" Value="{Binding Value, Mode=OneWay}" AutomationProperties.Name="{Binding Label}"
+                             Maximum="{Binding DataContext.SizeMaximum, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                <TextBlock Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{StaticResource NumberFont}"
+                           Text="{Binding Value, StringFormat=0.###, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" />
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="Guess" DataType="{x:Type labs:LensGuess}">
+            <TextBlock FontFamily="{StaticResource NumberFont}" Margin="0,0,16,0" Text="{Binding Text}" />
+        </DataTemplate>
+        <DataTemplate x:Key="LensLine" DataType="{x:Type labs:LensRow}">
+            <Border BorderBrush="{DynamicResource GridLineBrush}" BorderThickness="0,0,0,1" Padding="0,4" AutomationProperties.Name="{Binding Description}">
+                <StackPanel>
+                    <TextBlock FontWeight="SemiBold" Text="{Binding Label}" />
+                    <ItemsControl ItemsSource="{Binding Guesses}" ItemTemplate="{StaticResource Guess}" Focusable="False">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="Each token has one vector that travels through the whole model. Every attention and feed-forward layer adds to it, and never replaces it. That running total is the residual stream." />
+        <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
+        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MaxLength="300" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" AutomationProperties.Name="Your text" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}" Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
+        <TextBlock Style="{StaticResource MutedText}" Text="␣ is a space, ↵ a new line, � a character the model has never seen. Each token is numbered by its position." />
+        <WrapPanel Margin="0,0,0,8">
+            <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Token to follow" />
+            <ComboBox Width="120" Margin="0,0,16,4" ItemsSource="{Binding PositionChoices}" SelectedIndex="{Binding PositionIndex}" AutomationProperties.Name="Token to follow" />
+        </WrapPanel>
+
+        <TextBlock Style="{StaticResource SubheadingText}" Text="How long the vector is after each stage" />
+        <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:ResidualLabViewModel.SizeNote}" />
+        <ItemsControl ItemsSource="{Binding Sizes}" ItemTemplate="{StaticResource SizeRow}" Focusable="False" />
+
+        <TextBlock Style="{StaticResource SubheadingText}" Text="What would the model guess at each stage?" />
+        <TextBlock Style="{StaticResource BodyText}" Text="{Binding LensCaption}" />
+        <TextBlock Style="{StaticResource MutedText}" Text="Each line: the stage, then its five best guesses for the next character, with probabilities." />
+        <ItemsControl ItemsSource="{Binding LensRows}" ItemTemplate="{StaticResource LensLine}" Focusable="False" />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0" Text="{x:Static labs:ResidualLabViewModel.LensNote}" />
+
+        <TextBlock Style="{StaticResource SubheadingText}" Text="Layer norm: tidying a vector" />
+        <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:ResidualLabViewModel.NormNote}" />
+        <WrapPanel Margin="0,0,0,8">
+            <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Which layer norm" />
+            <ComboBox Width="80" Margin="0,0,16,4" ItemsSource="{Binding NormStageNumbers}" SelectedItem="{Binding NormStage}" AutomationProperties.Name="Which layer norm" />
+            <TextBlock VerticalAlignment="Center" Margin="0,0,0,4" Style="{StaticResource MutedText}" Text="{Binding NormStageName}" />
+        </WrapPanel>
+        <TextBlock Style="{StaticResource PaneTitle}" Text="{Binding NormBeforeText}" />
+        <c:VectorStrip Values="{Binding NormBefore}" AutomationProperties.Name="The vector before layer norm" />
+        <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,0" Text="{Binding NormAfterText}" />
+        <c:VectorStrip Values="{Binding NormAfter}" AutomationProperties.Name="The vector after layer norm" />
+        <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,0" Text="{Binding NormScaledText}" />
+        <c:VectorStrip Values="{Binding NormScaled}" AutomationProperties.Name="The vector after gamma and beta" />
+    </StackPanel>
+</UserControl>

@@ -1,4 +1,5 @@
 using System.Text;
+using AIAnatomy.Models.Language;
 
 namespace AIAnatomy.Presentation.Labs;
 
@@ -6,6 +7,16 @@ namespace AIAnatomy.Presentation.Labs;
 public static class LabText
 {
     public const string EmptyPrompt = "Type some text to begin";
+
+    public const string DefaultText = "the fox and the ";
+    public const string DefaultLetters = "ABCDEFABCDE";
+
+    /// <summary>The starting text of a lab: words for the fables model, letters for the letters-only induction demo.</summary>
+    public static string StartingText(LanguageModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        return model.Tokenizer.Encode(DefaultText).Contains(model.Tokenizer.UnknownId) ? DefaultLetters : DefaultText;
+    }
 
     /// <summary>The note shown when the typed text is longer than the model can read.</summary>
     public static string TruncationNote(int contextLength) =>
