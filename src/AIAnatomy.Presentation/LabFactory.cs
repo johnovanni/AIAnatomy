@@ -26,6 +26,8 @@ public sealed class LabFactory
         Register(ArchitectureMapLabViewModel.Id, () => new ArchitectureMapLabViewModel(models));
         Register(TokensLabViewModel.Id, () => new TokensLabViewModel(() => fables.Value));
         Register(PositionLabViewModel.Id, () => new PositionLabViewModel(models));
+        Register(EmbeddingsLabViewModel.Id, () => new EmbeddingsLabViewModel(models));
+        Register(AttentionLabViewModel.Id, () => new AttentionLabViewModel(models));
     }
 
     public void Register(string labId, Func<LabViewModel> create)

@@ -107,10 +107,16 @@ public static class InductionExperiment
         return total / samples;
     }
 
-    /// <summary>Trains a fresh model on endless fresh sequences; the loss falls once an induction head forms.</summary>
-    public static async Task<Transformer> TrainAsync(int steps, int seed, IProgress<TrainingStepReport> p, CancellationToken ct)
+    /// <summary>
+    /// Trains a fresh model on endless fresh sequences; the loss falls once an induction head forms.
+    /// <paramref name="modelCreated"/> receives the model before training starts, so a caller can look at it while it learns
+    /// (only from inside <paramref name="p"/>'s Report, which runs between steps; the model changes during each step).
+    /// </summary>
+    public static async Task<Transformer> TrainAsync(int steps, int seed, IProgress<TrainingStepReport> p, CancellationToken ct,
+        Action<Transformer>? modelCreated = null)
     {
         var model = new Transformer(Config, new SeededRandom(seed));
+        modelCreated?.Invoke(model);
         var trainer = new Trainer(model, new SequenceSource(), new TrainingSettings(BatchSize: 16, LearningRate: 3e-3, Seed: seed));
         await trainer.RunAsync(steps, p, ct).ConfigureAwait(false);
         return model;

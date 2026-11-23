@@ -27,6 +27,8 @@ public sealed class HeatMap : ChartBase
     public static readonly DependencyProperty MaximumProperty = Register(nameof(Maximum), double.NaN);
     public static readonly DependencyProperty ShowCellValuesProperty = Register(nameof(ShowCellValues), true);
 
+    public static readonly DependencyProperty OutlinedCellsProperty = Register<IReadOnlyList<GridCell>?>(nameof(OutlinedCells), null);
+
     public static readonly DependencyProperty SelectedCellProperty = DependencyProperty.Register(nameof(SelectedCell), typeof(GridCell?),
         typeof(HeatMap), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault | Relayout));
 
@@ -62,6 +64,8 @@ public sealed class HeatMap : ChartBase
     public double Maximum { get => (double)GetValue(MaximumProperty); set => SetValue(MaximumProperty, value); }
     /// <summary>Write a short value inside each square when there is room.</summary>
     public bool ShowCellValues { get => (bool)GetValue(ShowCellValuesProperty); set => SetValue(ShowCellValuesProperty, value); }
+    /// <summary>Squares to draw with a heavy outline (a shape, not a colour), such as the cells a lesson is pointing at. Cells outside the grid are ignored.</summary>
+    public IReadOnlyList<GridCell>? OutlinedCells { get => (IReadOnlyList<GridCell>?)GetValue(OutlinedCellsProperty); set => SetValue(OutlinedCellsProperty, value); }
     public GridCell? SelectedCell { get => (GridCell?)GetValue(SelectedCellProperty); set => SetValue(SelectedCellProperty, value); }
     public Brush BlockedBrush { get => (Brush)GetValue(BlockedBrushProperty); set => SetValue(BlockedBrushProperty, value); }
     public Brush BlockedLineBrush { get => (Brush)GetValue(BlockedLineBrushProperty); set => SetValue(BlockedLineBrushProperty, value); }
@@ -186,6 +190,19 @@ public sealed class HeatMap : ChartBase
         }
         var gridRect = new Rect(l.GridLeft, l.GridTop, cols * l.Cell, rows * l.Cell);
         dc.DrawRectangle(null, new Pen(AxisBrush, 1), gridRect);
+
+        if (OutlinedCells is { } outlined)
+        {
+            var heavy = new Pen(Foreground, 3);
+            var light = new Pen(SurfaceBrush, 1.5);
+            foreach (var o in outlined)
+            {
+                if (o.Row < 0 || o.Row >= rows || o.Column < 0 || o.Column >= cols) continue;
+                var outer = new Rect(l.GridLeft + o.Column * l.Cell, l.GridTop + o.Row * l.Cell, l.Cell, l.Cell);
+                dc.DrawRectangle(null, heavy, Inflate(outer, -1.5));
+                dc.DrawRectangle(null, light, Inflate(outer, -4));
+            }
+        }
 
         if (selected is { } cell)
         {

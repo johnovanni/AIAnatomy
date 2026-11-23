@@ -55,7 +55,7 @@ public class MainViewModelTests : IDisposable
     {
         var vm = _env.NewMain();
         vm.SelectedSection = Section.Parts;
-        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "attention");
+        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "multi-head");
 
         var lab = Assert.IsType<ComingLaterLabViewModel>(vm.CurrentLab);
         Assert.Equal("ComingLaterLab", lab.LabId);

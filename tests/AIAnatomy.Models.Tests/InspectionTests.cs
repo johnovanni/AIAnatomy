@@ -23,6 +23,17 @@ public class InspectionTests
     }
 
     [Fact]
+    public async Task InductionTrain_HandsOverTheModelBeforeTrainingStarts()
+    {
+        Transformer? seen = null;
+        int stepsAtCallback = -1;
+        var progress = new Progress<TrainingStepReport>();
+        var trained = await InductionExperiment.TrainAsync(2, 1, progress, CancellationToken.None, m => { seen = m; stepsAtCallback = 0; });
+        Assert.Same(trained, seen);
+        Assert.Equal(0, stepsAtCallback);
+    }
+
+    [Fact]
     public void Pca_PointsOnALine_ExplainNearlyAll()
     {
         var rows = Enumerable.Range(0, 20).Select(i => new[] { i * 1.0, i * 2.0 + 1, -i * 0.5, i * 3.0 }).ToArray();
