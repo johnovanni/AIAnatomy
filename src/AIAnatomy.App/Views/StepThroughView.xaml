@@ -25,7 +25,7 @@
             <TextBlock VerticalAlignment="Center" Margin="0,0,0,4" FontWeight="SemiBold" Text="{Binding StageCaption}" />
         </WrapPanel>
         <TextBlock Style="{StaticResource MutedText}"
-                   Text="With the steps selected (click them), the Left and Right arrow keys or Page Up and Page Down also move between steps. The step you are on is marked &quot;current step&quot;." />
+                   Text="With the steps selected (click them, or press Tab to reach them), the Left and Right arrow keys or Page Up and Page Down also move between steps. The step you are on is marked &quot;current step&quot;." />
         <c:PipelineView Stages="{Binding Stages}" SelectedIndex="{Binding StageIndex, Mode=TwoWay}" KeyDown="OnPipelineKeyDown"
                         AutomationProperties.Name="The steps of one prediction" />
     </StackPanel>

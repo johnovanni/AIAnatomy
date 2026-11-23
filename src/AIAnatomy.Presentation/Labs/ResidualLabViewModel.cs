@@ -140,7 +140,8 @@ public sealed partial class ResidualLabViewModel : LabViewModel
         Notice = prediction.WasTruncated ? LabText.TruncationNote(config.ContextLength) : null;
         var ids = prediction.UsedTokenIds;
         ShownText = LabText.ShowNewlines(model.Tokenizer.Decode(ids));
-        PositionChoices = ids.Select((id, i) => $"{i + 1}:{LabText.Visible(model.Tokenizer.TokenText(id))}").ToList();
+        var choices = ids.Select((id, i) => $"{i + 1}:{LabText.Visible(model.Tokenizer.TokenText(id))}").ToList();
+        if (!PositionChoices.SequenceEqual(choices)) PositionChoices = choices;
         int position = _moveToEnd ? ids.Count - 1 : Math.Clamp(PositionIndex, 0, ids.Count - 1);
         _moveToEnd = false;
         if (position != PositionIndex) { _syncing = true; PositionIndex = position; _syncing = false; }

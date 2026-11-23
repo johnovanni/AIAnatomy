@@ -18,7 +18,6 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
 
     private readonly IActiveModelService _models;
     private string _lastDefault;
-    private bool _syncing;
     private bool _moveToEnd = true;
 
     public StepThroughLabViewModel(IActiveModelService models)
@@ -66,7 +65,11 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
     }
 
     [RelayCommand(CanExecute = nameof(CanNext))]
-    private void Next() => StageIndex = Math.Min(StageIndex + 1, Stages.Count - 1);
+    private void Next()
+    {
+        if (Stages.Count == 0) return;
+        StageIndex = Math.Min(StageIndex + 1, Stages.Count - 1);
+    }
     private bool CanNext() => StageIndex < Stages.Count - 1;
 
     [RelayCommand(CanExecute = nameof(CanPrevious))]
@@ -88,12 +91,17 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
         Refresh();
     }
 
+    private void SetChoices(IReadOnlyList<string> choices)
+    {
+        // Replaced only when the entries change, so a drop-down being used is not reset.
+        if (!PositionChoices.SequenceEqual(choices)) PositionChoices = choices;
+    }
+
     private void UpdateCaption() =>
         StageCaption = Stages.Count == 0 ? "" : $"Step {Math.Clamp(StageIndex, 0, Stages.Count - 1) + 1} of {Stages.Count}";
 
     private void Refresh()
     {
-        if (_syncing) return;
         var model = _models.Current;
         var config = model.Transformer.Config;
         if (string.IsNullOrEmpty(Text))
@@ -101,7 +109,7 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
             Message = LabText.EmptyPrompt;
             Notice = null;
             ShownText = "";
-            PositionChoices = [];
+            SetChoices([]);
             Stages = [];
             StageIndex = 0;
             UpdateCaption();
@@ -112,15 +120,13 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
         Notice = prediction.WasTruncated ? LabText.TruncationNote(config.ContextLength) : null;
         var ids = prediction.UsedTokenIds;
         ShownText = LabText.ShowNewlines(model.Tokenizer.Decode(ids));
-        PositionChoices = ids.Select((id, i) => $"{i + 1}:{LabText.Visible(model.Tokenizer.TokenText(id))}").ToList();
+        SetChoices(ids.Select((id, i) => $"{i + 1}:{LabText.Visible(model.Tokenizer.TokenText(id))}").ToList());
         int position = _moveToEnd ? ids.Count - 1 : Math.Clamp(PositionIndex, 0, ids.Count - 1);
         _moveToEnd = false;
-        if (position != PositionIndex) { _syncing = true; PositionIndex = position; _syncing = false; }
+        if (position != PositionIndex) PositionIndex = position;
 
         var list = Build(model, prediction, position);
-        _syncing = true;
         StageIndex = Math.Clamp(StageIndex, 0, list.Count - 1);
-        _syncing = false;
         Stages = list;
         UpdateCaption();
     }
@@ -139,7 +145,7 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
             new($"Token embedding of {token}", "The token's id picks one row of a learned table: a list of numbers that stands for this character.",
                 trace.TokenEmbeddings.Row(p), null),
             new($"Position embedding of place {p + 1}",
-                "The place in the text also has a list of numbers (all zeros if this model has no position information).",
+                "The place in the text also has a list of numbers: learned during training, or a fixed pattern of sine and cosine waves, depending on the model.",
                 trace.PositionEmbeddings.Row(p), null),
             new("Token plus position", "The two lists are added number by number. This is the vector that enters the first block.",
                 trace.Input.Row(p), null),
@@ -158,7 +164,7 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
                     items.Add(new($"head {h + 1} looks at {PositionChoices[k]}", row[k]));
             }
             list.Add(new(n + "where each head looks",
-                $"Each head spreads attention over the tokens up to this one (its weights add up to 1). Shown: the {WeightsPerHead} largest weights of each head.", null, items));
+                $"Each head spreads attention over the tokens up to this one (its weights add up to 1). Shown: up to {WeightsPerHead} largest weights of each head.", null, items));
             list.Add(new(n + "attention output", "The heads' results are joined and mixed by the output projection into one vector.", block.AttentionOut.Row(p), null));
             list.Add(new(n + "residual after attention",
                 "The attention output is added to the vector that entered the block. Nothing is replaced, only added to.", block.ResidualMid.Row(p), null));
@@ -166,7 +172,7 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
             list.Add(new(n + "layer norm before feed-forward", "The same kind of tidying again, with its own learned scale and shift.", block.Norm2Out.Row(p), null));
             var hidden = block.FeedForwardHidden!.Row(p);
             list.Add(new(n + $"feed-forward hidden layer ({TopCount} largest)",
-                $"The vector is widened into {hidden.Length} neurons. Shown: the {TopCount} with the largest size (ignoring the sign), by neuron number, with their values.",
+                $"The vector is widened into {hidden.Length} neurons. Shown: the {TopCount} with the largest size (ignoring the sign), largest first, each labelled with its neuron number (counted from 1, as in the Feed-forward lab), after the GELU activation.",
                 null, Enumerable.Range(0, hidden.Length).OrderByDescending(i => Math.Abs(hidden[i])).ThenBy(i => i).Take(TopCount)
                     .Select(i => new LabeledValue($"neuron {i + 1}", hidden[i])).ToList()));
             list.Add(new(n + "feed-forward output", "The neurons are combined back into a vector of the model's width.", block.FeedForwardOut!.Row(p), null));
@@ -175,7 +181,8 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
         var logits = trace.Logits.Row(p);
         var probabilities = Sampling.Probabilities(logits, new SamplingSettings(1.0));
         list.Add(new("Final layer norm", "One last tidying of the vector before the output layer.", trace.FinalNorm.Row(p), null));
-        list.Add(new("Logits", $"The output layer gives one score for each of the {logits.Length} tokens in the vocabulary. Higher means the model finds it more likely.", logits, null));
+        list.Add(new("Logits", $"The output layer gives one score for each of the {logits.Length} tokens in the vocabulary, listed in vocabulary order. Higher means the model finds it more likely.",
+            null, logits.Select((v, i) => new LabeledValue(LabText.Visible(tokenizer.TokenText(i)), v)).ToList()));
         list.Add(new($"Probabilities ({TopCount} largest)",
             $"The scores are turned into probabilities that add up to 1 (softmax, temperature 1). Shown: the {TopCount} most likely next tokens.",
             null, Enumerable.Range(0, probabilities.Length).OrderByDescending(i => probabilities[i]).ThenBy(i => i).Take(TopCount)

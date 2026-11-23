@@ -65,7 +65,7 @@ public class LessonCatalogTests
     {
         var catalog = LessonCatalog.Load(Content);
         var sources = SourceList.Load(Path.Combine(Content, "sources.json"));
-        Assert.Equal(12, sources.All.Count);
+        Assert.Equal(13, sources.All.Count);
         foreach (var lesson in catalog.All)
             foreach (var id in lesson.SourceIds)
                 Assert.NotNull(sources.Find(id));

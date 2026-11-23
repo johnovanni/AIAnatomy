@@ -10,6 +10,11 @@
     "url": null
   },
   {
+    "id": "openai-gpt2-release",
+    "citation": "OpenAI (2019). gpt-2: code and models from the paper 'Language Models are Unsupervised Multitask Learners'. GitHub repository.",
+    "url": "https://github.com/openai/gpt-2"
+  },
+  {
     "id": "brown2020",
     "citation": "Brown, T. B., Mann, B., Ryder, N., Subbiah, M., et al. (2020). Language Models are Few-Shot Learners. Advances in Neural Information Processing Systems 33 (NeurIPS 2020).",
     "url": "https://arxiv.org/abs/2005.14165"

@@ -6,9 +6,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace AIAnatomy.Presentation.Labs;
 
 /// <summary>One row of the size chart. <c>Count</c> and <c>BarFraction</c> are null when the size is not published.</summary>
-public sealed record ScaleRow(string Label, long? Count, string CountText, string? Source, double? BarFraction)
+public sealed record ScaleRow(string Label, long? Count, string CountText, string? Source, double? BarFraction, string? Note = null)
 {
-    public string Description => Source == null ? $"{Label}: {CountText}" : $"{Label}: {CountText}. Source: {Source}";
+    public string Description => $"{Label}{(Count == null ? "." : ":")} {CountText}" + (Note == null ? "" : $" {Note}") + (Source == null ? "" : $". Source: {Source}");
 }
 
 /// <summary>How big our model is, by part, next to published sizes of real models on a logarithmic scale.</summary>
@@ -21,10 +21,10 @@ public sealed partial class ScaleLabViewModel : LabViewModel
 
     public const string ScaleNote =
         "The bars use a logarithmic scale: each step along it is 10 times bigger than the one before. " +
-        "That is why a bar for a model a million times larger is only a few steps longer.";
+        "That is why a bar for a model a million times larger is only six steps longer.";
 
-    public const string Gpt2Text =
-        "124 million (the GPT-2 paper's table lists 117 million; the released model has 124 million)";
+    public const string Gpt2Number = "124 million";
+    public const string Gpt2Note = "(the GPT-2 paper's table lists 117 million; the released model has 124 million)";
 
     public const string ClaudeLabel = "Claude: size not published";
 
@@ -43,6 +43,11 @@ public sealed partial class ScaleLabViewModel : LabViewModel
     [ObservableProperty] private IReadOnlyList<ParameterRow> parts = [];
     [ObservableProperty] private IReadOnlyList<ScaleRow> models = [];
     [ObservableProperty] private string axisText = "";
+    /// <summary>The scale runs from 10^AxisLow to 10^AxisHigh; a bar's length is (log10 n - low) / (high - low).</summary>
+    [ObservableProperty] private int axisLow;
+    [ObservableProperty] private int axisHigh;
+    /// <summary>The value of each faint line, from the left; the right edge is 10^AxisHigh.</summary>
+    [ObservableProperty] private IReadOnlyList<string> decadeLabels = [];
     [ObservableProperty] private string ratioSentence = "";
 
     public override void Reset() => Refresh();
@@ -61,17 +66,18 @@ public sealed partial class ScaleLabViewModel : LabViewModel
         OurDescription = $"This model: {NumberText.Short(OurCount)} numbers to learn ({layers}, {heads} each, width {config.ModelWidth}).";
 
         // The scale runs from one step (power of ten) below our model to the first one above GPT-3, so every bar is visible.
-        int low = (int)Math.Floor(Math.Log10(Math.Max(1, OurCount))) - 1;
-        int high = (int)Math.Ceiling(Math.Log10(Gpt3Count));
+        int low = AxisLow = (int)Math.Floor(Math.Log10(Math.Max(1, OurCount))) - 1;
+        int high = AxisHigh = (int)Math.Ceiling(Math.Log10(Gpt3Count));
         double Fraction(long n) => (Math.Log10(n) - low) / (high - low);
         Models =
         [
             new("This model", OurCount, NumberText.Short(OurCount), null, Fraction(OurCount)),
-            new("GPT-2 small", Gpt2Count, Gpt2Text, "radford2019 (Radford et al., 2019)", Fraction(Gpt2Count)),
+            new("GPT-2 small", Gpt2Count, Gpt2Number, "radford2019 (117 million, Radford et al., 2019); openai-gpt2-release (124 million, OpenAI, 2019)", Fraction(Gpt2Count), Gpt2Note),
             new("GPT-3", Gpt3Count, "175 billion", "brown2020 (Brown et al., 2020)", Fraction(Gpt3Count)),
-            new(ClaudeLabel, null, "not published, so there is no bar", null, null),
+            new(ClaudeLabel, null, "No bar is drawn.", null, null),
         ];
-        AxisText = "Along the scale: " + string.Join(" → ", Enumerable.Range(low, high - low + 1).Select(e => Power(e)));
+        DecadeLabels = Enumerable.Range(low, high - low).Select(Power).ToList();
+        AxisText = $"Each faint line is a power of ten. From the left they are {string.Join(", ", DecadeLabels)}; the right edge is {Power(high)}.";
         RatioSentence = $"GPT-3 has about {Times(Gpt3Count / (double)OurCount)} times as many parameters as this model.";
     }
 
@@ -84,7 +90,7 @@ public sealed partial class ScaleLabViewModel : LabViewModel
         return $"{(long)Math.Pow(10, exponent - shift)} {unit}";
     }
 
-    /// <summary>A ratio in words with two significant figures, such as "5.5 million".</summary>
+    /// <summary>A ratio in words with one decimal, such as "1.5 million".</summary>
     private static string Times(double ratio)
     {
         if (ratio >= 1e6) return $"{(ratio / 1e6).ToString("0.#", CultureInfo.InvariantCulture)} million";

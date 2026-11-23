@@ -61,9 +61,7 @@ public sealed class PipelineView : ChartBase
             var title = Text($"{i + 1}. {s.Title}", LabelSize * 1.05, Foreground, BoldFace,
                 maxWidth: current ? Math.Max(40, inner - CurrentTagWidth() - 12) : inner);
             var description = Text(s.Description, LabelSize * 0.9, MutedBrush, maxWidth: inner);
-            FormattedText? values = s.Values is { Length: > 0 } v
-                ? Text(string.Join("   ", v.Select(NumberText.Short)), LabelSize * 0.85, Foreground, NumberFace, inner)
-                : null;
+            FormattedText? values = s.Values is { Length: > 0 } v ? Text(VectorText(v, inner), LabelSize * 0.85, Foreground, NumberFace, inner) : null;
             var items = (s.Items ?? []).Select(it => (Text(it.Label, LabelSize * 0.85, Foreground, NumberFace),
                 Number(NumberText.Short(it.Value), LabelSize * 0.85, Foreground))).ToList();
             double labelWidth = items.Count == 0 ? 0 : items.Max(it => it.Item1.Width) + 16;
@@ -73,6 +71,22 @@ public sealed class PipelineView : ChartBase
             y += h + ArrowGap;
         }
         return result;
+    }
+
+    /// <summary>
+    /// A vector as rows of 4, 8 or 16 numbers (the largest that fits), each right-aligned to the widest one, so number k
+    /// is in the same place in every step.
+    /// </summary>
+    private string VectorText(double[] v, double inner)
+    {
+        var cells = v.Select(NumberText.Short).ToArray();
+        int width = cells.Max(c => c.Length);
+        double cell = Text(new string('0', width + 2), LabelSize * 0.85, Foreground, NumberFace).Width;
+        int columns = new[] { 16, 8, 4 }.FirstOrDefault(c => c * cell <= inner, 4);
+        var rows = new List<string>();
+        for (int i = 0; i < cells.Length; i += columns)
+            rows.Add(string.Join("  ", cells.Skip(i).Take(columns).Select(c => c.PadLeft(width))));
+        return string.Join('\n', rows);
     }
 
     private double CurrentTagWidth() => Text(CurrentTag, LabelSize * 0.85, Foreground, BoldFace).Width + 16;
