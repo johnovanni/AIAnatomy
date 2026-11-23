@@ -29,6 +29,8 @@
         <DataTemplate DataType="{x:Type labs:MultiHeadLabViewModel}"><v:MultiHeadView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:FeedForwardLabViewModel}"><v:FeedForwardView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:ResidualLabViewModel}"><v:ResidualView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:SamplingLabViewModel}"><v:SamplingView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:LearningLabViewModel}"><v:LearningView /></DataTemplate>
 
         <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">
             <TextBlock TextTrimming="CharacterEllipsis">

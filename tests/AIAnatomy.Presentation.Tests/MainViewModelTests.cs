@@ -54,8 +54,8 @@ public class MainViewModelTests : IDisposable
     public void Main_LabNotRegisteredYet_ShowsComingLater()
     {
         var vm = _env.NewMain();
-        vm.SelectedSection = Section.Parts;
-        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "output-sampling");
+        vm.SelectedSection = Section.Whole;
+        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "train");
 
         var lab = Assert.IsType<ComingLaterLabViewModel>(vm.CurrentLab);
         Assert.Equal("ComingLaterLab", lab.LabId);

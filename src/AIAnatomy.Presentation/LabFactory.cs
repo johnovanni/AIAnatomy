@@ -31,6 +31,8 @@ public sealed class LabFactory
         Register(MultiHeadLabViewModel.Id, () => new MultiHeadLabViewModel(models));
         Register(FeedForwardLabViewModel.Id, () => new FeedForwardLabViewModel(models, () => fables.Value));
         Register(ResidualLabViewModel.Id, () => new ResidualLabViewModel(models));
+        Register(SamplingLabViewModel.Id, () => new SamplingLabViewModel(models));
+        Register(LearningLabViewModel.Id, () => new LearningLabViewModel(models));
     }
 
     public void Register(string labId, Func<LabViewModel> create)

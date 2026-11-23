@@ -1,0 +1,234 @@
+<UserControl x:Class="AIAnatomy.App.Views.LearningView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views"
+             xmlns:glob="clr-namespace:System.Globalization;assembly=System.Runtime"
+             xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation">
+    <!-- DataContext: LearningLabViewModel. Four parts, one under the other. -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+        <BooleanToVisibilityConverter x:Key="VisibleIfTrue" />
+        <DataTemplate x:Key="EpochLine" DataType="{x:Type labs:EpochRow}">
+            <Grid Margin="0,2" AutomationProperties.Name="{Binding Description}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition SharedSizeGroup="Epoch" />
+                    <ColumnDefinition SharedSizeGroup="W1" />
+                    <ColumnDefinition SharedSizeGroup="W2" />
+                    <ColumnDefinition SharedSizeGroup="Bias" />
+                    <ColumnDefinition SharedSizeGroup="Errors" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Margin="0,0,16,0" FontFamily="{StaticResource NumberFont}" Text="{Binding Epoch}" />
+                <TextBlock Grid.Column="1" Margin="0,0,16,0" FontFamily="{StaticResource NumberFont}" Text="{Binding W1}" />
+                <TextBlock Grid.Column="2" Margin="0,0,16,0" FontFamily="{StaticResource NumberFont}" Text="{Binding W2}" />
+                <TextBlock Grid.Column="3" Margin="0,0,16,0" FontFamily="{StaticResource NumberFont}" Text="{Binding Bias}" />
+                <TextBlock Grid.Column="4" FontFamily="{StaticResource NumberFont}" Text="{Binding Errors}" />
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="PathLine" DataType="{x:Type labs:PathRow}">
+            <Grid Margin="0,2" AutomationProperties.Name="{Binding Description}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition SharedSizeGroup="Step" />
+                    <ColumnDefinition SharedSizeGroup="PathW1" />
+                    <ColumnDefinition SharedSizeGroup="PathW2" />
+                    <ColumnDefinition SharedSizeGroup="PathLoss" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Margin="0,0,16,0" FontFamily="{StaticResource NumberFont}" Text="{Binding Step}" />
+                <TextBlock Grid.Column="1" Margin="0,0,16,0" FontFamily="{StaticResource NumberFont}" Text="{Binding W1}" />
+                <TextBlock Grid.Column="2" Margin="0,0,16,0" FontFamily="{StaticResource NumberFont}" Text="{Binding W2}" />
+                <TextBlock Grid.Column="3" FontFamily="{StaticResource NumberFont}" Text="{Binding Loss}" />
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="NodeLine" DataType="{x:Type labs:GraphNodeRow}">
+            <Grid Margin="0,2" AutomationProperties.Name="{Binding Description}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition SharedSizeGroup="NodeName" />
+                    <ColumnDefinition SharedSizeGroup="NodeValue" />
+                    <ColumnDefinition SharedSizeGroup="NodeGradient" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Margin="0,0,16,0" FontFamily="{StaticResource NumberFont}" Text="{Binding Name}" />
+                <TextBlock Grid.Column="1" Margin="0,0,16,0" FontFamily="{StaticResource NumberFont}" Text="{Binding ValueText}" />
+                <TextBlock Grid.Column="2" FontFamily="{StaticResource NumberFont}" Text="{Binding GradientText}" />
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="WorkingLine">
+            <TextBlock Margin="0,2" TextWrapping="Wrap" FontFamily="{StaticResource NumberFont}" Text="{Binding}" />
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="Learning means changing numbers to make a loss smaller. Here are four small pieces of that idea, one under the other: one neuron learning a rule, a ball rolling down a loss surface, backpropagation on a tiny graph, and the loss of the real model." />
+
+        <!-- (a) Perceptron -->
+        <StackPanel DataContext="{Binding Perceptron}">
+            <TextBlock Style="{StaticResource SubheadingText}" Text="1. One neuron learning a rule (perceptron)" />
+            <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:PerceptronPanelViewModel.RuleNote}" />
+            <WrapPanel Margin="0,4,0,4">
+                <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Rule to learn" />
+                <ComboBox MinWidth="100" Margin="0,0,16,4" ItemsSource="{x:Static labs:PerceptronPanelViewModel.DatasetNames}" SelectedItem="{Binding Dataset}" AutomationProperties.Name="Rule to learn" />
+            </WrapPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" MinWidth="120" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" VerticalAlignment="Center" Margin="0,0,12,0" Text="Learning rate" />
+                <Slider Grid.Row="0" Grid.Column="1" Minimum="0.01" Maximum="1" SmallChange="0.01" LargeChange="0.1" TickFrequency="0.01" IsSnapToTickEnabled="True"
+                        Value="{Binding Rate, Mode=TwoWay}" AutomationProperties.Name="Learning rate" />
+                <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0" MinWidth="80" FontWeight="SemiBold" Text="{Binding RateText}" />
+                <TextBlock Grid.Row="1" VerticalAlignment="Center" Margin="0,0,12,0" Text="Epoch limit" />
+                <Slider Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="100" SmallChange="1" LargeChange="10" TickFrequency="1" IsSnapToTickEnabled="True"
+                        Value="{Binding EpochLimit, Mode=TwoWay}" AutomationProperties.Name="Epoch limit" />
+                <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0" FontWeight="SemiBold" Text="{Binding EpochLimit}" />
+            </Grid>
+            <WrapPanel Margin="0,4,0,4">
+                <Button Content="Step one epoch" Command="{Binding StepOneEpochCommand}" Margin="0,0,8,4" ToolTip="One pass over the four points" />
+                <Button Content="Run" Command="{Binding RunCommand}" Margin="0,0,8,4" ToolTip="Train until no point is wrong or the epoch limit is reached" />
+                <Button Content="Reset" Command="{Binding ResetPerceptronCommand}" Margin="0,0,8,4" ToolTip="Zero weights, AND, rate 0.1, limit 20" />
+            </WrapPanel>
+            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Status}" AutomationProperties.LiveSetting="Polite" />
+            <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding LineText}" />
+            <TextBlock Style="{StaticResource BodyText}" Text="{Binding WrongPoints}" />
+            <c:ScatterPlot Points="{Binding Points}" Lines="{Binding Lines}" XAxisTitle="x1" YAxisTitle="x2" Height="380"
+                           AutomationProperties.Name="The four input points and the decision line" />
+            <TextBlock Style="{StaticResource MutedText}"
+                       Text="Circles are points that should give 0 and squares are points that should give 1. The dashed line is the decision line: the neuron answers 1 on the side away from the origin only if its sum is above 0 there." />
+            <Border Style="{StaticResource Pane}" Padding="12" Margin="0,4,0,0" Visibility="{Binding IsXor, Converter={StaticResource VisibleIfTrue}}">
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{x:Static labs:PerceptronPanelViewModel.XorNote}" />
+            </Border>
+            <TextBlock Style="{StaticResource PaneTitle}" Text="Epochs" />
+            <TextBlock Style="{StaticResource MutedText}" Text="An epoch is one pass over the four points. Each line shows the weights at the end of the pass and how many points were wrong during it." />
+            <StackPanel Grid.IsSharedSizeScope="True">
+                <Grid Margin="0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition SharedSizeGroup="Epoch" />
+                        <ColumnDefinition SharedSizeGroup="W1" />
+                        <ColumnDefinition SharedSizeGroup="W2" />
+                        <ColumnDefinition SharedSizeGroup="Bias" />
+                        <ColumnDefinition SharedSizeGroup="Errors" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Margin="0,0,16,0" FontWeight="SemiBold" Text="Epoch" />
+                    <TextBlock Grid.Column="1" Margin="0,0,16,0" FontWeight="SemiBold" Text="W1" />
+                    <TextBlock Grid.Column="2" Margin="0,0,16,0" FontWeight="SemiBold" Text="W2" />
+                    <TextBlock Grid.Column="3" Margin="0,0,16,0" FontWeight="SemiBold" Text="Bias" />
+                    <TextBlock Grid.Column="4" FontWeight="SemiBold" Text="Wrong" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding TableRows}" ItemTemplate="{StaticResource EpochLine}" Focusable="False" />
+            </StackPanel>
+            <TextBlock Style="{StaticResource MutedText}" Text="{Binding TableNote}" Visibility="{Binding TableNote, Converter={StaticResource VisibleIfSet}}" />
+        </StackPanel>
+
+        <!-- (b) Loss surface -->
+        <StackPanel DataContext="{Binding Loss}">
+            <TextBlock Style="{StaticResource SubheadingText}" Text="2. Walking down a loss surface" />
+            <TextBlock Style="{StaticResource BodyText}"
+                       Text="Here the loss is w1² + 10·w2², a bowl that is steep in the w2 direction and shallow in the w1 direction. Gradient descent starts at (−4, 1.5) and takes 30 steps downhill. Try different learning rates." />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" MinWidth="120" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" Margin="0,0,12,0" Text="Learning rate" />
+                <Slider Grid.Column="1" Minimum="0.01" Maximum="0.15" SmallChange="0.01" LargeChange="0.01" TickFrequency="0.01" IsSnapToTickEnabled="True"
+                        Value="{Binding Rate, Mode=TwoWay}" AutomationProperties.Name="Learning rate" />
+                <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0" MinWidth="80" FontWeight="SemiBold" Text="{Binding RateText}" />
+            </Grid>
+            <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" AutomationProperties.LiveSetting="Assertive"
+                       Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+            <c:ContourPlot Values="{Binding Grid}" XMin="-5" XMax="5" YMin="-2" YMax="2" Levels="{x:Static labs:LossPanelViewModel.Levels}" Path="{Binding Path}"
+                           XAxisTitle="w1" YAxisTitle="w2" Height="380" Margin="0,8,0,0" AutomationProperties.Name="Loss surface with the path of gradient descent" />
+            <TextBlock Style="{StaticResource MutedText}"
+                       Text="Darker is higher loss. Each line joins points with the same loss, written on the line. The dashed path starts at the square and ends at the diamond, with a dot at each step. The path is cut off where it leaves the plot." />
+            <TextBlock Style="{StaticResource BodyText}" Text="{Binding Summary}" />
+            <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding FactorText}" />
+            <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:LossPanelViewModel.ThresholdNote}" />
+            <StackPanel Grid.IsSharedSizeScope="True">
+                <Grid Margin="0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition SharedSizeGroup="Step" />
+                        <ColumnDefinition SharedSizeGroup="PathW1" />
+                        <ColumnDefinition SharedSizeGroup="PathW2" />
+                        <ColumnDefinition SharedSizeGroup="PathLoss" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Margin="0,0,16,0" FontWeight="SemiBold" Text="Step" />
+                    <TextBlock Grid.Column="1" Margin="0,0,16,0" FontWeight="SemiBold" Text="w1" />
+                    <TextBlock Grid.Column="2" Margin="0,0,16,0" FontWeight="SemiBold" Text="w2" />
+                    <TextBlock Grid.Column="3" FontWeight="SemiBold" Text="Loss" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource PathLine}" Focusable="False" />
+            </StackPanel>
+            <TextBlock Style="{StaticResource MutedText}" Text="The first six steps and the last." />
+        </StackPanel>
+
+        <!-- (c) Expression graph -->
+        <StackPanel DataContext="{Binding Graph}">
+            <TextBlock Style="{StaticResource SubheadingText}" Text="3. Backpropagation on a small graph" />
+            <TextBlock Style="{StaticResource BodyText}"
+                       Text="The graph computes L = (a·b + c)·f from four numbers. Change them: every value and every gradient is recomputed." />
+            <WrapPanel Margin="0,4,0,4">
+                <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="a" />
+                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding A, UpdateSourceTrigger=PropertyChanged, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="a" />
+                <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="b" />
+                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding B, UpdateSourceTrigger=PropertyChanged, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="b" />
+                <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="c" />
+                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding C, UpdateSourceTrigger=PropertyChanged, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="c" />
+                <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="f" />
+                <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding F, UpdateSourceTrigger=PropertyChanged, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="f" />
+            </WrapPanel>
+            <TextBlock Style="{StaticResource MutedText}" Text="Numbers from −100 to 100." />
+            <c:NetworkDiagram Nodes="{Binding Nodes}" Edges="{Binding Edges}" Height="{DynamicResource DiagramHeight}" Margin="0,8,0,0" AutomationProperties.Name="Expression graph with the value and gradient of every node" />
+            <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:GraphPanelViewModel.BackpropNote}" />
+            <TextBlock Style="{StaticResource PaneTitle}" Text="The working, from L back to the inputs" />
+            <ItemsControl ItemsSource="{Binding Working}" ItemTemplate="{StaticResource WorkingLine}" Focusable="False" />
+            <TextBlock Style="{StaticResource PaneTitle}" Text="Every node" />
+            <StackPanel Grid.IsSharedSizeScope="True">
+                <Grid Margin="0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition SharedSizeGroup="NodeName" />
+                        <ColumnDefinition SharedSizeGroup="NodeValue" />
+                        <ColumnDefinition SharedSizeGroup="NodeGradient" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Margin="0,0,16,0" FontWeight="SemiBold" Text="Node" />
+                    <TextBlock Grid.Column="1" Margin="0,0,16,0" FontWeight="SemiBold" Text="Value" />
+                    <TextBlock Grid.Column="2" FontWeight="SemiBold" Text="Gradient" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource NodeLine}" Focusable="False" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- (d) Cross-entropy -->
+        <StackPanel DataContext="{Binding CrossEntropy}">
+            <TextBlock Style="{StaticResource SubheadingText}" Text="4. The loss of the real model" />
+            <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:CrossEntropyPanelViewModel.LossNote}" />
+            <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
+            <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MaxLength="300" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" AutomationProperties.Name="Your text" />
+            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}" Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
+            <TextBlock Style="{StaticResource MutedText}" Text="␣ is a space, ↵ a new line, � a character the model has never seen. Each place is numbered from 1."
+                       Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
+            <WrapPanel Margin="0,0,0,8" Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}">
+                <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Place in the text" />
+                <ComboBox MinWidth="120" Margin="0,0,16,4" ItemsSource="{Binding PositionChoices}" SelectedIndex="{Binding PositionIndex}" AutomationProperties.Name="Place in the text" />
+            </WrapPanel>
+            <TextBlock Style="{StaticResource BodyText}" Text="{Binding ContextText}" TextWrapping="Wrap" />
+            <TextBlock Style="{StaticResource BodyText}" Text="{Binding ActualText, StringFormat=The character that really came next: {0}}"
+                       Visibility="{Binding ActualText, Converter={StaticResource VisibleIfSet}}" FontWeight="SemiBold" />
+            <TextBlock Style="{StaticResource BodyText}" Text="{Binding ProbabilityText, StringFormat=The model gave it a probability of {0}.}"
+                       Visibility="{Binding ProbabilityText, Converter={StaticResource VisibleIfSet}}" />
+            <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding FormulaText}" />
+            <TextBlock Style="{StaticResource MutedText}" Text="{Binding BarsCaption}" />
+            <c:ProbabilityBars Items="{Binding Bars}" HighlightedLabel="{Binding HighlightedBar}" AutomationProperties.Name="The model's probabilities for the next character" />
+            <TextBlock Style="{StaticResource PaneTitle}" Text="The loss at every place in your text" />
+            <TextBlock Style="{StaticResource MutedText}" Text="Each bar is −ln p at one place. The numbers under the bars are the places, in order:" Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
+            <c:VectorStrip Values="{Binding Losses}" AutomationProperties.Name="The loss at each place in the text" />
+            <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding LossKey}" Margin="0,4,0,0" />
+            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding MeanText}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>
