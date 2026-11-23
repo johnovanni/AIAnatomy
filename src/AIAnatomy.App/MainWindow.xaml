@@ -20,6 +20,11 @@
             <v:ComingLaterView />
         </DataTemplate>
 
+        <DataTemplate DataType="{x:Type labs:RulesVsLearningLabViewModel}"><v:RulesVsLearningView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:ArchitectureMapLabViewModel}"><v:ArchitectureMapView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:TokensLabViewModel}"><v:TokensView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:PositionLabViewModel}"><v:PositionView /></DataTemplate>
+
         <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">
             <TextBlock TextTrimming="CharacterEllipsis">
                 <Run Text="{Binding Name, Mode=OneWay}" /><Run x:Name="Note" Text="" />

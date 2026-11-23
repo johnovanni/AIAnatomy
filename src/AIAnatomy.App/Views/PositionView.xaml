@@ -1,0 +1,55 @@
+<UserControl x:Class="AIAnatomy.App.Views.PositionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views"
+             xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation">
+    <!-- DataContext: PositionLabViewModel. -->
+    <UserControl.Resources><v:NullToCollapsedConverter x:Key="VisibleIfSet" /></UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="Each position in the text gets its own vector of numbers, added to the token's vector. Rows are positions, columns are the numbers of the vector." />
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Style="{StaticResource PaneTitle}" Text="{Binding ModelPositionsTitle}" />
+                <c:HeatMap Values="{Binding ModelPositions}" RowLabels="{Binding PositionLabels}" ColumnLabels="{Binding VectorLabels}" RowAxisTitle="position" ColumnAxisTitle="number in the vector"
+                           ShowCellValues="False" AutomationProperties.Name="Learned position vectors" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Style="{StaticResource PaneTitle}" Text="The sine and cosine scheme (fixed, nothing learned)" />
+                <c:HeatMap Values="{Binding SinusoidalPositions}" RowLabels="{Binding PositionLabels}" ColumnLabels="{Binding VectorLabels}" RowAxisTitle="position" ColumnAxisTitle="number in the vector"
+                           ShowCellValues="False" AutomationProperties.Name="Sine and cosine position vectors" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Style="{StaticResource SubheadingText}" Text="Predictions with and without position" />
+        <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
+        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Your text" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}"
+                   Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}"
+                   Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Style="{StaticResource PaneTitle}" Text="With position information (top 5)" />
+                <c:ProbabilityBars Items="{Binding WithPositions}" AutomationProperties.Name="Predictions with positions" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Style="{StaticResource PaneTitle}" Text="Without position information (top 5)" />
+                <c:ProbabilityBars Items="{Binding WithoutPositions}" AutomationProperties.Name="Predictions without positions" />
+            </StackPanel>
+        </Grid>
+        <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,0" Text="{Binding Comparison}" />
+        <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:PositionLabViewModel.OrderNote}" />
+    </StackPanel>
+</UserControl>

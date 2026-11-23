@@ -37,6 +37,8 @@ public static class PngRenderer
         var window = new MainWindow(viewModel);
         Show(window, viewModel, services, view);
 
+        if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
+
         // The window is never shown: its content is laid out and drawn on its own, at exactly the size asked for.
         var content = window.Shell;
         double height = options.Height;

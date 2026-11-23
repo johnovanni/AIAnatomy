@@ -27,7 +27,7 @@ public sealed class TestEnvironment : IDisposable
     {
         settings ??= NewSettings();
         models ??= NewActiveModels(settings);
-        return new MainViewModel(LessonCatalog.Load(Content), SourceList.Load(Path.Combine(Content, "sources.json")), models, settings);
+        return new MainViewModel(LessonCatalog.Load(Content), SourceList.Load(Path.Combine(Content, "sources.json")), models, settings, Content);
     }
 
     public void Dispose()

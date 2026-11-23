@@ -1,4 +1,5 @@
 using AIAnatomy.Core;
+using AIAnatomy.Models.Language;
 using AIAnatomy.Models.Toys;
 using AIAnatomy.Models.Tokenization;
 
@@ -117,5 +118,16 @@ public class ToysTests
         var text = model.Generate("q", 5, new SeededRandom(3));
         Assert.Equal(5, text.Length);
         Assert.Equal(text, model.Generate("q", 5, new SeededRandom(3)));
+    }
+    [Fact]
+    public void Bigram_AfterTraining_FrequentRowBeatsUniform()
+    {
+        var tokenizer = CharTokenizer.FromText(TestTexts.Fable);
+        var model = new BigramModel(tokenizer, 1);
+        model.TrainSteps(tokenizer.Encode(TestTexts.Fable), 100, 20.0);   // the rate the Rules vs. learning lab uses
+        int t = tokenizer.Encode("t")[0], h = tokenizer.Encode("h")[0];
+        var afterT = Sampling.Probabilities(model.Logits.Row(t), new SamplingSettings(1.0));
+        Assert.True(afterT[h] > 1.0 / tokenizer.VocabularySize, $"P(h|t) = {afterT[h]}");
+        Assert.True(afterT[h] > 0.3, $"P(h|t) = {afterT[h]}");   // "th" is by far the most common pair after t
     }
 }

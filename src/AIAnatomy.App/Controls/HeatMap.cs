@@ -135,9 +135,16 @@ public sealed class HeatMap : ChartBase
 
         if (CaptionText(ActualWidth) is { } caption) dc.DrawText(caption, new Point(0, 0));
 
+        // When the squares are too small for every label, only every few-th one is written (the selected one always is).
+        double labelHeight = Text("Ag", label, Foreground).Height;
+        int rowStep = Math.Max(1, (int)Math.Ceiling(labelHeight / l.Cell));
+        double widestColumnLabel = Enumerable.Range(0, cols).Max(c => Text(ColumnName(c), label, Foreground, BoldFace).Width);
+        int columnStep = Math.Max(1, (int)Math.Ceiling((l.RotateColumnLabels ? labelHeight : widestColumnLabel + 4) / l.Cell));
+
         // Column labels, horizontal when they fit, otherwise turned to read upwards.
         for (int c = 0; c < cols; c++)
         {
+            if (c % columnStep != 0 && selected?.Column != c) continue;
             var text = Text(ColumnName(c), label, Foreground, selected?.Column == c ? BoldFace : TextFace);
             double centre = l.GridLeft + (c + 0.5) * l.Cell;
             if (!l.RotateColumnLabels)
@@ -153,6 +160,7 @@ public sealed class HeatMap : ChartBase
 
         for (int r = 0; r < rows; r++)
         {
+            if (r % rowStep != 0 && selected?.Row != r) continue;
             var text = Text(RowName(r), label, Foreground, selected?.Row == r ? BoldFace : TextFace);
             dc.DrawText(text, new Point(l.RowLabelWidth - 8 - text.Width, l.GridTop + (r + 0.5) * l.Cell - text.Height / 2));
         }

@@ -1,0 +1,24 @@
+<UserControl x:Class="AIAnatomy.App.Views.ArchitectureMapView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views">
+    <!-- DataContext: ArchitectureMapLabViewModel. Clicking a linked box raises the window-wide lesson navigation event. -->
+    <UserControl.Resources><v:NullToCollapsedConverter x:Key="VisibleIfSet" /></UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="Type some text and watch the model's next-character choices change. Click a box to open its lesson." />
+        <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
+        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Your text" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}"
+                   Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}"
+                   Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
+
+        <c:NetworkDiagram Nodes="{Binding Nodes}" Edges="{Binding Edges}" Height="560" Margin="0,16,0,0" AutomationProperties.Name="Architecture map" />
+
+        <TextBlock Style="{StaticResource SubheadingText}" Text="The ten most likely next characters" />
+        <TextBlock Style="{StaticResource MutedText}" Text="␣ is a space and ↵ a new line; � stands for a character the model has never seen." />
+        <c:ProbabilityBars Items="{Binding Top10}" AutomationProperties.Name="Top 10 next characters" />
+    </StackPanel>
+</UserControl>

@@ -14,12 +14,18 @@ public sealed class LabFactory
 {
     private readonly Dictionary<string, Func<LabViewModel>> _creators = new(StringComparer.Ordinal);
 
-    public LabFactory(IActiveModelService models, LessonCatalog lessons, Func<string, Task> navigate)
+    public LabFactory(IActiveModelService models, LessonCatalog lessons, Func<string, Task> navigate, string contentFolder)
     {
         ArgumentNullException.ThrowIfNull(models);
         ArgumentNullException.ThrowIfNull(lessons);
         ArgumentNullException.ThrowIfNull(navigate);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentFolder);
+        var fables = new Lazy<string>(() => File.ReadAllText(Path.Combine(contentFolder, "texts", "aesop-fables.txt")));
         Register(ComingLaterLabViewModel.Id, () => new ComingLaterLabViewModel());
+        Register(RulesVsLearningLabViewModel.Id, () => new RulesVsLearningLabViewModel(() => fables.Value));
+        Register(ArchitectureMapLabViewModel.Id, () => new ArchitectureMapLabViewModel(models, navigate));
+        Register(TokensLabViewModel.Id, () => new TokensLabViewModel(() => fables.Value));
+        Register(PositionLabViewModel.Id, () => new PositionLabViewModel(models));
     }
 
     public void Register(string labId, Func<LabViewModel> create)

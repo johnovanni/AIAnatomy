@@ -16,14 +16,15 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _navigating;
     private bool _revertingModel;
 
-    public MainViewModel(LessonCatalog lessons, SourceList sources, IActiveModelService models, ISettingsService settings)
+    public MainViewModel(LessonCatalog lessons, SourceList sources, IActiveModelService models, ISettingsService settings,
+        string? contentFolder = null)
     {
         _lessons = lessons ?? throw new ArgumentNullException(nameof(lessons));
         Sources = sources ?? throw new ArgumentNullException(nameof(sources));
         _models = models ?? throw new ArgumentNullException(nameof(models));
         Settings = settings ?? throw new ArgumentNullException(nameof(settings));
         // The factory is built here so it can be given our own NavigateToLesson (no construction cycle).
-        Labs = new LabFactory(models, lessons, NavigateToLesson);
+        Labs = new LabFactory(models, lessons, NavigateToLesson, contentFolder ?? AppPaths.Content);
 
         Sections = Enum.GetValues<Section>();
         SettingsPage = new SettingsViewModel(settings);
@@ -185,6 +186,7 @@ public sealed partial class MainViewModel : ObservableObject
             SelectedLesson = lesson;
             IsShowingSources = false;
             IsShowingSettings = false;
+            CurrentLab?.Deactivate();
             Explanation = lesson?.Explanation;
             Formula = lesson?.Formula;
             BrainsAndModels = lesson?.BrainsAndModels;
