@@ -258,7 +258,12 @@ public sealed partial class SamplingLabViewModel : LabViewModel
         // "others" is left out (it can be most of the probability and would shrink every other bar); its bar is cut off at full width.
         double max = Bars.Concat(Frequencies).Where(b => b.Label != OthersLabel).Select(b => b.Value).DefaultIfEmpty(0).Max();
         BarScaleMaximum = AxisTicks.NiceCeiling(max);
-        BarScaleCaption = Bars.Count == 0 ? "" : $"Both charts use the same scale: a full bar is {NumberText.Percent(BarScaleMaximum)}. The “{OthersLabel}” bar is cut off at full width; its real percentage is written beside it.";
+        // The cut-off sentence only when an "others" bar really is longer than a full bar (final review I5); the chart
+        // then also draws a break mark at the end of that bar.
+        bool cut = Bars.Concat(Frequencies).Any(b => b.Label == OthersLabel && b.Value > BarScaleMaximum);
+        BarScaleCaption = Bars.Count == 0 ? ""
+            : $"Both charts use the same scale: a full bar is {NumberText.Percent(BarScaleMaximum)}."
+              + (cut ? $" The “{OthersLabel}” bar is longer than that, so it is cut off at full width (marked “cut off”); its real percentage is written beside it." : "");
     }
 
     private static string Name(LanguageModel model, int id) => LabText.Visible(model.Tokenizer.TokenText(id));

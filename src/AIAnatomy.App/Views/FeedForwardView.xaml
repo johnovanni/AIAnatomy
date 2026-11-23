@@ -26,9 +26,9 @@
         <StackPanel Visibility="{Binding HasFeedForward, Converter={StaticResource VisibleIfTrue}}">
             <WrapPanel Margin="0,4,0,8">
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Layer" />
-                <ComboBox Width="80" Margin="0,0,16,4" ItemsSource="{Binding LayerNumbers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Layer" />
+                <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding LayerNumbers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Layer" />
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Neuron" />
-                <ComboBox Width="100" Margin="0,0,16,4" ItemsSource="{Binding NeuronNumbers}" SelectedItem="{Binding Neuron}" AutomationProperties.Name="Neuron" />
+                <ComboBox MinWidth="100" Margin="0,0,16,4" ItemsSource="{Binding NeuronNumbers}" SelectedItem="{Binding Neuron}" AutomationProperties.Name="Neuron" />
             </WrapPanel>
 
             <TextBlock Style="{StaticResource SubheadingText}" Text="Along your text" />
@@ -36,8 +36,8 @@
             <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MaxLength="300" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" AutomationProperties.Name="Your text" />
             <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}" Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
             <TextBlock Style="{StaticResource MutedText}" Text="{Binding ActivationCaption}" />
-            <c:VectorStrip Values="{Binding Activations}" AutomationProperties.Name="Activation of the chosen neuron along your text" />
-            <TextBlock Style="{StaticResource MutedText}" Text="The bars, left to right, numbered from 0 as under the bars (␣ is a space, ↵ a new line, � a character the model has never seen):" Margin="0,4,0,0" />
+            <c:VectorStrip Values="{Binding Activations}" IndexBase="1" AutomationProperties.Name="Activation of the chosen neuron along your text" />
+            <TextBlock Style="{StaticResource MutedText}" Text="The bars, left to right, numbered from 1 as under the bars (␣ is a space, ↵ a new line, � a character the model has never seen):" Margin="0,4,0,0" />
             <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding TokenKey}" />
 
             <TextBlock Style="{StaticResource SubheadingText}" Text="Where this neuron fires most" />

@@ -24,7 +24,32 @@ public partial class MainWindow : Window
 
     public MainViewModel ViewModel { get; }
 
-    /// <summary>Shows a page in place of the lesson (used by --render-png gallery).</summary>
+    /// <summary>Background work stops when the window closes, including a Train lab run left going in the background (R35).</summary>
+    protected override void OnClosed(EventArgs e)
+    {
+        ViewModel.Shutdown();
+        base.OnClosed(e);
+    }
+
+    /// <summary>
+    /// For <c>--render-png --full-lab</c>: the current lab by itself (with its title, in a pane), at the width the lab has in
+    /// the window now, so its text wraps as in the app; the caller then draws it at its full height (final review I8).
+    /// </summary>
+    public void ShowFullLabPage()
+    {
+        double width = Math.Max(200, LabContent.ActualWidth);
+        var title = new TextBlock { Text = ViewModel.SelectedLesson?.Title ?? "" };
+        title.SetResourceReference(StyleProperty, "HeadingText");
+        var lab = new ContentControl { Content = ViewModel.CurrentLab, Width = width, HorizontalAlignment = HorizontalAlignment.Left, Focusable = false };
+        var panel = new StackPanel();
+        panel.Children.Add(title);
+        panel.Children.Add(lab);
+        var pane = new Border { Child = panel, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+        pane.SetResourceReference(StyleProperty, "Pane");
+        ShowDiagnosticPage(pane);
+    }
+
+    /// <summary>Shows a page in place of the lesson (used by --render-png gallery and --full-lab).</summary>
     public void ShowDiagnosticPage(UIElement page)
     {
         DiagnosticPage.Content = page;

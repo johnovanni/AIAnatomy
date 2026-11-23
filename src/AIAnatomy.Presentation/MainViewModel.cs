@@ -4,6 +4,7 @@ using AIAnatomy.Lessons.Markdown;
 using AIAnatomy.Models.Language;
 using AIAnatomy.Presentation.Labs;
 using AIAnatomy.Presentation.Services;
+using AIAnatomy.Presentation.Visuals;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -15,6 +16,8 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IActiveModelService _models;
     private bool _navigating;
     private bool _revertingModel;
+    private TrainLabViewModel? _trainLab;
+    private bool _trainEndedAway;
 
     public MainViewModel(LessonCatalog lessons, SourceList sources, IActiveModelService models, ISettingsService settings,
         string? contentFolder = null)
@@ -23,8 +26,8 @@ public sealed partial class MainViewModel : ObservableObject
         Sources = sources ?? throw new ArgumentNullException(nameof(sources));
         _models = models ?? throw new ArgumentNullException(nameof(models));
         Settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        // The factory is built here so it can be given our own NavigateToLesson (no construction cycle).
-        Labs = new LabFactory(models, lessons, NavigateToLesson, contentFolder ?? AppPaths.Content, RefreshModelEntries);
+        Labs = new LabFactory(models, contentFolder ?? AppPaths.Content, RefreshModelEntries);
+        TrainLessonTitle = lessons.All.FirstOrDefault(l => l.LabId == TrainLabViewModel.Id)?.Title ?? "Training a model";
 
         Sections = Enum.GetValues<Section>();
         SettingsPage = new SettingsViewModel(settings);
@@ -74,6 +77,25 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>True when the lesson (lab and explanation) is showing, not the Sources or Settings page.</summary>
     public bool IsShowingLesson => !IsShowingSources && !IsShowingSettings;
     [ObservableProperty] private string? statusMessage;
+
+    /// <summary>
+    /// A silent line in the header about a Train lab run while another lesson is open, such as "Training in the background:
+    /// step 340 of 600." (R35), or how a run that ended meanwhile ended. Null while the Train lab is on show.
+    /// </summary>
+    [ObservableProperty] private string? backgroundStatus;
+
+    private string TrainLessonTitle { get; }
+
+    /// <summary>What the status line says when a source's web page could not be opened (no browser set up, or blocked).</summary>
+    public void ShowLinkNotOpened(string url) =>
+        StatusMessage = $"The web page could not be opened from here. You can type its address into your web browser: {url}";
+
+    /// <summary>Stops every lab's background work, the kept Train lab's too. The window calls this when it closes.</summary>
+    public void Shutdown()
+    {
+        CurrentLab?.Deactivate();
+        if (_trainLab != null && !ReferenceEquals(_trainLab, CurrentLab)) _trainLab.Deactivate();
+    }
 
     /// <summary>Re-reads the library (after a save or delete) and selects the active model's entry.</summary>
     public void RefreshModelEntries()
@@ -172,9 +194,12 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (SelectedModelEntry == null || !IsActive(SelectedModelEntry)) RefreshModelEntries();
         CurrentLab?.OnActiveModelChanged();
+        // The kept Train lab is not on show, but its "carry on from the active model" choice must stay true.
+        if (_trainLab != null && !ReferenceEquals(_trainLab, CurrentLab)) _trainLab.OnActiveModelChanged();
     }
 
-    private bool IsActive(ModelEntry e) => e.Name == _models.Current.Info.Name && e.IsShipped == _models.Current.Info.IsShipped;
+    // By file, not by name: a model saved over the active file is still the active entry (final review I10).
+    private bool IsActive(ModelEntry e) => _models.IsActive(e);
 
     private ModelEntry? ActiveEntry() => ModelEntries.FirstOrDefault(e => e.IsReadable && IsActive(e));
 
@@ -193,12 +218,58 @@ public sealed partial class MainViewModel : ObservableObject
             SelectedLesson = lesson;
             IsShowingSources = false;
             IsShowingSettings = false;
-            CurrentLab?.Deactivate();
+            // A lab that keeps running (the Train lab, R35) is not stopped when the user leaves it.
+            if (CurrentLab is { KeepsRunningWhenLeft: false } leaving) leaving.Deactivate();
             Explanation = lesson?.Explanation;
             Formula = lesson?.Formula;
             BrainsAndModels = lesson?.BrainsAndModels;
             CurrentLab = lesson == null ? null : Labs.IsRegistered(lesson.LabId) ? Labs.Create(lesson.LabId) : new ComingLaterLabViewModel();
+            if (CurrentLab is TrainLabViewModel train && !ReferenceEquals(train, _trainLab)) WatchTrainLab(train);
+            if (ReferenceEquals(CurrentLab, _trainLab)) _trainEndedAway = false;
+            UpdateBackgroundStatus();
         }
         finally { _navigating = false; }
+    }
+
+    private void WatchTrainLab(TrainLabViewModel train)
+    {
+        if (_trainLab != null) _trainLab.PropertyChanged -= OnTrainLabChanged;
+        _trainLab = train;
+        _trainEndedAway = false;
+        train.PropertyChanged += OnTrainLabChanged;
+    }
+
+    private void OnTrainLabChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (sender is not TrainLabViewModel train) return;
+        switch (e.PropertyName)
+        {
+            case nameof(TrainLabViewModel.IsTraining):
+                if (!train.IsTraining && !train.IsPaused && train.HasModel && !ReferenceEquals(train, CurrentLab)) _trainEndedAway = true;
+                break;
+            case nameof(TrainLabViewModel.StepsDone) or nameof(TrainLabViewModel.TargetSteps) or nameof(TrainLabViewModel.IsPaused)
+                or nameof(TrainLabViewModel.HasDiverged) or nameof(TrainLabViewModel.HasModel):
+                break;
+            default:
+                return;
+        }
+        UpdateBackgroundStatus();
+    }
+
+    private void UpdateBackgroundStatus()
+    {
+        var t = _trainLab;
+        string? text = null;
+        if (t != null && !ReferenceEquals(t, CurrentLab))
+        {
+            string step = NumberText.Short(t.StepsDone), target = NumberText.Short(t.TargetSteps);
+            if (t.IsTraining) text = t.TargetSteps == 0 ? "Training in the background: getting the model ready." : $"Training in the background: step {step} of {target}.";
+            else if (t.IsPaused) text = $"Training is paused at step {step} of {target}. Open “{TrainLessonTitle}” to resume or stop it.";
+            else if (_trainEndedAway && t.HasModel)
+                text = t.HasDiverged || t.Message != null
+                    ? $"Training stopped in the background at step {step}. Open “{TrainLessonTitle}” to see why."
+                    : $"Training finished in the background: {step} steps. Open “{TrainLessonTitle}” to save the model.";
+        }
+        BackgroundStatus = text;
     }
 }

@@ -1,25 +1,22 @@
-using AIAnatomy.Lessons;
 using AIAnatomy.Presentation.Labs;
 using AIAnatomy.Presentation.Services;
 
 namespace AIAnatomy.Presentation;
 
 /// <summary>
-/// Builds the view-model for a lab id. Later tasks add their labs in the constructor with <see cref="Register"/>
-/// (the models, lessons and navigate callback are what those labs will be given).
-/// <c>navigate</c> is how a lab asks the app to jump to a lesson; MainViewModel creates the factory itself and
-/// passes its own NavigateToLesson, so there is no construction cycle.
+/// Builds the view-model for a lab id; every lab is registered in the constructor with <see cref="Register"/>. Lesson
+/// links inside labs go through the view's routed navigate event, so the factory needs no lesson list or navigate
+/// callback (final review M3). Most labs are built afresh each time their lesson opens; the Train lab is built once
+/// per factory (so once per window) and kept, so a run carries on while the user reads other lessons (R35).
 /// </summary>
 public sealed class LabFactory
 {
     private readonly Dictionary<string, Func<LabViewModel>> _creators = new(StringComparer.Ordinal);
 
     /// <param name="libraryChanged">Called after a lab saves a model to the library, so the model picker can list it.</param>
-    public LabFactory(IActiveModelService models, LessonCatalog lessons, Func<string, Task> navigate, string contentFolder, Action? libraryChanged = null)
+    public LabFactory(IActiveModelService models, string contentFolder, Action? libraryChanged = null)
     {
         ArgumentNullException.ThrowIfNull(models);
-        ArgumentNullException.ThrowIfNull(lessons);
-        ArgumentNullException.ThrowIfNull(navigate);
         ArgumentException.ThrowIfNullOrWhiteSpace(contentFolder);
         var fables = new Lazy<string>(() => File.ReadAllText(Path.Combine(contentFolder, "texts", "aesop-fables.txt")));
         Register(ComingLaterLabViewModel.Id, () => new ComingLaterLabViewModel());
@@ -36,7 +33,8 @@ public sealed class LabFactory
         Register(LearningLabViewModel.Id, () => new LearningLabViewModel(models));
         Register(StepThroughLabViewModel.Id, () => new StepThroughLabViewModel(models));
         Register(ScaleLabViewModel.Id, () => new ScaleLabViewModel(models));
-        Register(TrainLabViewModel.Id, () => new TrainLabViewModel(models, () => fables.Value, libraryChanged));
+        TrainLabViewModel? train = null;
+        Register(TrainLabViewModel.Id, () => train ??= new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }
 
     public void Register(string labId, Func<LabViewModel> create)

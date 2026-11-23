@@ -66,7 +66,7 @@
             <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" Text="{Binding Toy.KeyCount, StringFormat={}{0} keys}" />
         </StackPanel>
         <TextBlock Style="{StaticResource PaneTitle}" Text="Query and keys" />
-        <c:DragPlot Handles="{Binding Toy.KeyPlotHandles}" XAxisTitle="x" YAxisTitle="y" HorizontalAlignment="Left" Width="420" AutomationProperties.Name="Plot of the query and the keys" />
+        <c:DragPlot Handles="{Binding Toy.KeyPlotHandles}" XAxisTitle="x" YAxisTitle="y" HorizontalAlignment="Left" AutomationProperties.Name="Plot of the query and the keys" />
         <WrapPanel Margin="0,8,0,0">
             <ContentControl Content="{Binding Toy.Query}" ContentTemplate="{StaticResource NumberBoxes}" Focusable="False" />
             <ItemsControl ItemsSource="{Binding Toy.ActiveKeys}" ItemTemplate="{StaticResource NumberBoxes}" Focusable="False">
@@ -74,7 +74,7 @@
             </ItemsControl>
         </WrapPanel>
         <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,0" Text="Values and the answer" />
-        <c:DragPlot Handles="{Binding Toy.ValuePlotHandles}" XAxisTitle="x" YAxisTitle="y" HorizontalAlignment="Left" Width="420" AutomationProperties.Name="Plot of the values and the answer" />
+        <c:DragPlot Handles="{Binding Toy.ValuePlotHandles}" XAxisTitle="x" YAxisTitle="y" HorizontalAlignment="Left" AutomationProperties.Name="Plot of the values and the answer" />
         <ItemsControl ItemsSource="{Binding Toy.ActiveValues}" ItemTemplate="{StaticResource NumberBoxes}" Focusable="False" Margin="0,8,0,0">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
@@ -106,9 +106,9 @@
         <TextBlock Style="{StaticResource MutedText}" Text="␣ is a space, ↵ a new line, � a character the model has never seen. Each token is numbered by its position." />
         <WrapPanel Margin="0,0,0,8">
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Layer" />
-            <ComboBox Width="80" Margin="0,0,16,4" ItemsSource="{Binding LayerNumbers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Layer" />
+            <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding LayerNumbers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Layer" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Head" />
-            <ComboBox Width="80" Margin="0,0,16,4" ItemsSource="{Binding HeadNumbers}" SelectedItem="{Binding Head}" AutomationProperties.Name="Head" />
+            <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding HeadNumbers}" SelectedItem="{Binding Head}" AutomationProperties.Name="Head" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,0,4" Style="{StaticResource MutedText}" Text="{Binding RealCaption}" />
         </WrapPanel>
         <c:HeatMap Values="{Binding RealWeights}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}"
@@ -173,9 +173,9 @@
             <TextBlock Style="{StaticResource PaneTitle}" Margin="0,12,0,4" Text="Where one head looks on the example sequence" />
             <WrapPanel>
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Layer" />
-                <ComboBox Width="80" Margin="0,0,16,4" ItemsSource="{Binding LayerNumbers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Induction layer" />
+                <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding LayerNumbers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Induction layer" />
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Head" />
-                <ComboBox Width="80" Margin="0,0,16,4" ItemsSource="{Binding HeadNumbers}" SelectedItem="{Binding Head}" AutomationProperties.Name="Induction head" />
+                <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding HeadNumbers}" SelectedItem="{Binding Head}" AutomationProperties.Name="Induction head" />
             </WrapPanel>
             <c:HeatMap Values="{Binding HeatMap}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}" OutlinedCells="{Binding OutlinedCells}"
                        RowAxisTitle="the letter that is looking" ColumnAxisTitle="the letter it looks at" Minimum="0" Maximum="1"
@@ -185,7 +185,7 @@
 
         <WrapPanel Margin="0,12,0,0">
             <TextBlock Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="0,0,8,8" Text="Seed (picks the example sequence and starts the training)" />
-            <TextBox Width="110" Text="{Binding Seed, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Seed" />
+            <TextBox MinWidth="110" Text="{Binding Seed, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Seed" />
         </WrapPanel>
     </StackPanel>
 </UserControl>

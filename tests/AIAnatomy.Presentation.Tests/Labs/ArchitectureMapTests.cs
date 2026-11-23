@@ -89,15 +89,42 @@ public class ArchitectureMapTests : IDisposable
         Assert.False(Edge("multihead", "feedforward")); // not a chain: both sublayers work on the residual stream
         Assert.False(Edge("feedforward", "norm"));
         Assert.True(Edge("residual", "norm"));          // the final norm reads the residual stream after the last block
+        // Final review M1: each sublayer also reads (a normalised copy of) the stream, so the picture shows its input.
+        Assert.Equal("reads (normalised)", lab.Edges.Single(e => e.FromId == "residual" && e.ToId == "multihead").Label);
+        Assert.Equal("reads (normalised)", lab.Edges.Single(e => e.FromId == "residual" && e.ToId == "feedforward").Label);
+    }
+
+    [Fact]
+    public void AttentionOnlyModel_HasNoReadArrowToAFeedForwardBox()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new ArchitectureMapLabViewModel(models);
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+        lab.OnActiveModelChanged();
+        Assert.Contains(lab.Edges, e => e.FromId == "residual" && e.ToId == "multihead");
+        Assert.DoesNotContain(lab.Edges, e => e.ToId == "feedforward");
     }
 
     [Fact]
     public void ShownText_ShowsTheTextTheModelReads_WithReplacementMarks()
     {
         var lab = NewLab();
-        Assert.Equal("The fox and the ", lab.ShownText);
+        Assert.Equal("The\u2423fox\u2423and\u2423the\u2423", lab.ShownText);   // final review I4: a space is shown as \u2423, as the caption says
         lab.Text = "a\U0001F642b";
         Assert.Equal("a\uFFFDb", lab.ShownText);
+    }
+
+    [Fact]
+    public void LongText_ShownTextIsOnlyTheTokensTheModelUses()
+    {
+        // Final review I4: with a long text, "What the model reads" shows only the last ContextLength tokens.
+        var models = _env.NewActiveModels();
+        var lab = new ArchitectureMapLabViewModel(models);
+        int context = models.Current.Transformer.Config.ContextLength;
+        lab.Text = new string('a', 30) + new string('b', context);
+        Assert.NotNull(lab.Notice);
+        Assert.Equal(context, LabText.CountScalars(lab.ShownText));
+        Assert.Equal(new string('b', context), lab.ShownText);
     }
 
     [Fact]

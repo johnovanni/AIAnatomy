@@ -6,10 +6,12 @@ public enum DiagnosticMode { Normal, RenderPng, SelfTest }
 
 /// <summary>
 /// The app's command line, for checks and diagnostics only:
-/// <c>--render-png &lt;lessonId|gallery|sources|settings&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000]</c>
+/// <c>--render-png &lt;lessonId|gallery|sources|settings&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
 /// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 20 pt unless
 /// told otherwise, so pictures do not depend on the user's own settings. Several views may be given as
-/// <c>gallery,sources,settings</c>; each then goes to "file-view.png". Bad input sets <see cref="Error"/>.
+/// <c>gallery,sources,settings</c>; each then goes to "file-view.png". <c>--full-lab</c> (lesson ids only) draws the lab
+/// pane by itself at its full height and at the width it has in the window, so the bottom of a long lab can be checked.
+/// Bad input sets <see cref="Error"/>.
 /// </summary>
 public sealed record DiagnosticOptions(
     DiagnosticMode Mode,
@@ -20,7 +22,8 @@ public sealed record DiagnosticOptions(
     int Width,
     int Height,
     string? SelfTest,
-    string? Error)
+    string? Error,
+    bool FullLab = false)
 {
     public const string Gallery = "gallery";
     public const string SourcesView = "sources";
@@ -50,7 +53,7 @@ public sealed record DiagnosticOptions(
         string theme = "Light";
         double textSize = 20;
         int width = 1600, height = 1000;
-        bool render = false, renderOnlyOption = false;
+        bool render = false, renderOnlyOption = false, fullLab = false;
 
         for (int i = 0; i < args.Length && error == null; i++)
         {
@@ -102,6 +105,9 @@ public sealed record DiagnosticOptions(
                     renderOnlyOption = true;
                     if (Next() is { } h) height = Pixels("--height", h, ref error);
                     break;
+                case "--full-lab":
+                    fullLab = true;
+                    break;
                 default:
                     error = $"Unknown option '{args[i]}'.";
                     break;
@@ -111,9 +117,11 @@ public sealed record DiagnosticOptions(
         if (error == null && render && selfTest != null) error = "Use either --render-png or --selftest, not both.";
         if (error == null && renderOnlyOption && !render)
             error = "--theme, --text-size, --width and --height only go with --render-png.";
+        if (error == null && fullLab && (!render || view!.Split(',').Any(v => v is Gallery or SourcesView or SettingsView)))
+            error = "--full-lab only goes with --render-png and a lesson id.";
 
         var mode = render ? DiagnosticMode.RenderPng : selfTest != null ? DiagnosticMode.SelfTest : DiagnosticMode.Normal;
-        return new DiagnosticOptions(mode, view, file, theme, textSize, width, height, selfTest, error);
+        return new DiagnosticOptions(mode, view, file, theme, textSize, width, height, selfTest, error, fullLab);
     }
 
     private static int Pixels(string option, string text, ref string? error)

@@ -10,6 +10,20 @@ public class ResidualTests : IDisposable
     public void Dispose() => _env.Dispose();
 
     [Fact]
+    public void TextEdit_RefreshesOnce_EvenWhenTheFollowedTokenMoves()
+    {
+        // Final review I3 / M19: the picker guard (_syncing) keeps the PositionIndex assignment in Refresh from refreshing again.
+        var lab = new ResidualLabViewModel(_env.NewActiveModels());
+        int rows = 0;
+        lab.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ResidualLabViewModel.LensRows)) rows++; };
+        int before = lab.PositionIndex;
+        lab.Text += "xy";
+        Assert.NotEqual(before, lab.PositionIndex);
+        Assert.Equal(lab.PositionChoices.Count - 1, lab.PositionIndex);
+        Assert.Equal(1, rows);
+    }
+
+    [Fact]
     public void LensRowsEqualLayersPlusOne()
     {
         var models = _env.NewActiveModels();

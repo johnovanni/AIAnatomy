@@ -20,7 +20,7 @@ public sealed class Trainer
     private readonly IReadOnlyList<Parameter> _parameters;
     private readonly int[][] _validation;   // each window: inputs then targets shifted by one
     private readonly Transformer[] _slots;   // one model per batch sequence; slot 0 is the model itself
-    private int _running;                    // 1 while RunAsync is running
+    private int _running;                    // 1 while RunAsync or Step is running (each claims it, so they never overlap)
 
     /// <summary>Trains on random windows of a text (see <see cref="CorpusBatchSource"/>).</summary>
     public Trainer(Transformer model, IReadOnlyList<int> corpusTokens, TrainingSettings settings)

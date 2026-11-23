@@ -21,7 +21,7 @@ public static class NumberText
     }
 
     /// <summary>
-    /// Three decimals; whole numbers from 1 up, and anything from 1,000 up, without decimals; very small numbers as
+    /// Three decimals; zero, whole numbers from 1 up, and anything from 1,000 up, without decimals; very small numbers as
     /// 1.23e−5. (One parameter only, so <c>values.Select(NumberText.Short)</c> can never pick up the index.)
     /// </summary>
     public static string Short(double value) => ShortWithDecimals(value, 3);
@@ -31,6 +31,7 @@ public static class NumberText
     {
         ArgumentOutOfRangeException.ThrowIfNegative(decimals);
         if (!double.IsFinite(value)) return Exact(value);
+        if (value == 0) return "0";   // exactly zero (also −0): "0", not "0.000" (final review M12)
         double size = Math.Abs(value);
         string text = size >= 1000 || (size >= 1 && value == Math.Round(value)) ? value.ToString("#,0", Invariant)
             : size != 0 && size < 0.5 * Math.Pow(10, -decimals) ? value.ToString("0.##e0", Invariant)

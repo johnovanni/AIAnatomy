@@ -30,10 +30,15 @@ public sealed class PipelineView : ChartBase
         Focusable = true;
     }
 
-    /// <summary>Scrolls the newly marked step into view, so stepping with the keyboard never leaves it off screen.</summary>
+    /// <summary>
+    /// Scrolls the newly marked step into view, so stepping with the keyboard never leaves it off screen. Not for the first
+    /// value the binding gives when the lab opens (−1 to 0), or the lab would open scrolled down past its intro and text box
+    /// (final review I7); Previous and Next (buttons or keys) still scroll.
+    /// </summary>
     private static void OnSelectedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var view = (PipelineView)d;
+        if ((int)e.OldValue < 0 || !view.IsLoaded) return;
         view.Dispatcher.BeginInvoke(new Action(() =>
         {
             if (view.Stages is not { Count: > 0 } stages || view.SelectedIndex < 0 || view.SelectedIndex >= stages.Count || view.ActualWidth <= 0) return;
@@ -169,7 +174,7 @@ public sealed class PipelineView : ChartBase
         var s = stages[i];
         var parts = new List<string> { s.Title };
         if (s.Values is { Length: > 0 } v) parts.Add(string.Join(",  ", v.Select(NumberText.Exact)));
-        if (s.Items is { Count: > 0 } items) parts.AddRange(items.Select(it => $"{it.Label}: {NumberText.Exact(it.Value)}"));
+        if ((s.AllItems ?? s.Items) is { Count: > 0 } items) parts.AddRange(items.Select(it => $"{it.Label}: {NumberText.Exact(it.Value)}"));
         ToolTip = parts.Count > 1 ? string.Join("\n", parts) : null;
     }
 }

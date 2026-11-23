@@ -56,7 +56,7 @@
 
         <WrapPanel Margin="0,12,0,0">
             <TextBlock Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="0,0,8,8" Text="Seed (for the learned model's random choices)" />
-            <TextBox Width="110" Text="{Binding Seed, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Seed" />
+            <TextBox MinWidth="110" Text="{Binding Seed, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Seed" />
         </WrapPanel>
     </StackPanel>
 </UserControl>

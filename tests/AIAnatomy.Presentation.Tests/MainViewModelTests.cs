@@ -215,6 +215,15 @@ public class MainViewModelTests : IDisposable
     }
 
     [Fact]
+    public void Main_LinkThatCannotBeOpened_GivesTheAddressInTheStatusLine()
+    {
+        var vm = _env.NewMain();
+        vm.ShowLinkNotOpened("https://arxiv.org/abs/1706.03762");
+        Assert.Equal("The web page could not be opened from here. You can type its address into your web browser: https://arxiv.org/abs/1706.03762",
+            vm.StatusMessage);
+    }
+
+    [Fact]
     public void LabFactory_UnknownId_Throws()
     {
         var vm = _env.NewMain();

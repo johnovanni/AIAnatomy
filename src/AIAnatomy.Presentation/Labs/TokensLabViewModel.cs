@@ -1,4 +1,5 @@
 using AIAnatomy.Models.Tokenization;
+using AIAnatomy.Presentation.Services;
 using AIAnatomy.Presentation.Visuals;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -117,6 +118,12 @@ public sealed partial class TokensLabViewModel : LabViewModel
             if (!token.IsCancellationRequested) UseBpe(merges, trained);
         }
         catch (OperationCanceledException) { /* a newer merges value replaced this one */ }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // Nobody awaits this task in the app, so the failure is logged here and shown as a plain line (final review M14).
+            ErrorLog.ReportBackground(e);
+            if (!token.IsCancellationRequested) { IsBpeBusy = false; BpeStatus = "The pieces could not be learned: " + e.Message; }
+        }
     }
 
     private void UseBpe(int merges, BpeTokenizer tokenizer)
@@ -133,11 +140,13 @@ public sealed partial class TokensLabViewModel : LabViewModel
         CharacterChips = Chips(_chars, Text, null);
         BpeChips = _bpe == null ? [] : Chips(_bpe, Text, null);
         Message = string.IsNullOrEmpty(Text) ? LabText.EmptyPrompt : null;
-        int chars = string.IsNullOrEmpty(Text) ? 0 : LabText.CountScalars(Text);
+        // Counted as the tokenizer reads the text: Enter types CR LF, which is one new line (D10, final review I11).
+        int chars = string.IsNullOrEmpty(Text) ? 0 : _chars.Encode(Text).Count;
         CharacterCountText = chars == 0 ? "" : $"{Plural(chars, "token")} (one per character)";
+        string ratio = NumberText.ShortWithDecimals((double)chars / Math.Max(1, BpeChips.Count), 1);
         BpeCountText = _bpe == null || chars == 0 ? ""
             : $"{Plural(BpeChips.Count, "token")} with {Plural(_bpeMerges, "merge")}, about "
-              + $"{NumberText.ShortWithDecimals((double)chars / Math.Max(1, BpeChips.Count), 1)} characters per token";
+              + $"{ratio} {(ratio == "1" ? "character" : "characters")} per token";
         RefreshWord();
     }
 
@@ -152,13 +161,18 @@ public sealed partial class TokensLabViewModel : LabViewModel
         }
         string? letter = string.IsNullOrEmpty(Letter) ? null : Letter[..1];
         WordChips = Chips(_bpe, w, letter);
-        int letters = LabText.CountScalars(w);
+        int characters = LabText.CountScalars(w);
+        int letters = w.EnumerateRunes().Count(System.Text.Rune.IsLetter);
         int pieces = WordChips.Count;
-        var summary = $"“{w}” has {Plural(letters, "letter")}. With {Plural(_bpeMerges, "merge")} the BPE sees {Plural(pieces, "piece")}.";
+        // Only letters are called letters; spaces, digits and marks are characters (final review M9).
+        string has = letters == characters
+            ? Plural(letters, "letter")
+            : $"{Plural(characters, "character")}, {NumberText.Short(letters)} of them {(letters == 1 ? "a letter" : "letters")}";
+        var summary = $"“{w}” has {has}. With {Plural(_bpeMerges, "merge")} the BPE sees {Plural(pieces, "piece")}.";
         if (letter != null)
             summary += $" It contains the letter “{letter}” {Plural(CountLetter(w, letter), "time")}.";
-        summary += pieces == letters
-            ? " Every piece is one letter, so the pieces are the letters."
+        summary += pieces == characters
+            ? letters == characters ? " Every piece is one letter, so the pieces are the letters." : " Every piece is one character."
             : " The model receives the pieces, not the letters: what is inside each piece has to be learned from the training text.";
         WordSummary = summary;
     }

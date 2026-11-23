@@ -490,6 +490,120 @@ public class TrainTests : IDisposable
         Assert.Equal("about 60 steps per second; about 1 second left", TrainLabViewModel.Speed(60, 30));
     }
 
+    private static void MakeTiny(TrainLabViewModel lab, int steps)
+    {
+        lab.Settings.Width = 16; lab.Settings.LayersText = "1"; lab.Settings.HeadsText = "2"; lab.Settings.ContextText = "16";
+        lab.Settings.BatchText = "2"; lab.Settings.StepsText = steps.ToString();
+        Assert.Null(lab.Settings.StartProblem);
+    }
+
+    [Fact]
+    public async Task Main_LeavingTheTrainLab_KeepsTheRunGoing_AndShowsItInTheHeader()
+    {
+        // Final review I9 (ruling R35): one Train lab per window; leaving it does not stop the run, and the header says so.
+        var vm = _env.NewMain();
+        await vm.NavigateToLesson("train");
+        var lab = Assert.IsType<TrainLabViewModel>(vm.CurrentLab);
+        MakeTiny(lab, 100_000);
+        var run = lab.StartCommand.ExecuteAsync(null);
+        await WaitUntil(() => lab.StepsDone > 0);
+        Assert.Null(vm.BackgroundStatus);   // not while the Train lab is on show
+
+        await vm.NavigateToLesson("attention");
+        Assert.True(lab.IsTraining);
+        await WaitUntil(() => vm.BackgroundStatus?.StartsWith("Training in the background: step ") == true);
+        Assert.EndsWith(" of 100,000.", vm.BackgroundStatus);
+        int before = lab.StepsDone;
+        await WaitUntil(() => lab.StepsDone > before);   // it really carries on
+
+        await vm.NavigateToLesson("train");
+        Assert.Same(lab, vm.CurrentLab);   // the same lab, with its chart, samples and model
+        Assert.True(lab.IsTraining);
+        Assert.Null(vm.BackgroundStatus);
+
+        vm.ResetLabCommand.Execute(null);   // Reset still stops it
+        await run.WaitAsync(Patience);
+        Assert.False(lab.IsTraining);
+        Assert.Equal(0, lab.StepsDone);
+        Assert.False(lab.HasModel);
+    }
+
+    [Fact]
+    public async Task Main_ARunThatEndsWhileAway_IsReportedInTheHeader_UntilTheLabIsOpened()
+    {
+        var vm = _env.NewMain();
+        await vm.NavigateToLesson("train");
+        var lab = Assert.IsType<TrainLabViewModel>(vm.CurrentLab);
+        MakeTiny(lab, 20);
+        var run = lab.StartCommand.ExecuteAsync(null);
+        await vm.NavigateToLesson("tokens");
+        await run.WaitAsync(Patience);
+        Assert.Equal(20, lab.StepsDone);
+        Assert.Equal("Training finished in the background: 20 steps. Open “Training a model” to save the model.", vm.BackgroundStatus);
+        await vm.NavigateToLesson("train");
+        Assert.Null(vm.BackgroundStatus);
+        await vm.NavigateToLesson("tokens");
+        Assert.Null(vm.BackgroundStatus);   // already seen
+    }
+
+    [Fact]
+    public async Task Main_Shutdown_StopsABackgroundRun()
+    {
+        var vm = _env.NewMain();
+        await vm.NavigateToLesson("train");
+        var lab = Assert.IsType<TrainLabViewModel>(vm.CurrentLab);
+        MakeTiny(lab, 100_000);
+        var run = lab.StartCommand.ExecuteAsync(null);
+        await vm.NavigateToLesson("attention");
+        vm.Shutdown();
+        await run.WaitAsync(Patience);
+        Assert.False(lab.IsTraining);
+    }
+
+    [Fact]
+    public async Task Main_SavingOverTheActiveModel_ReloadsIt()
+    {
+        // Final review I10: "My model" is active; a newer run saved over its file must become what the labs use.
+        var models = _env.NewActiveModels();
+        var vm = _env.NewMain(models);
+        await vm.NavigateToLesson("train");
+        var lab = Assert.IsType<TrainLabViewModel>(vm.CurrentLab);
+        MakeTiny(lab, 3);
+        await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
+        lab.SaveName = "My model";
+        await lab.UseInLabsCommand.ExecuteAsync(null).WaitAsync(Patience);
+        Assert.Equal("My model", models.Current.Info.Name);
+        var first = models.Current;
+
+        lab.Seed = 2;   // a different run
+        await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
+        await lab.SaveCommand.ExecuteAsync(null);
+        Assert.Equal(TrainLabViewModel.OverwriteText, lab.OverwriteQuestion);
+        await lab.ConfirmOverwriteCommand.ExecuteAsync(null).WaitAsync(Patience);
+
+        Assert.NotSame(first, models.Current);
+        Assert.Equal(2, models.Current.Info.Seed);
+        var saved = models.Library.Load(models.Library.List().Single(e => e.Name == "My model"));
+        Assert.Equal(saved.Transformer.Parameters().Select(p => p.Value.Data.ToArray()).ToList(),
+            models.Current.Transformer.Parameters().Select(p => p.Value.Data.ToArray()).ToList());
+        Assert.Equal("My model", vm.SelectedModelEntry!.Name);
+        Assert.Contains("the labs now use this version", lab.SaveStatus);
+    }
+
+    [Fact]
+    public async Task SavingOverAnotherModel_DoesNotChangeTheActiveOne()
+    {
+        var models = _env.NewActiveModels();
+        var lab = TinyLab(models, steps: 2);
+        await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
+        lab.SaveName = "Other";
+        await lab.SaveCommand.ExecuteAsync(null);
+        await lab.SaveCommand.ExecuteAsync(null);
+        await lab.ConfirmOverwriteCommand.ExecuteAsync(null).WaitAsync(Patience);
+        Assert.Equal("Fables model", models.Current.Info.Name);
+        Assert.DoesNotContain("the labs now use", lab.SaveStatus);
+    }
+
     [Fact]
     public void Factory_RegistersTheTrainLab()
     {

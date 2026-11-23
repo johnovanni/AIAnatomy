@@ -11,6 +11,17 @@ public class AttentionTests : IDisposable
 
     private AttentionLabViewModel NewLab() => new(_env.NewActiveModels());
 
+    /// <summary>Waits for the training's first loss report (every 10 steps) instead of a fixed delay (final review M18).</summary>
+    private static async Task FirstReport(InductionPanelViewModel induction)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(60);
+        while (induction.Progress <= 0)
+        {
+            if (DateTime.UtcNow > deadline) throw new TimeoutException("The training did not report in time.");
+            await Task.Delay(10);
+        }
+    }
+
     // ---- the toy ----
 
     [Fact]
@@ -190,7 +201,7 @@ public class AttentionTests : IDisposable
         induction.Steps = 100_000;   // far more than can finish
         var run = induction.TrainCommand.ExecuteAsync(null);
         Assert.True(induction.IsTraining);
-        await Task.Delay(300);
+        await FirstReport(induction);
         induction.TrainCancelCommand.Execute(null);
         await run.WaitAsync(TimeSpan.FromSeconds(60));
 
@@ -227,7 +238,7 @@ public class AttentionTests : IDisposable
         var induction = lab.Induction;
         induction.Steps = 100_000;
         var run = induction.TrainCommand.ExecuteAsync(null);
-        await Task.Delay(300);
+        await FirstReport(induction);
         await induction.ShowDemoCommand.ExecuteAsync(null);
         await run.WaitAsync(TimeSpan.FromSeconds(60));
         await lab.WorkCompleted;
@@ -245,7 +256,7 @@ public class AttentionTests : IDisposable
         var induction = lab.Induction;
         induction.Steps = 100_000;
         var run = induction.TrainCommand.ExecuteAsync(null);
-        await Task.Delay(200);
+        await FirstReport(induction);
         var cells = induction.SequenceCells.Select(c => c.Letter).ToList();
         lab.Seed = 9;
         Assert.Equal(1, induction.Seed);
@@ -310,13 +321,27 @@ public class AttentionTests : IDisposable
         var lab = NewLab();
         lab.Induction.Steps = 100_000;
         var run = lab.Induction.TrainCommand.ExecuteAsync(null);
-        await Task.Delay(200);
+        await FirstReport(lab.Induction);
         lab.Reset();
         await run.WaitAsync(TimeSpan.FromSeconds(60));
         await lab.WorkCompleted;
         Assert.False(lab.Induction.IsTraining);
         Assert.Contains("trained demo", lab.Induction.Source);
         Assert.Empty(lab.Induction.LossSeries);
+    }
+
+    [Fact]
+    public async Task Induction_SeedChangedWhileTheDemoLoads_ShowsTheNewSeed()
+    {
+        // Final review I2: the demo started by the constructor must not show the old seed's sequence when it finishes.
+        var lab = NewLab();
+        lab.Seed = 5;
+        await lab.WorkCompleted;
+        var expected = InductionExperiment.MakeSequence(new AIAnatomy.Core.SeededRandom(5));
+        Assert.Equal(5, lab.Induction.Seed);
+        Assert.Equal(expected.Tokens.Select(t => InductionExperiment.Tokenizer.TokenText(t)).ToList(),
+            lab.Induction.SequenceCells.Select(c => c.Letter).ToList());
+        Assert.Equal(expected.SecondStart, lab.Induction.CopySpans[1].Column);
     }
 
     [Fact]

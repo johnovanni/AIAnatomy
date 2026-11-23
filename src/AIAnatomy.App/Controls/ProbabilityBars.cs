@@ -90,6 +90,7 @@ public sealed class ProbabilityBars : ChartBase
             dc.DrawRectangle(null, gridPen, track);
             double p = double.IsFinite(item.Value) ? Math.Clamp(item.Value / Scale, 0, 1) : 0;
             dc.DrawRectangle(chosen ? Series2Brush : Series1Brush, null, new Rect(track.X, track.Y, track.Width * p, track.Height));
+            if (double.IsFinite(item.Value) && item.Value > Scale) DrawCutOff(dc, track);
 
             var percent = Number(NumberText.Percent(item.Value), LabelSize, Foreground, bold: chosen);
             dc.DrawText(percent, new Point(track.Right + percentWidth - 8 - percent.Width, mid - percent.Height / 2));
@@ -105,6 +106,31 @@ public sealed class ProbabilityBars : ChartBase
         }
     }
 
+    public const string CutOffTag = "cut off";
+
+    /// <summary>
+    /// A bar longer than the scale is drawn full width with a break near its end (two slanted gaps) and a "cut off" tag,
+    /// so a clipped bar never looks like a true full-scale bar, whatever the colours (final review I5).
+    /// </summary>
+    private void DrawCutOff(DrawingContext dc, Rect track)
+    {
+        double h = track.Height;
+        double x = track.Right - Math.Max(14, h * 0.9);
+        var gap = new Pen(SurfaceBrush, Math.Max(3, h * 0.14));
+        var edge = new Pen(Foreground, 1.5);
+        for (int k = 0; k < 2; k++)
+        {
+            double dx = x + k * Math.Max(6, h * 0.3);
+            dc.DrawLine(gap, new Point(dx + h * 0.25, track.Top - 2), new Point(dx - h * 0.25, track.Bottom + 2));
+            dc.DrawLine(edge, new Point(dx + h * 0.25 + 2.5, track.Top - 2), new Point(dx - h * 0.25 + 2.5, track.Bottom + 2));
+        }
+        var tag = Text(CutOffTag, LabelSize * 0.8, Foreground, BoldFace);
+        var box = new Rect(x - h * 0.4 - tag.Width - 14, track.Top + (h - tag.Height) / 2 - 1, tag.Width + 10, tag.Height + 2);
+        if (box.Left <= track.Left) return;   // too narrow for the words; the break alone still shows the cut
+        dc.DrawRoundedRectangle(SurfaceBrush, new Pen(Foreground, 1), box, 4, 4);
+        dc.DrawText(tag, new Point(box.Left + 5, box.Top + 1));
+    }
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
@@ -112,6 +138,7 @@ public sealed class ProbabilityBars : ChartBase
         int i = (int)Math.Floor((e.GetPosition(this).Y - 2) / RowHeight);
         ToolTip = i >= 0 && i < items.Count
             ? $"“{items[i].Label}”: probability {NumberText.Exact(items[i].Value)}" + (items[i].Label == HighlightedLabel ? " (chosen)" : "")
+              + (items[i].Value > Scale ? " (longer than a full bar, so the bar is cut off)" : "")
             : null;
     }
 }

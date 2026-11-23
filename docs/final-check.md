@@ -37,7 +37,9 @@ screen.
   640 + 4,485 = 113,093). Each part also matches its shape: 69 tokens × 64 for the embeddings, 64 × 64 for the
   positions, and 64 × 69 + 69 for the output layer.
 
-Found in this check, and sent to the whole-branch review to fix:
+Found in this check and sent to the whole-branch review. All four were fixed in the final review's fix wave
+(`.superpowers/sdd/2026-11-22-aianatomy-stage-1/final-fix-report.md`: I6, I7, I1 and I4), and are to be checked again
+in new pictures:
 
 - In the Attention toy at 32 pt the two small plots keep their size while the text grows, so labels overlap (K3 on
   K2, Q on K1, Answer on V1).
@@ -46,12 +48,14 @@ Found in this check, and sent to the whole-branch review to fix:
 - The architecture map and Position lab say "␣ is a space" but show plain spaces in "What the model reads".
 
 Not yet seen in a picture: the logits table at the bottom of Output and sampling, and the loss formula at the end
-of Learning, both at 32 pt. They sit below the lab's own scroll area even in a 7000-pixel-high window. They will be
-checked after the review fixes.
+of Learning, both at 32 pt. They sit below the lab's own scroll area even in a 7000-pixel-high window. The final
+review's fix wave added `--render-png <lesson> <file.png> --full-lab`, which draws the lab pane by itself at its full
+height (final review I8), so they can now be checked.
 
 ## What could not be checked without you
 
-- **Dragging** the points in the Attention toy and the Learning loss surface, and how it feels with a mouse.
+- **Dragging** the points in the Attention toy, and how it feels with a mouse. (The Learning loss surface has no
+  points to drag: its path always starts at the same point, and only the learning rate is changed.)
 - **How fast training feels**, and whether a run of a few minutes is pleasant to watch. Run a Release build
   (`dotnet run -c Release --project src\AIAnatomy.App`); a Debug build trains noticeably slower.
 - **Keyboard-only use** all the way through: Tab order, arrow keys in the plots and steps, and Page Up/Page Down in

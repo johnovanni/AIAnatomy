@@ -18,7 +18,7 @@ Three settings change the probabilities before the draw:
 
 Whatever is left is scaled to add up to 100% again.
 
-**Generate 200 characters** writes text one random draw at a time: each new character is added to the text, and the model runs again. This is why the same question can get different answers from an assistant.
+**Generate 200 characters** writes text one random draw at a time: each new character is added to the text, and the model runs again. This is a large part of why the same question can get different answers from an assistant; differences in what came before the question in the conversation play a part too.
 
 "Confident" means a high probability, not a correct answer. The probability measures how text like the training text tended to continue, not what is true, so a confident-sounding choice can still be wrong.
 

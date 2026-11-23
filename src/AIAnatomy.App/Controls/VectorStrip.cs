@@ -23,6 +23,11 @@ public sealed class VectorStrip : ChartBase
     public static readonly DependencyProperty SelectedIndexProperty = DependencyProperty.Register(nameof(SelectedIndex), typeof(int),
         typeof(VectorStrip), new FrameworkPropertyMetadata(-1, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault | Relayout));
 
+    /// <summary>The number written under the first bar: 0 for the parts of a vector (the default), 1 for places in a text,
+    /// so the bars match the numbered key under them.</summary>
+    public static readonly DependencyProperty IndexBaseProperty = DependencyProperty.Register(nameof(IndexBase), typeof(int),
+        typeof(VectorStrip), new FrameworkPropertyMetadata(0, Relayout));
+
     public VectorStrip()
     {
         Focusable = true;
@@ -30,8 +35,10 @@ public sealed class VectorStrip : ChartBase
     }
 
     public double[]? Values { get => (double[]?)GetValue(ValuesProperty); set => SetValue(ValuesProperty, value); }
-    /// <summary>The selected number (0-based), or −1 for none.</summary>
+    /// <summary>The selected number (0-based in code, whatever <see cref="IndexBase"/> says on screen), or −1 for none.</summary>
     public int SelectedIndex { get => (int)GetValue(SelectedIndexProperty); set => SetValue(SelectedIndexProperty, value); }
+
+    public int IndexBase { get => (int)GetValue(IndexBaseProperty); set => SetValue(IndexBaseProperty, value); }
 
     private bool HasData => Values is { Length: > 0 };
 
@@ -52,7 +59,7 @@ public sealed class VectorStrip : ChartBase
         double band = label * 3;
         var sample = Number(NumberText.Short(-0.5), label * 0.8, Foreground);
         bool writeValues = sample.Width + 4 <= cell;
-        double indexWidth = Number((n - 1).ToString(), label * 0.8, Foreground).Width + 6;
+        double indexWidth = Number((n - 1 + IndexBase).ToString(), label * 0.8, Foreground).Width + 6;
         int every = new[] { 1, 2, 5, 10, 20, 50, 100, 200, 500 }.FirstOrDefault(k => k * cell >= indexWidth, 1000);
         double indexHeight = Number("0", label * 0.8, Foreground).Height + 2;
         double valueHeight = writeValues ? sample.Height + 2 : 0;
@@ -96,9 +103,9 @@ public sealed class VectorStrip : ChartBase
                 dc.DrawRectangle(v >= 0 ? Series1Brush : Series2Brush, null, bar);
                 if (i == SelectedIndex)
                     dc.DrawRectangle(null, new Pen(HighlightBrush, 3), new Rect(x + 1.5, top + 1.5, Math.Max(1, l.Cell - 3), l.BandHeight - 3));
-                if (i % l.IndexEvery == 0)
+                if ((i + IndexBase) % l.IndexEvery == 0)
                 {
-                    var index = Number(i.ToString(), small, MutedBrush, bold: i == SelectedIndex);
+                    var index = Number((i + IndexBase).ToString(), small, MutedBrush, bold: i == SelectedIndex);
                     dc.DrawText(index, new Point(x + (l.Cell - index.Width) / 2, top + l.BandHeight + 2));
                 }
                 if (l.WriteValues)
@@ -127,7 +134,7 @@ public sealed class VectorStrip : ChartBase
         var values = Values!;
         if (SelectedIndex < 0 || SelectedIndex >= values.Length)
             return Text("Click a bar, or use the arrow keys, to see its exact value.", FontSize * 0.9, Foreground, maxWidth: Math.Max(50, width));
-        string prefix = $"Number {SelectedIndex} (counting from 0): ";
+        string prefix = $"Number {SelectedIndex + IndexBase} (counting from {IndexBase}): ";
         var text = Text(prefix + NumberText.Exact(values[SelectedIndex]), FontSize * 0.9, Foreground, maxWidth: Math.Max(50, width));
         text.SetFontTypeface(BoldNumberFace, prefix.Length, text.Text.Length - prefix.Length);
         return text;
@@ -155,7 +162,7 @@ public sealed class VectorStrip : ChartBase
     {
         base.OnMouseMove(e);
         int i = IndexAt(e.GetPosition(this));
-        ToolTip = i >= 0 ? $"Number {i}: {NumberText.Exact(Values![i])}" : null;
+        ToolTip = i >= 0 ? $"Number {i + IndexBase}: {NumberText.Exact(Values![i])}" : null;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

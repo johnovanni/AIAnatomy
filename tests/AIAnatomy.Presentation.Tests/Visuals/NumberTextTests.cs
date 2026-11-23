@@ -24,7 +24,8 @@ public class NumberTextTests
     [Theory]
     [InlineData(0.41273849201, "0.413")]
     [InlineData(-1.2, "\u22121.200")]
-    [InlineData(0, "0.000")]
+    [InlineData(0, "0")]          // final review M12: zero is written "0", not "0.000"
+    [InlineData(-0.0, "0")]       // never "−0"
     [InlineData(12345.6, "12,346")]
     [InlineData(0.0000123, "1.23e\u22125")]
     [InlineData(21, "21")]

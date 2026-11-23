@@ -121,17 +121,27 @@ public sealed class ContourPlot : ChartBase
         var line = new Pen(Foreground, 2.5) { DashStyle = new DashStyle(new DoubleCollection { 4, 2 }, 0), LineJoin = PenLineJoin.Round };
 
         // Each step is cut to the axes (plus a small margin) in data coordinates first: a diverging path can be millions of
-        // pixels long, and only the visible part is drawn.
+        // pixels long, and only the visible part is drawn. Joined steps form one line, so the dashes run on along the whole
+        // path instead of starting again at every step (final review M19); a new piece starts only where the path was cut.
         double mx = (XMax - XMin) * 0.02, my = (YMax - YMin) * 0.02;
         double x0 = XMin - mx, x1 = XMax + mx, y0 = YMin - my, y1 = YMax + my;
-        for (int i = 1; i < path.Count; i++)
+        var geometry = new StreamGeometry();
+        using (var g = geometry.Open())
         {
-            if (SegmentClip.Clip(path[i - 1].X, path[i - 1].Y, path[i].X, path[i].Y, x0, x1, y0, y1) is not { } cut) continue;
-            var a = frame.Map(cut.From.X, cut.From.Y);
-            var b = frame.Map(cut.To.X, cut.To.Y);
-            dc.DrawLine(halo, a, b);
-            dc.DrawLine(line, a, b);
+            Point? end = null;
+            for (int i = 1; i < path.Count; i++)
+            {
+                if (SegmentClip.Clip(path[i - 1].X, path[i - 1].Y, path[i].X, path[i].Y, x0, x1, y0, y1) is not { } cut) { end = null; continue; }
+                var a = frame.Map(cut.From.X, cut.From.Y);
+                var b = frame.Map(cut.To.X, cut.To.Y);
+                if (end is not { } previous || (previous - a).Length > 0.01) g.BeginFigure(a, false, false);
+                g.LineTo(b, true, true);
+                end = b;
+            }
         }
+        geometry.Freeze();
+        dc.DrawGeometry(null, halo, geometry);
+        dc.DrawGeometry(null, line, geometry);
 
         double r = Math.Max(4, LabelSize * 0.25), big = Math.Max(8, LabelSize * 0.5);
         var ring = new Pen(SurfaceBrush, 1.5);

@@ -119,12 +119,14 @@ public class FeedForwardTests : IDisposable
     }
 
     [Fact]
-    public async Task TokenKey_IsNumberedFromZero_LikeTheStrip()
+    public async Task TokenKey_IsNumberedFromOne_LikeEveryOtherLab()
     {
+        // R30 / final review I1: places in a text are numbered from 1 everywhere (the strip under it uses IndexBase="1").
         var lab = NewLab();
         await lab.WorkCompleted;
-        Assert.StartsWith("0:t", lab.TokenKey);
-        Assert.Contains($"{lab.Activations!.Length - 1}:", lab.TokenKey);
-        Assert.DoesNotContain($"{lab.Activations.Length}:", lab.TokenKey);
+        Assert.StartsWith("1:t", lab.TokenKey);
+        Assert.Contains($"   {lab.Activations!.Length}:", lab.TokenKey);
+        Assert.DoesNotContain("0:", lab.TokenKey.Split("   ")[0]);
+        Assert.DoesNotContain($"{lab.Activations.Length + 1}:", lab.TokenKey);
     }
 }

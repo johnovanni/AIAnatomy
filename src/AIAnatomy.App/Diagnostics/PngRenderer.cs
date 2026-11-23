@@ -12,7 +12,8 @@ namespace AIAnatomy.App.Diagnostics;
 
 /// <summary>
 /// <c>--render-png</c>: draws the window's content into a PNG without showing it on screen, so screens can be checked
-/// without a screen capture. The theme and text size apply to this render only; nothing is saved.
+/// without a screen capture. The theme and text size apply to this render only; nothing is saved. With <c>--full-lab</c>
+/// the lab pane is drawn by itself at its full height (up to 12,000 px), so the bottom of a long lab is in the picture.
 /// </summary>
 public static class PngRenderer
 {
@@ -45,9 +46,16 @@ public static class PngRenderer
         var content = window.Shell;
         double height = options.Height;
         await SettleAsync(content, options.Width, height);
-        if (view == DiagnosticOptions.Gallery)
+        if (options.FullLab)
         {
-            // The gallery is drawn at its full height so every control is in the picture.
+            // The lab pane's width is read from the window as laid out above (stacked or side by side), then the lab is
+            // shown by itself and drawn at its full height like the gallery (final review I8).
+            window.ShowFullLabPage();
+            await SettleAsync(content, options.Width, height);
+        }
+        if (view == DiagnosticOptions.Gallery || options.FullLab)
+        {
+            // The gallery (or a full lab) is drawn at its full height so everything is in the picture.
             content.Measure(new Size(options.Width, double.PositiveInfinity));
             height = Math.Min(MaxGalleryHeight, Math.Max(height, Math.Ceiling(content.DesiredSize.Height)));
             await SettleAsync(content, options.Width, height);

@@ -61,20 +61,29 @@ public class StepThroughTests : IDisposable
     }
 
     [Fact]
-    public void LogitsStage_IsOneLabelledItemPerToken_InVocabularyOrder()
+    public void LogitsStage_ShowsTheFifteenHighest_AndKeepsEveryScoreForTheTooltip()
     {
+        // Final review M5: one row per token (69) made this step very tall; it shows the 15 highest, as Sampling does.
         var models = _env.NewActiveModels();
         var lab = new StepThroughLabViewModel(models);
         var logits = models.Current.Predict(lab.Text).Forward.Trace.Logits.Row(lab.PositionIndex);
         var stage = lab.Stages[^2];
-        Assert.Equal("Logits", stage.Title);
+        Assert.StartsWith("Logits", stage.Title);
         Assert.Null(stage.Values);
-        Assert.Equal(logits.Length, stage.Items!.Count);
+        var top = Enumerable.Range(0, logits.Length).OrderByDescending(i => logits[i]).ThenBy(i => i).Take(15).ToArray();
+        Assert.Equal(15, stage.Items!.Count);
+        for (int i = 0; i < 15; i++)
+        {
+            Assert.Equal(logits[top[i]], stage.Items[i].Value);
+            Assert.Equal(LabText.Visible(models.Current.Tokenizer.TokenText(top[i])), stage.Items[i].Label);
+        }
+        Assert.Equal(logits.Length, stage.AllItems!.Count);   // every score, in vocabulary order, for the tooltip
         for (int i = 0; i < logits.Length; i++)
         {
-            Assert.Equal(logits[i], stage.Items[i].Value);
-            Assert.Equal(LabText.Visible(models.Current.Tokenizer.TokenText(i)), stage.Items[i].Label);
+            Assert.Equal(logits[i], stage.AllItems[i].Value);
+            Assert.Equal(LabText.Visible(models.Current.Tokenizer.TokenText(i)), stage.AllItems[i].Label);
         }
+        Assert.Contains($"all {logits.Length} scores", stage.Description);
     }
 
     [Theory]
@@ -177,6 +186,32 @@ public class StepThroughTests : IDisposable
         lab.Text = "";
         Assert.Equal(LabText.EmptyPrompt, lab.Message);
         Assert.Empty(lab.Stages);
+    }
+
+    [Fact]
+    public void TextEdit_BuildsTheStagesOnce_EvenWhenTheFollowedTokenMoves()
+    {
+        // Final review I3: moving PositionIndex inside Refresh must not run Refresh again (nested).
+        var lab = new StepThroughLabViewModel(_env.NewActiveModels());
+        int stages = 0;
+        lab.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(StepThroughLabViewModel.Stages)) stages++; };
+        int before = lab.PositionIndex;
+        lab.Text += "xy";
+        Assert.NotEqual(before, lab.PositionIndex);   // the followed token moved to the new end
+        Assert.Equal(lab.PositionChoices.Count - 1, lab.PositionIndex);
+        Assert.Equal(1, stages);
+    }
+
+    [Fact]
+    public void PickerPushingMinusOne_IsIgnored()
+    {
+        // When the choices are replaced, WPF can push -1 back through SelectedIndex for a moment.
+        var lab = new StepThroughLabViewModel(_env.NewActiveModels());
+        var stagesBefore = lab.Stages;
+        lab.PositionIndex = -1;
+        Assert.Same(stagesBefore, lab.Stages);
+        lab.PositionIndex = 2;
+        Assert.Equal("Position embedding of place 3", lab.Stages[2].Title);
     }
 
     [Fact]

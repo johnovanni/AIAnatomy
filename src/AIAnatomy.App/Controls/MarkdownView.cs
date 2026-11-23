@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -131,13 +132,22 @@ public sealed class MarkdownView : Decorator
         var formula = new FormulaControl { Formula = latex, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 4) };
         formula.SetResourceReference(FormulaControl.ScaleProperty, "FormulaScale");
         formula.SetResourceReference(Control.ForegroundProperty, "TextBrush");
-        // Wide formulas scroll sideways instead of being cut off.
+        // Wide formulas scroll sideways instead of being cut off. A formula that is wider than its room can also be reached
+        // with Tab and scrolled with the arrow keys (final review M6); one that fits is no tab stop.
         var scroller = new ScrollViewer
         {
             Content = formula,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Focusable = false,
+            IsTabStop = false,
+        };
+        AutomationProperties.SetName(scroller, "Formula");
+        scroller.ScrollChanged += (_, _) =>
+        {
+            bool wide = scroller.ScrollableWidth > 0.5;
+            scroller.Focusable = scroller.IsTabStop = wide;
+            scroller.ToolTip = wide ? "This formula is wider than the pane: scroll it with the scroll bar, or click it and use the arrow keys." : null;
         };
         return new BlockUIContainer(scroller) { Margin = new Thickness(0, 4, 0, 12) };
     }

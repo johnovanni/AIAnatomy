@@ -62,6 +62,15 @@ public class PositionTests : IDisposable
         Assert.Equal("Only the last 64 characters are used: that is this model's context length.", lab.Notice);
         Assert.Equal(5, lab.WithPositions.Count);
         Assert.EndsWith("\uFFFD", lab.ShownText);
+        Assert.Equal(64, LabText.CountScalars(lab.ShownText));   // final review I4: only the tokens the model uses
+    }
+
+    [Fact]
+    public void ShownText_ShowsSpacesAsTheVisibleMark()
+    {
+        var lab = new PositionLabViewModel(_env.NewActiveModels());
+        lab.Text = "the fox\nran";
+        Assert.Equal("the\u2423fox\u21B5ran", lab.ShownText);
     }
 
     [Fact]

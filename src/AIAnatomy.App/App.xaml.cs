@@ -18,6 +18,13 @@ public partial class App : Application
     {
         base.OnStartup(e);
         DispatcherUnhandledException += OnUnhandledException;
+        // Background work that nobody awaits: a failure is written to the error log (final review M14), never shown as a crash.
+        ErrorLog.BackgroundFailed = error => ErrorLog.Append(AppPaths.ErrorLogFile, error, DateTimeOffset.Now);
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            ErrorLog.ReportBackground(args.Exception);
+            args.SetObserved();
+        };
         var options = DiagnosticOptions.Parse(e.Args);
         _diagnosticRun = options.Mode != DiagnosticMode.Normal;
         if (options.Error != null)

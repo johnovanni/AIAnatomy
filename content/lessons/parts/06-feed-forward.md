@@ -8,7 +8,7 @@ sources: geva2021, anthropic2024-mapping, textbook
 ---
 Attention moves information between tokens. The **feed-forward layer** then works on each token by itself. It is one small network, the same one for every token in the text: each token's vector goes through it separately, and no token sees another here.
 
-The network has two layers. The first widens the vector into many **neurons**: 256 in each layer of the Fables model, four times the width of 64. Each neuron adds up the vector's numbers with its own learned weights and then applies a smooth bend called GELU, which lets large positive sums through and squashes negative ones to near zero. The second layer combines the neurons back into a vector of 64 numbers, which is added to the [residual stream](lesson:residual-stream).
+The network has two layers. The first widens the vector into many **neurons**: 256 in each layer of the Fables model, four times the width of 64. Each neuron adds up the vector's numbers with its own learned weights and then applies a smooth bend called GELU, which lets large positive sums through and turns large negative sums into nearly zero (a small negative sum gives a small negative result, never below about −0.17). The second layer combines the neurons back into a vector of 64 numbers, which is added to the [residual stream](lesson:residual-stream).
 
 In the lab, choose a **Layer** and a **Neuron**. **Along your text** shows how strongly that neuron fires at each character you type. **Where this neuron fires most** searches the first 20,000 characters of the fables and lists the ten places where it fired hardest, with the text just before and the character it had just read in a box. Try a few neurons and ask what, if anything, their places have in common.
 

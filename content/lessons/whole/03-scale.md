@@ -14,7 +14,7 @@ How big is the model you are using next to real ones? Size here means the number
 - **GPT-3**: 175 billion (Brown et al., 2020).
 - **Claude**: Anthropic has not published Claude's size, so no bar is drawn and no number is guessed.
 
-GPT-2's design is the same as ours, and GPT-3's nearly so (it also uses a sparse kind of attention in some layers); mainly the sizes differ. Make every part wider and deeper, train on vastly more text, and the same arithmetic scales up. Bigger models trained on more text have generally predicted text better, but size is not the only thing that matters: the training text and the later training that turns a model into an assistant matter a great deal too.
+GPT-2's design is nearly the same as ours (GPT-2 reuses its token table as its output layer), and GPT-3's is close to GPT-2's (it also uses a sparse kind of attention in some layers); mainly the sizes differ. Make every part wider and deeper, train on vastly more text, and the same arithmetic scales up. Bigger models trained on more text have generally predicted text better, but size is not the only thing that matters: the training text and the later training that turns a model into an assistant matter a great deal too.
 
 Our model stores each number in 64 bits, so that the app's own checks of its arithmetic are precise. Large models usually store theirs in 16 or 32 bits, or fewer, because at billions of parameters every bit costs memory and time.
 
@@ -22,10 +22,14 @@ Our model stores each number in 64 bits, so that the app's own checks of its ari
 
 ## Formula
 
-Parameters of a model like ours (learned positions, feed-forward layers on):
+Parameters of a model like ours (learned positions, feed-forward layers on), written over two lines:
 
 $$
-N = V d + T d + n_L (4 d^2 + 4 d) + n_L (2 d F + F + d) + (2 n_L + 1) \cdot 2 d + (d V + V)
+N = V d + T d + n_L (4 d^2 + 4 d) \; +
+$$
+
+$$
+n_L (2 d F + F + d) + (2 n_L + 1) \cdot 2 d + (d V + V)
 $$
 
 - V: vocabulary size; d: width; T: context length; n with subscript L: number of blocks; F: feed-forward width.

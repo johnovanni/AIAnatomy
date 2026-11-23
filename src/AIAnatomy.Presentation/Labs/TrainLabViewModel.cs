@@ -79,6 +79,9 @@ public sealed partial class TrainLabViewModel : LabViewModel
 
     public override string LabId => Id;
 
+    /// <summary>One Train lab per window, kept while other lessons are open, so a run carries on in the background (R35).</summary>
+    public override bool KeepsRunningWhenLeft => true;
+
     /// <summary>The training run (if any) and any background read of a large pasted text.</summary>
     public override Task WorkCompleted => Task.WhenAll(_work, Settings.Reading);
 
@@ -109,6 +112,8 @@ public sealed partial class TrainLabViewModel : LabViewModel
     private bool isSaving;
 
     [ObservableProperty] private int stepsDone;
+    /// <summary>The step the current run trains up to (0 before any run).</summary>
+    [ObservableProperty] private int targetSteps;
     [ObservableProperty] private double progress;
     [ObservableProperty] private string progressText = "";
     [ObservableProperty] private string speedText = "";
@@ -155,7 +160,8 @@ public sealed partial class TrainLabViewModel : LabViewModel
         ClearRun();
     }
 
-    /// <summary>Stops any training; what it reports afterwards is not shown. Leaving the lab calls this.</summary>
+    /// <summary>Stops any training; what it reports afterwards is not shown. Reset and closing the app call this; leaving
+    /// the lab does not (<see cref="KeepsRunningWhenLeft"/>).</summary>
     public override void Deactivate()
     {
         Interlocked.Increment(ref _generation);
@@ -290,6 +296,7 @@ public sealed partial class TrainLabViewModel : LabViewModel
         Message = null;
         IsPaused = false;
         IsTraining = true;
+        TargetSteps = run.Target;
         Status = $"Training: {NumberText.Short(run.Target)} steps.";
 
         var ui = SynchronizationContext.Current;
@@ -425,6 +432,7 @@ public sealed partial class TrainLabViewModel : LabViewModel
         LossSeries = [];
         Samples = [];
         StepsDone = 0;
+        TargetSteps = 0;
         Progress = 0;
         ProgressText = SpeedText = Status = "";
         Message = SaveStatus = OverwriteQuestion = null;
@@ -479,9 +487,13 @@ public sealed partial class TrainLabViewModel : LabViewModel
             var entry = await Task.Run(() => _models.Library.Save(model, name));
             _saved = (run, steps, name, entry);
             SaveStatus = $"Saved as “{name}” in your model library.";
+            // Saved over the active model's own file: load it again, or the labs would keep the old weights while the
+            // picker names this model (final review I10).
+            bool overActive = _models.IsActive(entry);
             _libraryChanged?.Invoke();
             // Back on the UI thread: the active model's Changed handlers change UI collections.
             if (activate && IsCurrent(generation)) Activate(entry);
+            else if (overActive) Reload(entry);
         }
         catch (InvalidOperationException e) { SaveStatus = e.Message; }   // weights that are not finite
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
@@ -497,6 +509,16 @@ public sealed partial class TrainLabViewModel : LabViewModel
         {
             _models.SetActive(entry);
             SaveStatus = $"Saved as “{entry.Name}”. Every lab that uses a model now uses this one; you can switch back with the model picker.";
+        }
+        catch (InvalidOperationException e) { SaveStatus = e.Message; }
+    }
+
+    private void Reload(ModelEntry entry)
+    {
+        try
+        {
+            _models.SetActive(entry);
+            SaveStatus = $"Saved as “{entry.Name}”, over the model the labs were using; the labs now use this version.";
         }
         catch (InvalidOperationException e) { SaveStatus = e.Message; }
     }

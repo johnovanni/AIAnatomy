@@ -103,6 +103,27 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void ParsesFullLab()
+    {
+        // Final review I8: the lab pane by itself at its full height, so the bottom of a long lab can be checked at 32 pt.
+        var o = DiagnosticOptions.Parse(["--render-png", "output-sampling,learning", "lab.png", "--full-lab", "--theme", "Dark", "--text-size", "32"]);
+        Assert.Null(o.Error);
+        Assert.True(o.FullLab);
+        Assert.Equal(new[] { "output-sampling", "learning" }, o.Views);
+        Assert.Equal(32, o.TextSize);
+        Assert.False(DiagnosticOptions.Parse(["--render-png", "learning", "lab.png"]).FullLab);
+    }
+
+    [Theory]
+    [InlineData(new[] { "--full-lab" }, "--full-lab only goes with --render-png and a lesson id.")]
+    [InlineData(new[] { "--render-png", "gallery", "g.png", "--full-lab" }, "--full-lab only goes with --render-png and a lesson id.")]
+    [InlineData(new[] { "--render-png", "learning,sources", "g.png", "--full-lab" }, "--full-lab only goes with --render-png and a lesson id.")]
+    public void FullLab_WithoutALesson_GivesPlainError(string[] args, string error)
+    {
+        Assert.Equal(error, DiagnosticOptions.Parse(args).Error);
+    }
+
+    [Fact]
     public void EmptyViewInList_GivesError()
     {
         var o = DiagnosticOptions.Parse(["--render-png", "gallery,,sources", "g.png"]);

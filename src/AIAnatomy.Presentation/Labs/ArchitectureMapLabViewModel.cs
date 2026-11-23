@@ -56,7 +56,8 @@ public sealed partial class ArchitectureMapLabViewModel : LabViewModel
             Message = null;
             Notice = result.WasTruncated ? LabText.TruncationNote(config.ContextLength) : null;
             tokenCount = result.UsedTokenIds.Count;
-            ShownText = LabText.ShowNewlines(model.Tokenizer.Decode(model.Tokenizer.Encode(Text)));
+            // Only the tokens the model uses, with spaces as ␣ as the caption says (final review I4).
+            ShownText = LabText.Visible(model.Tokenizer.Decode(result.UsedTokenIds));
             var logits = result.Forward.Logits;
             var probabilities = Sampling.Probabilities(logits.Row(logits.Shape[0] - 1), new SamplingSettings(1.0));
             Top10 = Enumerable.Range(0, probabilities.Length)
@@ -72,6 +73,8 @@ public sealed partial class ArchitectureMapLabViewModel : LabViewModel
 
     // One block in the pre-norm design (D3): the residual stream runs through the whole block; the attention sublayer
     // (several heads side by side) and the feed-forward sublayer each read a normalised copy of it and add their result back.
+    private const string ReadsLabel = "reads (normalised)";
+
     private void BuildDiagram(AIAnatomy.Models.Transformers.TransformerConfig config, int tokenCount, string? top)
     {
         string layers = config.Layers == 1 ? "1 layer" : $"{config.Layers} layers";
@@ -92,11 +95,15 @@ public sealed partial class ArchitectureMapLabViewModel : LabViewModel
             new("text", "tokens", "split"), new("tokens", "embed", "look up"), new("embed", "block", "add"),
             new("position", "block", "add"), new("block", "residual", "inside"),
             new("attention", "multihead", $"× {heads} side by side"),
+            // Each sublayer reads a normalised copy of the stream and adds its result back (final review M1); the diagram
+            // draws a pair of opposite arrows side by side.
+            new("residual", "multihead", ReadsLabel),
             new("multihead", "residual", "add back"),
         };
         if (config.UseFeedForward)
         {
             list.Add(new("feedforward", "Feed-forward", 0.78, 0.57, $"norm first, {config.FeedForwardWidth} hidden", "feed-forward"));
+            links.Add(new("residual", "feedforward", ReadsLabel));
             links.Add(new("feedforward", "residual", "add back"));
         }
         list.Add(new("norm", "Final norm", 0.50, 0.77, null, null));

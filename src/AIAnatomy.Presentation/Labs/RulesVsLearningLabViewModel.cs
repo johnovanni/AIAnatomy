@@ -25,7 +25,8 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
     /// </summary>
     public const double LearningRate = 20.0;
 
-    private const int CorpusCharacters = 6000;
+    /// <summary>The lab learns from the first 6,000 characters of the fables.</summary>
+    public const int CorpusCharacters = 6000;
 
     private readonly RuleBasedWriter _writer = new();
     private readonly CharTokenizer _tokenizer;
@@ -42,7 +43,7 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
         _tokenizer = CharTokenizer.FromText(text);
         _corpus = _tokenizer.Encode(text.Length > CorpusCharacters ? text[..CorpusCharacters] : text);
         _model = new BigramModel(_tokenizer, Seed);
-        _untrainedLoss = CurrentLoss();
+        _untrainedLoss = LossOf(_model, _corpus);
         Rules = _writer.Rules.Select((r, i) => $"{i + 1}. {r.Description}").ToList();
         ResetState();
     }
@@ -70,9 +71,11 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
 
     public override string LabId => Id;
 
-    partial void OnStartTextChanged(string value) => Refresh();
+    // While a chunk is training in the background, the learned text waits for the end of the chunk (final review M8):
+    // it is never written from a table that is being changed. The rules' text is written at once.
+    partial void OnStartTextChanged(string value) => Refresh(learned: !IsLearning);
 
-    protected override void OnSeedEdited() => Refresh();
+    protected override void OnSeedEdited() => Refresh(learned: !IsLearning);
 
     [RelayCommand(IncludeCancelCommand = true)]
     private async Task LearnAsync(CancellationToken token)
@@ -84,7 +87,12 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
         {
             for (int chunk = 0; chunk < ChunksPerRun && !token.IsCancellationRequested; chunk++)
             {
-                double loss = await Task.Run(() => model.TrainSteps(_corpus, StepsPerChunk, LearningRate), CancellationToken.None);
+                // The loss shown is measured after the chunk's last step (TrainSteps returns the loss before it; final review M8).
+                double loss = await Task.Run(() =>
+                {
+                    double last = model.TrainSteps(_corpus, StepsPerChunk, LearningRate);
+                    return double.IsFinite(last) ? LossOf(model, _corpus) : last;
+                }, CancellationToken.None);
                 if (generation != _generation) return;   // Reset (or leaving the lab) happened meanwhile
                 StepsTrained += StepsPerChunk;
                 _lossPoints.Add((StepsTrained, loss));
@@ -94,7 +102,11 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
         }
         finally
         {
-            if (generation == _generation) IsLearning = false;
+            if (generation == _generation)
+            {
+                IsLearning = false;
+                Refresh();   // the start text may have changed after the last chunk
+            }
         }
     }
 
@@ -122,14 +134,14 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
         Refresh();
     }
 
-    private double CurrentLoss()
+    private static double LossOf(BigramModel model, IReadOnlyList<int> corpus)
     {
-        var previous = _corpus.Take(_corpus.Count - 1).ToArray();
-        var next = _corpus.Skip(1).ToArray();
-        return Losses.CrossEntropy(Ops.Rows(_model.Logits, previous), next).Item();
+        var previous = corpus.Take(corpus.Count - 1).ToArray();
+        var next = corpus.Skip(1).ToArray();
+        return Losses.CrossEntropy(Ops.Rows(model.Logits, previous), next).Item();
     }
 
-    private void Refresh()
+    private void Refresh(bool learned = true)
     {
         LossSeries = [new LineSeries("loss", _lossPoints.ToList())];
         LossText = StepsTrained == 0
@@ -143,6 +155,6 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
         }
         Message = null;
         RuleOutput = LabText.ShowNewlines(_writer.Write(StartText, OutputLength));
-        LearnedOutput = LabText.ShowNewlines(_model.Generate(StartText, OutputLength, new SeededRandom(Seed)));
+        if (learned) LearnedOutput = LabText.ShowNewlines(_model.Generate(StartText, OutputLength, new SeededRandom(Seed)));
     }
 }

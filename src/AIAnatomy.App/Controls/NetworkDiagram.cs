@@ -102,11 +102,11 @@ public sealed class NetworkDiagram : ChartBase
         var boxes = nodes.ToDictionary(n => n.Id, n => Box(n, scale));
         var arrowPen = new Pen(AxisBrush, 2);
 
-        foreach (var edge in Edges ?? [])
+        var edges = Edges ?? [];
+        foreach (var edge in edges)
         {
             if (!boxes.TryGetValue(edge.FromId, out var from) || !boxes.TryGetValue(edge.ToId, out var to)) continue;
-            var start = EdgePoint(from, Centre(to));
-            var end = EdgePoint(to, Centre(from));
+            var (start, end) = Ends(edge, edges, from, to, scale);
             dc.DrawLine(arrowPen, start, end);
             DrawArrowHead(dc, start, end);
         }
@@ -127,15 +127,34 @@ public sealed class NetworkDiagram : ChartBase
             }
         }
 
-        // Arrow labels last, so no box paints over them, and placed clear of every box.
-        foreach (var edge in Edges ?? [])
+        // Arrow labels last, so no box paints over them, and placed clear of every box and of the labels already placed.
+        var placed = new List<Rect>(boxes.Values);
+        foreach (var edge in edges)
         {
             if (string.IsNullOrEmpty(edge.Label) || !boxes.TryGetValue(edge.FromId, out var from) || !boxes.TryGetValue(edge.ToId, out var to)) continue;
             var text = Text(edge.Label, LabelSize * 0.85 * scale, MutedBrush);
-            var plate = LabelPlate(EdgePoint(from, Centre(to)), EdgePoint(to, Centre(from)), text, boxes.Values);
+            var (start, end) = Ends(edge, edges, from, to, scale);
+            var plate = LabelPlate(start, end, text, placed);
+            placed.Add(plate);
             dc.DrawRoundedRectangle(SurfaceBrush, null, plate, 4, 4);
             dc.DrawText(text, new Point(plate.X + 4, plate.Y + 1));
         }
+    }
+
+    /// <summary>
+    /// Where an arrow starts and ends. Two arrows between the same boxes in opposite directions ("reads" and "add back")
+    /// are drawn side by side, each moved to its own right, so they never lie on top of each other (final review M1).
+    /// </summary>
+    private (Point Start, Point End) Ends(NetworkEdge edge, IReadOnlyList<NetworkEdge> edges, Rect from, Rect to, double scale)
+    {
+        var start = EdgePoint(from, Centre(to));
+        var end = EdgePoint(to, Centre(from));
+        if (!edges.Any(o => o.FromId == edge.ToId && o.ToId == edge.FromId)) return (start, end);
+        var along = end - start;
+        if (along.Length < 1e-9) return (start, end);
+        along.Normalize();
+        var right = new Vector(-along.Y, along.X) * Math.Max(8, LabelSize * 0.45 * scale);
+        return (EdgePoint(from, Centre(to) + right) + right, EdgePoint(to, Centre(from) + right) + right);
     }
 
     /// <summary>

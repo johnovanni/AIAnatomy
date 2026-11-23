@@ -35,6 +35,17 @@
         <DataTemplate DataType="{x:Type labs:StepThroughLabViewModel}"><v:StepThroughView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:ScaleLabViewModel}"><v:ScaleView /></DataTemplate>
 
+        <!-- Final review M2: the explanation's column keeps its minimum width only beside the lab; when the explanation is
+             stacked under the lab, the column may shrink, so the window does not need extra width at 32 pt. -->
+        <Style x:Key="ExplanationColumn" TargetType="ColumnDefinition">
+            <Setter Property="MinWidth" Value="260" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding UseStackedLayout}" Value="True">
+                    <Setter Property="MinWidth" Value="0" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">
             <TextBlock TextTrimming="CharacterEllipsis">
                 <Run Text="{Binding Name, Mode=OneWay}" /><Run x:Name="Note" Text="" />
@@ -107,6 +118,13 @@
                        FontWeight="SemiBold" AutomationProperties.LiveSetting="Assertive" />
         </Border>
 
+        <!-- R35: a Train lab run that carries on while another lesson is open is shown here, in words (never as a sound). -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1" Padding="16,6"
+                Visibility="{Binding BackgroundStatus, Converter={StaticResource VisibleIfSet}}">
+            <TextBlock Text="{Binding BackgroundStatus}" TextWrapping="Wrap" AutomationProperties.Name="Background training" />
+        </Border>
+
         <!-- Spec 5.1: the lessons list always stays on the left; the lab and explanation (columns 2 to 4) are swapped
              for the Sources or Settings page, so clicking a lesson there goes straight back to it. -->
         <Grid x:Name="Body" Margin="12">
@@ -115,7 +133,7 @@
                 <ColumnDefinition Width="12" />
                 <ColumnDefinition Width="2*" MinWidth="360" />
                 <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="1.25*" MinWidth="260" />
+                <ColumnDefinition Width="1.25*" Style="{StaticResource ExplanationColumn}" />
             </Grid.ColumnDefinitions>
 
             <Border x:Name="LessonsPane" Grid.Column="0" Style="{StaticResource Pane}" Padding="8,12">
@@ -143,7 +161,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*" MinWidth="360" />
                     <ColumnDefinition Width="12" />
-                    <ColumnDefinition Width="1.25*" MinWidth="260" />
+                    <ColumnDefinition Width="1.25*" Style="{StaticResource ExplanationColumn}" />
                 </Grid.ColumnDefinitions>
                 <!-- R32: at large text the explanation goes under the lab (same column span) instead of beside it. -->
                 <Grid.RowDefinitions>
@@ -170,7 +188,7 @@
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource HeadingText}" Text="{Binding SelectedLesson.Title}" />
                         <ScrollViewer Style="{StaticResource PaneScroller}" AutomationProperties.Name="Lab">
-                            <ContentControl Content="{Binding CurrentLab}" Focusable="False" IsTabStop="False" />
+                            <ContentControl x:Name="LabContent" Content="{Binding CurrentLab}" Focusable="False" IsTabStop="False" />
                         </ScrollViewer>
                     </DockPanel>
                 </Border>

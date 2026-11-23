@@ -36,6 +36,42 @@ public class RulesVsLearningTests
     }
 
     [Fact]
+    public async Task ShownLoss_IsTheLossAfterTheLastStep()
+    {
+        // Final review M8: "Loss X after 20 steps" is measured after step 20, not before it.
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 1 };
+        await lab.LearnCommand.ExecuteAsync(null);
+
+        string text = Fables();
+        var tokenizer = AIAnatomy.Models.Tokenization.CharTokenizer.FromText(text);
+        var corpus = tokenizer.Encode(text[..RulesVsLearningLabViewModel.CorpusCharacters]);
+        var model = new AIAnatomy.Models.Toys.BigramModel(tokenizer, 1);
+        double beforeLastStep = model.TrainSteps(corpus, RulesVsLearningLabViewModel.StepsPerChunk, RulesVsLearningLabViewModel.LearningRate);
+        var previous = corpus.Take(corpus.Count - 1).ToArray();
+        var next = corpus.Skip(1).ToArray();
+        double after = AIAnatomy.Core.Losses.CrossEntropy(AIAnatomy.Core.Ops.Rows(model.Logits, previous), next).Item();
+
+        Assert.Equal(after, lab.Loss, 12);
+        Assert.NotEqual(beforeLastStep, lab.Loss);
+        Assert.Contains($"after {RulesVsLearningLabViewModel.StepsPerChunk} steps", lab.LossText);
+    }
+
+    [Fact]
+    public async Task StartTextEditedWhileLearning_EndsWithTheOutputForTheNewText()
+    {
+        // Final review M8: the learned output is written only between chunks, from a table that is not changing.
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 3 };
+        var run = lab.LearnCommand.ExecuteAsync(null);
+        lab.StartText = "Once ";
+        Assert.StartsWith("Once ", lab.StartText);
+        await run;
+        string shown = lab.LearnedOutput;
+        lab.StartText = "x";
+        lab.StartText = "Once ";
+        Assert.Equal(shown, lab.LearnedOutput);
+    }
+
+    [Fact]
     public async Task Learn_LossFallsEveryChunk_AtTheLabsLearningRate()
     {
         var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 20 };

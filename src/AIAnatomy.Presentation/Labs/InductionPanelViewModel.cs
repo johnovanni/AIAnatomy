@@ -9,10 +9,10 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AIAnatomy.Presentation.Labs;
 
-/// <summary>One letter of the experiment's sequence, with which copy of the repeated segment it belongs to (if any).</summary>
 /// <summary>Where a copy of the repeated segment sits: 0-based first column, how many letters, and its name.</summary>
 public sealed record CopySpan(int Column, int Length, string Name);
 
+/// <summary>One letter of the experiment's sequence, with which copy of the repeated segment it belongs to (if any).</summary>
 public sealed record SequenceCell(int Position, string Letter, string Copy)
 {
     /// <summary>The 0-based column of this letter.</summary>
@@ -148,6 +148,13 @@ public sealed partial class InductionPanelViewModel : ObservableObject
             ClearTraining();
             Source = $"The trained demo ({NumberText.Short(info.StepsTrained)} training steps)";
             Apply(snapshot, chooseBestHead: true);
+            // The Seed may have changed while the demo was loading (Seed builds the new sequence, but had no model to measure
+            // again): measure the demo again for the seed now shown, so the scores and the heat map match it.
+            if (seed != Seed && snapshot.Model is { } demo)
+            {
+                Remeasure(demo);
+                await _background;
+            }
         }
         catch (InvalidDataException e)
         {
@@ -308,8 +315,17 @@ public sealed partial class InductionPanelViewModel : ObservableObject
 
     private async Task RemeasureAsync(Transformer model, InductionSequence sequence, int seed, int generation)
     {
-        var snapshot = await Task.Run(() => Measure(model, sequence, seed, retain: true));
-        if (generation == _generation && seed == Seed) Apply(snapshot);
+        try
+        {
+            var snapshot = await Task.Run(() => Measure(model, sequence, seed, retain: true));
+            if (generation == _generation && seed == Seed) Apply(snapshot);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // Nobody awaits this task in the app, so the failure is logged here and shown as a plain line (final review M14).
+            ErrorLog.ReportBackground(e);
+            if (generation == _generation) Message = "The heads could not be measured for this seed: " + e.Message;
+        }
     }
 
     private void Apply(Snapshot snapshot, bool chooseBestHead = false)

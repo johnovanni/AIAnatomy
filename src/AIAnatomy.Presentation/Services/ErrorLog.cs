@@ -19,6 +19,20 @@ public static class ErrorLog
         }
     }
 
+    /// <summary>
+    /// Where failures of background work that nobody awaits go (for example re-measuring after a seed change). The app sets
+    /// this to append to the error log; unit tests leave it unset. A lab that catches such a failure also shows a plain line.
+    /// </summary>
+    public static Action<Exception>? BackgroundFailed { get; set; }
+
+    /// <summary>Passes a background failure to <see cref="BackgroundFailed"/>, if it is set. Never throws.</summary>
+    public static void ReportBackground(Exception error)
+    {
+        ArgumentNullException.ThrowIfNull(error);
+        try { BackgroundFailed?.Invoke(error); }
+        catch (Exception e) when (e is not OutOfMemoryException) { /* logging must never take the app down */ }
+    }
+
     /// <summary>The plain message shown in the error window.</summary>
     public static string UserMessage(Exception error)
     {

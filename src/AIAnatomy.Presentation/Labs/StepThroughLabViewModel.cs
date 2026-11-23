@@ -14,11 +14,12 @@ namespace AIAnatomy.Presentation.Labs;
 public sealed partial class StepThroughLabViewModel : LabViewModel
 {
     public const string Id = "StepThroughLab";
-    private const int TopCount = 10, WeightsPerHead = 5;
+    private const int TopCount = 10, WeightsPerHead = 5, LogitCount = 15;
 
     private readonly IActiveModelService _models;
     private string _lastDefault;
     private bool _moveToEnd = true;
+    private bool _syncing;
 
     public StepThroughLabViewModel(IActiveModelService models)
     {
@@ -44,7 +45,13 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
     public int StageCount => Stages.Count;
 
     partial void OnTextChanged(string value) { _moveToEnd = true; Refresh(); }
-    partial void OnPositionIndexChanged(int value) => Refresh();
+    // Refresh sets PositionIndex itself (under _syncing), and the picker can push -1 for a moment when its list is replaced:
+    // neither may start another, nested Refresh.
+    partial void OnPositionIndexChanged(int value)
+    {
+        if (_syncing || value < 0) return;
+        Refresh();
+    }
 
     partial void OnStagesChanged(IReadOnlyList<PipelineStage> value)
     {
@@ -123,7 +130,7 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
         SetChoices(ids.Select((id, i) => $"{i + 1}:{LabText.Visible(model.Tokenizer.TokenText(id))}").ToList());
         int position = _moveToEnd ? ids.Count - 1 : Math.Clamp(PositionIndex, 0, ids.Count - 1);
         _moveToEnd = false;
-        if (position != PositionIndex) PositionIndex = position;
+        if (position != PositionIndex) { _syncing = true; PositionIndex = position; _syncing = false; }
 
         var list = Build(model, prediction, position);
         StageIndex = Math.Clamp(StageIndex, 0, list.Count - 1);
@@ -181,8 +188,14 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
         var logits = trace.Logits.Row(p);
         var probabilities = Sampling.Probabilities(logits, new SamplingSettings(1.0));
         list.Add(new("Final layer norm", "One last tidying of the vector before the output layer.", trace.FinalNorm.Row(p), null));
-        list.Add(new("Logits", $"The output layer gives one score for each of the {logits.Length} tokens in the vocabulary, listed in vocabulary order. Higher means the model finds it more likely.",
-            null, logits.Select((v, i) => new LabeledValue(LabText.Visible(tokenizer.TokenText(i)), v)).ToList()));
+        // The 15 highest scores, as the Sampling lab shows; all of them (in vocabulary order) are in the tooltip (final review M5).
+        list.Add(new($"Logits ({LogitCount} highest)",
+            $"The output layer gives one score for each of the {logits.Length} tokens in the vocabulary. Higher means the model finds it more likely. " +
+            $"Shown: the {LogitCount} highest scores, highest first. Point at this step to see all {logits.Length} scores, in vocabulary order.",
+            null,
+            Enumerable.Range(0, logits.Length).OrderByDescending(i => logits[i]).ThenBy(i => i).Take(LogitCount)
+                .Select(i => new LabeledValue(LabText.Visible(tokenizer.TokenText(i)), logits[i])).ToList(),
+            logits.Select((v, i) => new LabeledValue(LabText.Visible(tokenizer.TokenText(i)), v)).ToList()));
         list.Add(new($"Probabilities ({TopCount} largest)",
             $"The scores are turned into probabilities that add up to 1 (softmax, temperature 1). Shown: the {TopCount} most likely next tokens.",
             null, Enumerable.Range(0, probabilities.Length).OrderByDescending(i => probabilities[i]).ThenBy(i => i).Take(TopCount)

@@ -115,6 +115,32 @@ public class TokensTests
     }
 
     [Fact]
+    public async Task EnterTypesCrLf_ButIsCountedAsOneToken()
+    {
+        // Final review I11: the text box types CR LF for Enter; the tokenizer reads it as one new line (D10).
+        var lab = NewLab();
+        await lab.BpeReady;
+        lab.Text = "ab\r\ncd";
+        Assert.Equal(5, lab.CharacterChips.Count);
+        Assert.StartsWith("5 tokens", lab.CharacterCountText);
+        lab.Merges = 0;
+        await lab.BpeReady;
+        Assert.StartsWith("5 tokens with 0 merges, about 1 character per token", lab.BpeCountText);   // 5 characters in 5 pieces, not 6 in 5
+    }
+
+    [Fact]
+    public async Task CountTheLetters_CountsOnlyLetters()
+    {
+        // Final review M9: spaces and digits are characters, not letters.
+        var lab = NewLab();
+        await lab.BpeReady;
+        lab.Word = "a b1";
+        Assert.Contains("“a b1” has 4 characters, 2 of them letters.", lab.WordSummary);
+        lab.Word = "crow";
+        Assert.Contains("“crow” has 4 letters.", lab.WordSummary);
+    }
+
+    [Fact]
     public async Task Reset_RestoresDefaults()
     {
         var lab = NewLab();

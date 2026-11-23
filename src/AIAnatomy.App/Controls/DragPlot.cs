@@ -17,7 +17,12 @@ public sealed class DragPlot : ChartBase
 {
     private const FrameworkPropertyMetadataOptions Relayout =
         FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender;
-    private const double MinPlotHeight = 320, MaxSide = 420, Gap = 8, HitRadius = 18, Snap = 0.05, SmallStep = 0.05, BigStep = 0.5;
+    private const double BaseMinPlotHeight = 320, BaseSide = 420, Gap = 8, HitRadius = 18, Snap = 0.05, SmallStep = 0.05, BigStep = 0.5;
+
+    // The plot grows with the text (final review I6): at the default 20 pt the side is about 420 px; at 32 pt about 680 px,
+    // so the labels and axis numbers, which grow with the text, keep their room.
+    private double MaxSide => Math.Max(BaseSide, LabelSize * 20);
+    private double MinPlotHeight => Math.Max(BaseMinPlotHeight, LabelSize * 15);
 
     public static readonly DependencyProperty HandlesProperty = DependencyProperty.Register(nameof(Handles),
         typeof(IReadOnlyList<DragHandle>), typeof(DragPlot), new FrameworkPropertyMetadata(null, Relayout, OnHandlesChanged));
@@ -85,6 +90,7 @@ public sealed class DragPlot : ChartBase
         dc.DrawLine(zeroPen, new Point(centre.X, frame.Plot.Top), new Point(centre.X, frame.Plot.Bottom));
 
         double marker = Math.Max(8, LabelSize * 0.5);
+        var labelSpots = PlaceLabels(handles, frame, marker, readoutTop);
         for (int i = 0; i < handles.Count; i++)
         {
             var h = handles[i];
@@ -114,14 +120,61 @@ public sealed class DragPlot : ChartBase
                 if (IsKeyboardFocused) dc.DrawEllipse(null, new Pen(FocusBrush, 1.5) { DashStyle = DashStyles.Dash }, at, marker + 10, marker + 10);
             }
 
-            var text = Text(h.Label, LabelSize, Foreground, i == SelectedIndex ? BoldFace : TextFace);
-            double x = at.X + marker + 6;
-            if (x + text.Width > ActualWidth) x = at.X - marker - 6 - text.Width;
-            double y = Math.Clamp(at.Y - text.Height / 2 - marker, 0, Math.Max(0, readoutTop - text.Height));
-            dc.DrawText(text, new Point(x, y));
+            dc.DrawText(LabelText(i), labelSpots[i]);
         }
 
         dc.DrawText(ReadoutText(ActualWidth), new Point(0, readoutTop + Gap));
+    }
+
+    private FormattedText LabelText(int i) => Text(Handles![i].Label, LabelSize, Foreground, i == SelectedIndex ? BoldFace : TextFace);
+
+    /// <summary>
+    /// Where each label goes: right of its point, else left, above or below, taking the first place that stays inside the
+    /// plot and covers no earlier label and no point (final review I6; the same idea as NetworkDiagram's arrow labels).
+    /// If no place is free, the one that covers least is used.
+    /// </summary>
+    private Point[] PlaceLabels(IReadOnlyList<DragHandle> handles, AxisFrame frame, double marker, double readoutTop)
+    {
+        var points = handles.Select(h => frame.Map(h.X, h.Y)).ToArray();
+        var markers = points.Select(p => new Rect(p.X - marker * 1.2, p.Y - marker * 1.2, marker * 2.4, marker * 2.4)).ToArray();
+        var placed = new List<Rect>();
+        var result = new Point[handles.Count];
+        double bottom = Math.Max(0, readoutTop);
+        for (int i = 0; i < handles.Count; i++)
+        {
+            var text = LabelText(i);
+            var at = points[i];
+            double w = text.Width, h = text.Height, d = marker + 6;
+            var candidates = new[]
+            {
+                new Point(at.X + d, at.Y - h / 2),              // right
+                new Point(at.X - d - w, at.Y - h / 2),          // left
+                new Point(at.X - w / 2, at.Y - d - h),          // above
+                new Point(at.X - w / 2, at.Y + d),              // below
+                new Point(at.X + d, at.Y - d - h),              // above right
+                new Point(at.X + d, at.Y + d / 2),              // below right
+                new Point(at.X - d - w, at.Y - d - h),          // above left
+                new Point(at.X - d - w, at.Y + d / 2),          // below left
+            };
+            Rect best = Rect.Empty;
+            double bestCover = double.MaxValue;
+            foreach (var c in candidates)
+            {
+                var box = new Rect(Math.Clamp(c.X, 0, Math.Max(0, ActualWidth - w)), Math.Clamp(c.Y, 0, Math.Max(0, bottom - h)), w, h);
+                double cover = placed.Concat(markers).Sum(r => Overlap(box, r));
+                if (cover < bestCover) { best = box; bestCover = cover; }
+                if (cover == 0) break;
+            }
+            placed.Add(best);
+            result[i] = best.TopLeft;
+        }
+        return result;
+
+        static double Overlap(Rect a, Rect b)
+        {
+            var x = Rect.Intersect(a, b);
+            return x.IsEmpty ? 0 : x.Width * x.Height;
+        }
     }
 
     private string Describe(int i)

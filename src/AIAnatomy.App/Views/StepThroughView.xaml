@@ -17,7 +17,7 @@
         <TextBlock Style="{StaticResource MutedText}" Text="␣ is a space, ↵ a new line, � a character the model has never seen. Each token is numbered by its position, starting at 1." />
         <WrapPanel Margin="0,0,0,8">
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Token to follow" />
-            <ComboBox Width="120" Margin="0,0,16,4" ItemsSource="{Binding PositionChoices}" SelectedIndex="{Binding PositionIndex}" AutomationProperties.Name="Token to follow" />
+            <ComboBox MinWidth="120" Margin="0,0,16,4" ItemsSource="{Binding PositionChoices}" SelectedIndex="{Binding PositionIndex}" AutomationProperties.Name="Token to follow" />
         </WrapPanel>
         <WrapPanel Margin="0,0,0,8">
             <Button Content="Previous" Command="{Binding PreviousCommand}" Margin="0,0,8,4" Padding="12,4" AutomationProperties.Name="Previous step" />

@@ -152,7 +152,7 @@
             <c:ProbabilityBars Items="{Binding Bars}" HighlightedLabel="{Binding HighlightedBar}" AutomationProperties.Name="The model's probabilities for the next character" />
             <TextBlock Style="{StaticResource PaneTitle}" Text="The loss at every place in your text" />
             <TextBlock Style="{StaticResource MutedText}" Text="Each bar is −ln p at one place. The numbers under the bars are the places, in order:" Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
-            <c:VectorStrip Values="{Binding Losses}" AutomationProperties.Name="The loss at each place in the text" />
+            <c:VectorStrip Values="{Binding Losses}" IndexBase="1" AutomationProperties.Name="The loss at each place in the text" />
             <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding LossKey}" Margin="0,4,0,0" />
             <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding MeanText}" />
         </StackPanel>

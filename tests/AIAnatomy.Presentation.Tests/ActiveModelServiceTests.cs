@@ -42,6 +42,22 @@ public class ActiveModelServiceTests : IDisposable
     }
 
     [Fact]
+    public void IsActive_ComparesTheFile_NotOnlyTheName()
+    {
+        // Final review I10: the active model is known by its file, so a model saved over that file is recognised.
+        var service = _env.NewActiveModels();
+        var fables = service.Library.List().Single(e => e.Name == "Fables model");
+        Assert.True(service.IsActive(fables));
+        Assert.Equal(Path.GetFullPath(fables.Path), Path.GetFullPath(service.ActivePath));
+        Assert.False(service.IsActive(fables with { Path = Path.Combine(_env.UserModels, "Fables model.aimodel"), IsShipped = false }));
+
+        var mine = service.Library.Save(service.Current, "a/b");
+        service.SetActive(mine);
+        Assert.True(service.IsActive(new AIAnatomy.Models.Language.ModelEntry("a_b", mine.Path.ToUpperInvariant(), false, true, null)));
+        Assert.False(service.IsActive(fables));
+    }
+
+    [Fact]
     public void ActiveModel_SetActive_RaisesChanged_AndRemembersName()
     {
         var settings = _env.NewSettings();

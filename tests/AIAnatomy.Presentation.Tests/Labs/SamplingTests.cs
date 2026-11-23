@@ -166,6 +166,25 @@ public class SamplingTests : IDisposable
         Assert.Contains("cut off at full width", lab.BarScaleCaption);
     }
 
+    [Theory]
+    [InlineData(0.3, 0)]   // "others" is small, well inside the scale
+    [InlineData(1.0, 15)]  // top-k 15: "others" is exactly 0
+    public void CutOffSentence_OnlyWhenTheOthersBarIsReallyCut(double temperature, int topK)
+    {
+        // Final review I5: the caption says the "others" bar is cut off only when it is longer than a full bar.
+        var lab = new SamplingLabViewModel(_env.NewActiveModels()) { Temperature = temperature, TopK = topK };
+        lab.SampleHundredCommand.Execute(null);
+        var others = lab.Bars.Concat(lab.Frequencies).Where(b => b.Label == SamplingLabViewModel.OthersLabel).Max(b => b.Value);
+        Assert.True(others <= lab.BarScaleMaximum);
+        Assert.Contains("a full bar is", lab.BarScaleCaption);
+        Assert.DoesNotContain("cut off", lab.BarScaleCaption);
+
+        lab.TopK = 0;
+        lab.Temperature = 2;   // now the rest outweighs the scale
+        Assert.True(lab.Bars.Single(b => b.Label == SamplingLabViewModel.OthersLabel).Value > lab.BarScaleMaximum);
+        Assert.Contains("cut off at full width", lab.BarScaleCaption);
+    }
+
     [Fact]
     public void ShownText_ShowsTheTrailingSpaceAsAVisibleMark()
     {
@@ -198,7 +217,7 @@ public class SamplingTests : IDisposable
     [Fact]
     public void IsRegisteredInTheFactory()
     {
-        var factory = new LabFactory(_env.NewActiveModels(), AIAnatomy.Lessons.LessonCatalog.Load(TestEnvironment.Content), _ => Task.CompletedTask, TestEnvironment.Content);
+        var factory = new LabFactory(_env.NewActiveModels(), TestEnvironment.Content);
         Assert.IsType<SamplingLabViewModel>(factory.Create(SamplingLabViewModel.Id));
         Assert.IsType<LearningLabViewModel>(factory.Create(LearningLabViewModel.Id));
     }

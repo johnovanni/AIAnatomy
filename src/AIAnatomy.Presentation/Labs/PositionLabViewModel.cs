@@ -74,8 +74,9 @@ public sealed partial class PositionLabViewModel : LabViewModel
             return;
         }
         Message = null;
-        ShownText = LabText.ShowNewlines(model.Tokenizer.Decode(model.Tokenizer.Encode(Text)));
         var with = model.Predict(Text);
+        // Only the tokens the model uses, with spaces as ␣ as the caption says (final review I4).
+        ShownText = LabText.Visible(model.Tokenizer.Decode(with.UsedTokenIds));
         var without = model.Predict(Text, new ForwardOptions { RemovePositions = true });
         Notice = with.WasTruncated ? LabText.TruncationNote(config.ContextLength) : null;
         var p = Probabilities(with);
