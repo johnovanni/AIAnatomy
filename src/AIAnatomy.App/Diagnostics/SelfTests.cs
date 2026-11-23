@@ -78,8 +78,8 @@ public static class SelfTests
         await viewModel.NavigateToLesson(lesson.Id);
         if (viewModel.CurrentLab is not TrainLabViewModel lab) return Fail($"Lesson '{lesson.Id}' did not open the Train lab.");
 
-        lab.StepsText = TrainSteps.ToString();
-        if (lab.StartProblem != null) return Fail("The Train lab will not start: " + lab.StartProblem);
+        lab.Settings.StepsText = TrainSteps.ToString();
+        if (lab.Settings.StartProblem != null) return Fail("The Train lab will not start: " + lab.Settings.StartProblem);
         await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
         lab.Deactivate();
 

@@ -255,5 +255,17 @@ public class TrainerTests
     }
 
     [Fact]
+    public void CorpusValidator_ProblemForLength_CountsTokensNotTypedCharacters()
+    {
+        const string text = "abcdefghi\r\nabcdefg";   // 18 characters typed; "\r\n" is read as one new line, so 17 tokens
+        int tokens = CharTokenizer.FromText(text).Encode(text).Count;
+        Assert.Equal(17, tokens);
+        Assert.Null(CorpusValidator.Problem(text, 16));
+        Assert.Equal("The text is too short to learn from: it needs at least 18 characters, and this has 17.", CorpusValidator.ProblemForLength(tokens, 16));
+        Assert.Null(CorpusValidator.ProblemForLength(18, 16));
+        Assert.NotNull(CorpusValidator.ProblemForLength(CorpusValidator.MaxCharacters + 1, 16));
+    }
+
+    [Fact]
     public void CorpusValidator_Normal_IsNull() => Assert.Null(CorpusValidator.Problem(CatText, 16));
 }

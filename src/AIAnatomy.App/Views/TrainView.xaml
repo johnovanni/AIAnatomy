@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:AIAnatomy.App.Controls"
              xmlns:v="clr-namespace:AIAnatomy.App.Views"
-             xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation">
+             xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation"
+             xmlns:training="clr-namespace:AIAnatomy.Models.Training;assembly=AIAnatomy.Models">
     <!-- DataContext: TrainLabViewModel. Five steps, one under the other: text, model, training, samples, keeping the model. -->
     <UserControl.Resources>
         <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
@@ -29,63 +30,67 @@
     </UserControl.Resources>
     <StackPanel>
         <TextBlock Style="{StaticResource BodyText}"
-                   Text="Train a small transformer of your own. Choose the text it learns from and the size of the model, press Start, and watch the loss fall and the writing improve. When it is done you can keep the model and use it in every other lab." />
+                   Text="Train a small transformer of your own. Choose the text it learns from and the size of the model, press Start, and watch the loss fall and the writing improve. When it is done you can keep the model and use it in every lab that uses a model." />
 
         <!-- 1. The text -->
         <TextBlock Style="{StaticResource SubheadingText}" Text="1. The text to learn from" />
         <StackPanel IsEnabled="{Binding CanEditSettings}">
             <StackPanel Margin="0,0,0,4">
-                <RadioButton Content="Aesop's Fables (Townsend translation)" IsChecked="{Binding UseFables}" Margin="0,0,0,4" />
-                <RadioButton Content="Your own text (paste or type it below)" IsChecked="{Binding UseOwnText}" />
+                <RadioButton Content="Aesop's Fables (Townsend translation)" IsChecked="{Binding Settings.UseFables}" Margin="0,0,0,4" />
+                <RadioButton Content="Your own text (paste or type it below)" IsChecked="{Binding Settings.UseOwnText}" />
             </StackPanel>
-            <TextBox Text="{Binding OwnText, UpdateSourceTrigger=PropertyChanged, Delay=300}" AcceptsReturn="True" AcceptsTab="False" TextWrapping="Wrap"
+            <TextBox x:Name="OwnTextBox" Text="{Binding Settings.OwnText, UpdateSourceTrigger=PropertyChanged, Delay=300}" AcceptsReturn="True" AcceptsTab="False" TextWrapping="Wrap"
+                     MaxLength="{x:Static training:CorpusValidator.MaxCharacters}"
                      MinHeight="120" MaxHeight="300" VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Your own text"
-                     Visibility="{Binding UseOwnText, Converter={StaticResource VisibleIfTrue}}" />
+                     Visibility="{Binding Settings.UseOwnText, Converter={StaticResource VisibleIfTrue}}" />
         </StackPanel>
-        <TextBlock Style="{StaticResource MutedText}" Text="{Binding TextSummary}" Visibility="{Binding TextSummary, Converter={StaticResource VisibleIfSet}}" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Settings.PasteNote}" AutomationProperties.LiveSetting="Assertive"
+                   Visibility="{Binding Settings.PasteNote, Converter={StaticResource VisibleIfSet}}" />
+        <TextBlock Style="{StaticResource MutedText}" Text="{Binding Settings.TextSummary}" Visibility="{Binding Settings.TextSummary, Converter={StaticResource VisibleIfSet}}" />
 
         <!-- 2. The model -->
         <TextBlock Style="{StaticResource SubheadingText}" Text="2. The model" />
         <StackPanel IsEnabled="{Binding CanEditSettings}" Margin="0,0,0,4">
-            <RadioButton Content="A new model, with the shape below" IsChecked="{Binding FreshModel}" Margin="0,0,0,4" />
-            <RadioButton Content="Carry on training a copy of the active model" IsChecked="{Binding ContinueActive}" IsEnabled="{Binding CanContinueActive}" />
+            <RadioButton Content="A new model, with the shape below" IsChecked="{Binding Settings.FreshModel}" Margin="0,0,0,4" />
+            <RadioButton Content="Carry on training a copy of the active model" IsChecked="{Binding Settings.ContinueActive}" IsEnabled="{Binding Settings.CanContinueActive}" />
         </StackPanel>
-        <TextBlock Style="{StaticResource MutedText}" Text="{Binding ContinueNote}" />
-        <WrapPanel Margin="0,4,0,4" IsEnabled="{Binding CanEditShape}">
+        <TextBlock Style="{StaticResource MutedText}" Text="{Binding Settings.ContinueNote}" />
+        <WrapPanel Margin="0,4,0,4" IsEnabled="{Binding Settings.CanEditShape}">
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Width" />
-            <ComboBox MinWidth="90" Margin="0,0,16,4" ItemsSource="{x:Static labs:TrainLabViewModel.Widths}" SelectedItem="{Binding Width}"
+            <ComboBox MinWidth="90" Margin="0,0,16,4" ItemsSource="{x:Static labs:TrainSettingsPanelViewModel.Widths}" SelectedItem="{Binding Settings.Width}"
                       AutomationProperties.Name="Width (numbers per token)" ToolTip="How many numbers stand for each token" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Layers" />
-            <TextBox MinWidth="70" Margin="0,0,16,4" Text="{Binding LayersText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Layers, 1 to 4" ToolTip="1 to 4" />
+            <TextBox MinWidth="70" Margin="0,0,16,4" Text="{Binding Settings.LayersText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Layers, 1 to 4" ToolTip="1 to 4" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Heads" />
-            <TextBox MinWidth="70" Margin="0,0,16,4" Text="{Binding HeadsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Attention heads per layer, 1 to 8" ToolTip="1 to 8, and it must divide the width" />
+            <TextBox MinWidth="70" Margin="0,0,16,4" Text="{Binding Settings.HeadsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Attention heads per layer, 1 to 8" ToolTip="1 to 8, and it must divide the width" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Context" />
-            <TextBox MinWidth="80" Margin="0,0,16,4" Text="{Binding ContextText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Context length, 16 to 128 characters" ToolTip="How many characters the model reads at once: 16 to 128" />
+            <TextBox MinWidth="80" Margin="0,0,16,4" Text="{Binding Settings.ContextText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Context length, 16 to 128 characters" ToolTip="How many characters the model reads at once: 16 to 128" />
         </WrapPanel>
-        <TextBlock Style="{StaticResource MutedText}" Text="The feed-forward layers are 4 times as wide as the model, as in GPT-2." />
+        <TextBlock Style="{StaticResource MutedText}" Text="{Binding Settings.FeedForwardNote}" />
         <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,2" Text="Learnable numbers in each part" />
-        <ItemsControl ItemsSource="{Binding ParameterRows}" ItemTemplate="{StaticResource PartLine}" Focusable="False" Grid.IsSharedSizeScope="True" HorizontalAlignment="Left" />
-        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding ParameterTotalText}" />
+        <ItemsControl ItemsSource="{Binding Settings.ParameterRows}" ItemTemplate="{StaticResource PartLine}" Focusable="False" Grid.IsSharedSizeScope="True" HorizontalAlignment="Left" />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Settings.ParameterTotalText}" />
 
         <!-- 3. Training -->
         <TextBlock Style="{StaticResource SubheadingText}" Text="3. Training" />
         <WrapPanel Margin="0,0,0,4" IsEnabled="{Binding CanEditSettings}">
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Learning rate" />
-            <TextBox MinWidth="100" Margin="0,0,16,4" Text="{Binding LearningRateText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Learning rate" ToolTip="How big each step is, such as 0.003" />
+            <TextBox MinWidth="100" Margin="0,0,16,4" Text="{Binding Settings.LearningRateText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Learning rate" ToolTip="How big each step is, such as 0.003" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Steps" />
-            <TextBox MinWidth="100" Margin="0,0,16,4" Text="{Binding StepsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Training steps" ToolTip="1 to 100,000" />
+            <TextBox MinWidth="100" Margin="0,0,16,4" Text="{Binding Settings.StepsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Training steps" ToolTip="1 to 100,000" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Batch" />
-            <TextBox MinWidth="70" Margin="0,0,16,4" Text="{Binding BatchText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Batch size" ToolTip="Pieces of text per step: 1 to 64" />
+            <TextBox MinWidth="70" Margin="0,0,16,4" Text="{Binding Settings.BatchText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Batch size" ToolTip="Pieces of text per step: 1 to 64" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Seed" />
-            <TextBox MinWidth="100" Margin="0,0,16,4" Text="{Binding Seed, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Seed" ToolTip="Picks the starting weights, the pieces of text and the samples" />
+            <TextBox MinWidth="100" Margin="0,0,16,4" Text="{Binding Seed, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Seed" ToolTip="{Binding Settings.SeedHint}" />
         </WrapPanel>
+        <TextBlock Style="{StaticResource MutedText}" Text="{Binding Settings.SeedHint, StringFormat=The seed: {0}.}" />
         <WrapPanel Margin="0,4,0,4">
             <Button Content="Start" Command="{Binding StartCommand}" Margin="0,0,8,4" ToolTip="Build the model and train it from the start">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                         <Setter Property="Visibility" Value="Collapsed" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding StartProblem}" Value="{x:Null}">
+                            <DataTrigger Binding="{Binding Settings.StartProblem}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Visible" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -96,8 +101,8 @@
             <Button Content="Resume" Command="{Binding ResumeCommand}" Margin="0,0,8,4" ToolTip="Carry on from where it paused" />
             <Button Content="Stop" Command="{Binding StopCommand}" Margin="0,0,8,4" ToolTip="End training; the model can still be saved" />
         </WrapPanel>
-        <Border Style="{StaticResource Pane}" Padding="12" Margin="0,0,0,4" Visibility="{Binding StartProblem, Converter={StaticResource VisibleIfSet}}">
-            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding StartProblem}" AutomationProperties.LiveSetting="Polite" />
+        <Border Style="{StaticResource Pane}" Padding="12" Margin="0,0,0,4" Visibility="{Binding Settings.StartProblem, Converter={StaticResource VisibleIfSet}}">
+            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Settings.StartProblem}" AutomationProperties.LiveSetting="Polite" />
         </Border>
         <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" AutomationProperties.LiveSetting="Assertive"
                    Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
@@ -124,7 +129,7 @@
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Name" />
             <TextBox MinWidth="260" Margin="0,0,16,4" Text="{Binding SaveName, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Model name" />
             <Button Content="Save to library…" Command="{Binding SaveCommand}" Margin="0,0,8,4" ToolTip="Save the model under this name" />
-            <Button Content="Use in the labs" Command="{Binding UseInLabsCommand}" Margin="0,0,8,4" ToolTip="Save the model, then make it the model every lab uses" />
+            <Button Content="Use in the labs" Command="{Binding UseInLabsCommand}" Margin="0,0,8,4" ToolTip="Save the model, then make it the active model, used by every lab that uses a model" />
         </WrapPanel>
         <Border Style="{StaticResource Pane}" Padding="12" Margin="0,0,0,4" Visibility="{Binding OverwriteQuestion, Converter={StaticResource VisibleIfSet}}">
             <WrapPanel>

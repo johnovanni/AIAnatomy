@@ -21,13 +21,13 @@ public class TrainTests : IDisposable
     private TrainLabViewModel TinyLab(ActiveModelService? models = null, int steps = 5)
     {
         var lab = NewLab(models);
-        lab.Width = 16;
-        lab.LayersText = "1";
-        lab.HeadsText = "2";
-        lab.ContextText = "16";
-        lab.BatchText = "2";
-        lab.StepsText = steps.ToString();
-        Assert.Null(lab.StartProblem);
+        lab.Settings.Width = 16;
+        lab.Settings.LayersText = "1";
+        lab.Settings.HeadsText = "2";
+        lab.Settings.ContextText = "16";
+        lab.Settings.BatchText = "2";
+        lab.Settings.StepsText = steps.ToString();
+        Assert.Null(lab.Settings.StartProblem);
         return lab;
     }
 
@@ -45,17 +45,17 @@ public class TrainTests : IDisposable
     public void Defaults_AreTheDocumentedOnes()
     {
         var lab = NewLab();
-        Assert.False(lab.UseOwnText);
-        Assert.False(lab.ContinueActive);
-        Assert.Equal(32, lab.Width);
-        Assert.Equal("2", lab.LayersText);
-        Assert.Equal("4", lab.HeadsText);
-        Assert.Equal("64", lab.ContextText);
-        Assert.Equal("0.003", lab.LearningRateText);
-        Assert.Equal("8", lab.BatchText);
-        Assert.Equal("600", lab.StepsText);
+        Assert.False(lab.Settings.UseOwnText);
+        Assert.False(lab.Settings.ContinueActive);
+        Assert.Equal(32, lab.Settings.Width);
+        Assert.Equal("2", lab.Settings.LayersText);
+        Assert.Equal("4", lab.Settings.HeadsText);
+        Assert.Equal("64", lab.Settings.ContextText);
+        Assert.Equal("0.003", lab.Settings.LearningRateText);
+        Assert.Equal("8", lab.Settings.BatchText);
+        Assert.Equal("600", lab.Settings.StepsText);
         Assert.Equal(1, lab.Seed);
-        Assert.Null(lab.StartProblem);
+        Assert.Null(lab.Settings.StartProblem);
         Assert.True(lab.StartCommand.CanExecute(null));
     }
 
@@ -63,16 +63,16 @@ public class TrainTests : IDisposable
     public void InvalidHeads_ShowsMessage()
     {
         var lab = NewLab();
-        lab.HeadsText = "3";
-        Assert.Equal("The number of heads must divide the width evenly: 32 can't be split into 3 heads.", lab.SettingsProblem);
-        Assert.Equal(lab.SettingsProblem, lab.StartProblem);
+        lab.Settings.HeadsText = "3";
+        Assert.Equal("The number of heads must divide the width evenly: 32 can't be split into 3 heads.", lab.Settings.SettingsProblem);
+        Assert.Equal(lab.Settings.SettingsProblem, lab.Settings.StartProblem);
         Assert.False(lab.StartCommand.CanExecute(null));
-        Assert.Empty(lab.ParameterRows);
+        Assert.Empty(lab.Settings.ParameterRows);
 
-        lab.HeadsText = "9";
-        Assert.Equal("The number of heads must be a whole number from 1 to 8.", lab.SettingsProblem);
-        lab.HeadsText = "8";
-        Assert.Null(lab.SettingsProblem);
+        lab.Settings.HeadsText = "9";
+        Assert.Equal("The number of heads must be a whole number from 1 to 8.", lab.Settings.SettingsProblem);
+        lab.Settings.HeadsText = "8";
+        Assert.Null(lab.Settings.SettingsProblem);
         Assert.True(lab.StartCommand.CanExecute(null));
     }
 
@@ -80,57 +80,112 @@ public class TrainTests : IDisposable
     public void OtherBadSettings_ShowPlainMessages()
     {
         var lab = NewLab();
-        lab.LayersText = "5";
-        lab.ContextText = "abc";
-        lab.LearningRateText = "0";
-        lab.StepsText = "-1";
-        lab.BatchText = "";
+        lab.Settings.LayersText = "5";
+        lab.Settings.ContextText = "abc";
+        lab.Settings.LearningRateText = "0";
+        lab.Settings.StepsText = "-1";
+        lab.Settings.BatchText = "";
         Assert.Equal(string.Join("\n",
             "The number of layers must be a whole number from 1 to 4.",
             "The context length must be a whole number from 16 to 128.",
             "The learning rate must be a number above 0 and no more than 100, such as 0.003.",
             "The number of steps must be a whole number from 1 to 100,000.",
-            "The batch size must be a whole number from 1 to 64."), lab.SettingsProblem);
-        lab.LearningRateText = "3e-3";
-        Assert.DoesNotContain("learning rate", lab.SettingsProblem);
+            "The batch size must be a whole number from 1 to 64."), lab.Settings.SettingsProblem);
+        lab.Settings.LearningRateText = "3e-3";
+        Assert.DoesNotContain("learning rate", lab.Settings.SettingsProblem);
     }
 
     [Fact]
     public void TooShortText_DisablesStart()
     {
         var lab = NewLab();
-        lab.UseOwnText = true;
-        Assert.Equal("Type some text to begin", lab.StartProblem);
+        lab.Settings.UseOwnText = true;
+        Assert.Equal("Type some text to begin", lab.Settings.StartProblem);
         Assert.False(lab.StartCommand.CanExecute(null));
 
-        lab.OwnText = "short";
-        Assert.Equal(CorpusValidator.Problem("short", 64), lab.StartProblem);
+        lab.Settings.OwnText = "short";
+        Assert.Equal(CorpusValidator.Problem("short", 64), lab.Settings.StartProblem);
         Assert.False(lab.StartCommand.CanExecute(null));
 
-        lab.ContextText = "16";
-        lab.OwnText = new string('a', 17);
-        Assert.Equal(CorpusValidator.Problem(lab.OwnText, 16), lab.StartProblem);
-        lab.OwnText = "the cat sat on the mat";
-        Assert.Null(lab.StartProblem);
+        lab.Settings.ContextText = "16";
+        lab.Settings.OwnText = new string('a', 17);
+        Assert.Equal(CorpusValidator.Problem(lab.Settings.OwnText, 16), lab.Settings.StartProblem);
+        lab.Settings.OwnText = "the cat sat on the mat";
+        Assert.Null(lab.Settings.StartProblem);
         Assert.True(lab.StartCommand.CanExecute(null));
 
-        lab.OwnText = new string('a', CorpusValidator.MaxCharacters + 1);
-        Assert.Equal(CorpusValidator.Problem(lab.OwnText, 16), lab.StartProblem);
+        // The box gives "\r\n" for Enter, but the model reads one new line: 18 characters typed, 17 read, so it is too short.
+        lab.Settings.OwnText = "abcdefghi\r\nabcdefg";
+        Assert.Equal(CorpusValidator.ProblemForLength(17, 16), lab.Settings.StartProblem);
+        Assert.Contains("this has 17", lab.Settings.StartProblem);
+        Assert.StartsWith("17 characters", lab.Settings.TextSummary);
         Assert.False(lab.StartCommand.CanExecute(null));
+        lab.Settings.OwnText = "abcdefghi\r\nabcdefgh";
+        Assert.Null(lab.Settings.StartProblem);
+    }
+
+    [Fact]
+    public async Task LargePastedText_IsReadInTheBackground_ThenChecked()
+    {
+        var lab = NewLab();
+        lab.Settings.UseOwnText = true;
+        lab.Settings.ContextText = "16";
+        lab.Settings.OwnText = new string('a', CorpusValidator.MaxCharacters + 1);
+        Assert.Equal(TrainSettingsPanelViewModel.ReadingMessage, lab.Settings.StartProblem);
+        Assert.False(lab.StartCommand.CanExecute(null));
+        await lab.WorkCompleted.WaitAsync(Patience);
+        Assert.Equal(CorpusValidator.ProblemForLength(CorpusValidator.MaxCharacters + 1, 16), lab.Settings.StartProblem);
+
+        lab.Settings.OwnText = string.Concat(Enumerable.Repeat("the fox and the crow. ", 3000));   // 66,000 characters
+        await lab.WorkCompleted.WaitAsync(Patience);
+        Assert.Null(lab.Settings.StartProblem);
+        Assert.StartsWith("66,000 characters", lab.Settings.TextSummary);
+    }
+
+    [Fact]
+    public void RefusedPaste_SaysWhy_AndTheNoteClearsWhenTheTextChanges()
+    {
+        var lab = NewLab();
+        lab.Settings.UseOwnText = true;
+        lab.Settings.RefusePaste(CorpusValidator.MaxCharacters + 5);
+        Assert.Equal("That text was not pasted. " + CorpusValidator.ProblemForLength(CorpusValidator.MaxCharacters + 5, 16), lab.Settings.PasteNote);
+        Assert.Contains("too long", lab.Settings.PasteNote);
+        lab.Settings.OwnText = "x";
+        Assert.Null(lab.Settings.PasteNote);
+    }
+
+    [Fact]
+    public void CarryingOn_DescribesTheActiveModelsOwnFeedForwardAndSeed()
+    {
+        var models = _env.NewActiveModels();
+        var lab = NewLab(models);
+        Assert.Contains("(128 numbers)", lab.Settings.FeedForwardNote);   // 4 x 32
+        Assert.Contains("starting weights", lab.Settings.SeedHint);
+        lab.Settings.ContinueActive = true;
+        Assert.Equal($"The active model's feed-forward layers are {models.Current.Transformer.Config.FeedForwardWidth} numbers wide.", lab.Settings.FeedForwardNote);
+        Assert.DoesNotContain("starting weights", lab.Settings.SeedHint);
+
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));   // letters A to O, attention only
+        lab.OnActiveModelChanged();
+        lab.Settings.UseOwnText = true;
+        lab.Settings.OwnText = "ABCDEFGHIJKLMNOABCDEFGHIJKLMNO";
+        lab.Settings.ContinueActive = true;
+        Assert.True(lab.Settings.ContinueActive);
+        Assert.Equal("The active model has no feed-forward layers.", lab.Settings.FeedForwardNote);
     }
 
     [Fact]
     public void ParameterCount_IsByPartInTheFixedOrder_AndAddsUpToTheConfig()
     {
         var lab = NewLab();
-        Assert.Equal(TrainLabViewModel.PartOrder, lab.ParameterRows.Select(r => r.Part).ToList());
-        Assert.Equal(lab.CurrentConfig()!.CountParameters(), lab.ParameterRows.Sum(r => r.Count));
-        Assert.Contains("32,005", lab.ParameterTotalText);   // width 32, 2 layers, 4 heads, context 64 on the fables' 69 tokens
+        Assert.Equal(TrainSettingsPanelViewModel.PartOrder, lab.Settings.ParameterRows.Select(r => r.Part).ToList());
+        Assert.Equal(lab.Settings.CurrentConfig()!.CountParameters(), lab.Settings.ParameterRows.Sum(r => r.Count));
+        Assert.Contains("32,005", lab.Settings.ParameterTotalText);   // width 32, 2 layers, 4 heads, context 64 on the fables' 69 tokens
 
-        long before = lab.ParameterRows.Sum(r => r.Count);
-        lab.LayersText = "3";
-        Assert.True(lab.ParameterRows.Sum(r => r.Count) > before);   // updates live
-        Assert.Equal(lab.CurrentConfig()!.CountParameters(), lab.ParameterRows.Sum(r => r.Count));
+        long before = lab.Settings.ParameterRows.Sum(r => r.Count);
+        lab.Settings.LayersText = "3";
+        Assert.True(lab.Settings.ParameterRows.Sum(r => r.Count) > before);   // updates live
+        Assert.Equal(lab.Settings.CurrentConfig()!.CountParameters(), lab.Settings.ParameterRows.Sum(r => r.Count));
     }
 
     [Fact]
@@ -151,6 +206,7 @@ public class TrainTests : IDisposable
         var validation = lab.LossSeries.Single(s => s.Name == TrainLabViewModel.ValidationSeriesName);
         Assert.Equal(1, validation.Points.Single().X);   // measured at step 1, then every 25 steps
         Assert.Matches(@"^about [0-9.,]+ steps per second", lab.SpeedText);
+        Assert.Contains("(measured at step 1)", lab.ProgressText);   // the validation loss shown says when it was measured
         Assert.Null(lab.Message);
         Assert.True(lab.SaveCommand.CanExecute(null));
     }
@@ -175,6 +231,7 @@ public class TrainTests : IDisposable
 
         Assert.True(lab.IsPaused);
         Assert.False(lab.IsTraining);
+        Assert.False(lab.StartCommand.CanExecute(null));   // Start would throw the paused model away: Stop first
         int paused = lab.StepsDone;
         Assert.True(lab.ResumeCommand.CanExecute(null));
         Assert.True(lab.SaveCommand.CanExecute(null));   // a paused model can be saved
@@ -186,6 +243,7 @@ public class TrainTests : IDisposable
 
         Assert.False(lab.IsPaused);
         Assert.False(lab.ResumeCommand.CanExecute(null));
+        Assert.True(lab.StartCommand.CanExecute(null));
         var steps = lab.Reports.Select(r => r.Step).ToList();
         Assert.Equal(Enumerable.Range(1, steps.Count), steps);   // the count carried on from where it paused, with no restart
         Assert.True(steps.Count > paused);
@@ -209,7 +267,7 @@ public class TrainTests : IDisposable
     public async Task Diverged_DisablesSave()
     {
         var lab = TinyLab(steps: 200);
-        lab.LearningRateText = "50";
+        lab.Settings.LearningRateText = "50";
         await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
 
         Assert.True(lab.HasDiverged);
@@ -218,6 +276,61 @@ public class TrainTests : IDisposable
         Assert.False(lab.UseInLabsCommand.CanExecute(null));
         Assert.False(lab.ResumeCommand.CanExecute(null));
         Assert.True(lab.StepsDone < 200);
+        var drawn = lab.LossSeries.Single(x => x.Name == TrainLabViewModel.TrainSeriesName).Points;
+        Assert.All(drawn, p => Assert.True(p.X < lab.StepsDone));   // the runaway loss of the step that diverged is not drawn
+    }
+
+    [Fact]
+    public async Task Resume_IsNotAllowedWhileSaving()
+    {
+        var lab = TinyLab(steps: 100_000);
+        var run = lab.StartCommand.ExecuteAsync(null);
+        await WaitUntil(() => lab.StepsDone >= 1);
+        lab.PauseCommand.Execute(null);
+        await run.WaitAsync(Patience);
+        Assert.True(lab.ResumeCommand.CanExecute(null));
+
+        lab.SaveName = "Paused model";
+        var save = lab.SaveCommand.ExecuteAsync(null);
+        Assert.True(lab.IsSaving);
+        Assert.False(lab.ResumeCommand.CanExecute(null));   // the save is reading the weights that training would change
+        await save.WaitAsync(Patience);
+        Assert.False(lab.IsSaving);
+        Assert.True(lab.ResumeCommand.CanExecute(null));
+        lab.StopCommand.Execute(null);
+    }
+
+    [Fact]
+    public async Task ChangingTheName_ClearsTheOverwriteQuestion()
+    {
+        var lab = TinyLab();
+        await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
+        lab.SaveName = "twice";
+        await lab.SaveCommand.ExecuteAsync(null);
+        await lab.SaveCommand.ExecuteAsync(null);
+        Assert.NotNull(lab.OverwriteQuestion);
+        lab.SaveName = "something else";
+        Assert.Null(lab.OverwriteQuestion);
+        await lab.ConfirmOverwriteCommand.ExecuteAsync(null);   // nothing is waiting any more
+        Assert.Single(_env.NewLibrary().List(), e => !e.IsShipped);
+    }
+
+    [Fact]
+    public async Task Main_TrainLabSave_ShowsTheNewModelInThePicker()
+    {
+        var vm = _env.NewMain();
+        await vm.NavigateToLesson("train");
+        var lab = Assert.IsType<TrainLabViewModel>(vm.CurrentLab);
+        lab.Settings.Width = 16; lab.Settings.LayersText = "1"; lab.Settings.HeadsText = "1"; lab.Settings.ContextText = "16";
+        lab.Settings.BatchText = "1"; lab.Settings.StepsText = "2";
+        await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
+        lab.SaveName = "Picker test";
+        await lab.SaveCommand.ExecuteAsync(null);
+        Assert.Contains(vm.ModelEntries, e => e.Name == "Picker test");
+        Assert.True(vm.SelectedModelEntry!.IsShipped);   // saving alone does not change the active model
+
+        await lab.UseInLabsCommand.ExecuteAsync(null);
+        Assert.Equal("Picker test", vm.SelectedModelEntry!.Name);
     }
 
     [Fact]
@@ -226,7 +339,7 @@ public class TrainTests : IDisposable
         var models = _env.NewActiveModels();
         int refreshed = 0;
         var lab = new TrainLabViewModel(models, () => Fables.Value, () => refreshed++);
-        lab.Width = 16; lab.LayersText = "1"; lab.HeadsText = "2"; lab.ContextText = "16"; lab.BatchText = "2"; lab.StepsText = "5";
+        lab.Settings.Width = 16; lab.Settings.LayersText = "1"; lab.Settings.HeadsText = "2"; lab.Settings.ContextText = "16"; lab.Settings.BatchText = "2"; lab.Settings.StepsText = "5";
         lab.Seed = 7;
         await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
         lab.SaveName = "My tiny model";
@@ -253,10 +366,10 @@ public class TrainTests : IDisposable
         var weights = active.Transformer.Parameters().Select(p => p.Value.Data.ToArray()).ToList();
 
         var lab = NewLab(models);
-        Assert.True(lab.CanContinueActive);   // the fables model and the fables text share their characters
-        lab.ContinueActive = true;
-        lab.StepsText = "5";
-        lab.BatchText = "2";
+        Assert.True(lab.Settings.CanContinueActive);   // the fables model and the fables text share their characters
+        lab.Settings.ContinueActive = true;
+        lab.Settings.StepsText = "5";
+        lab.Settings.BatchText = "2";
         await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
 
         Assert.Equal(5, lab.Reports.Count);
@@ -269,15 +382,15 @@ public class TrainTests : IDisposable
     public void ContinueActive_OnlyWhenTheTextFitsTheModel()
     {
         var lab = NewLab();
-        Assert.True(lab.CanContinueActive);
-        lab.UseOwnText = true;
-        lab.OwnText = "Ünïcödé text with letters the fables never use";
-        Assert.False(lab.CanContinueActive);
-        Assert.False(lab.ContinueActive);
-        lab.ContinueActive = true;
-        Assert.False(lab.ContinueActive);   // refused
-        lab.OwnText = "the fox and the crow sat in a tree and talked";
-        Assert.True(lab.CanContinueActive);
+        Assert.True(lab.Settings.CanContinueActive);
+        lab.Settings.UseOwnText = true;
+        lab.Settings.OwnText = "Ünïcödé text with letters the fables never use";
+        Assert.False(lab.Settings.CanContinueActive);
+        Assert.False(lab.Settings.ContinueActive);
+        lab.Settings.ContinueActive = true;
+        Assert.False(lab.Settings.ContinueActive);   // refused
+        lab.Settings.OwnText = "the fox and the crow sat in a tree and talked";
+        Assert.True(lab.Settings.CanContinueActive);
     }
 
     [Fact]
@@ -286,9 +399,9 @@ public class TrainTests : IDisposable
         var models = _env.NewActiveModels();
         int shipped = models.Current.Info.StepsTrained;
         var lab = NewLab(models);
-        lab.ContinueActive = true;
-        lab.StepsText = "3";
-        lab.BatchText = "2";
+        lab.Settings.ContinueActive = true;
+        lab.Settings.StepsText = "3";
+        lab.Settings.BatchText = "2";
         await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
         lab.SaveName = "Fables, more";
         await lab.UseInLabsCommand.ExecuteAsync(null).WaitAsync(Patience);
@@ -348,16 +461,16 @@ public class TrainTests : IDisposable
     public async Task Reset_PutsEverythingBack()
     {
         var lab = TinyLab();
-        lab.UseOwnText = true;
-        lab.OwnText = "the cat sat on the mat and the dog sat on the log";
+        lab.Settings.UseOwnText = true;
+        lab.Settings.OwnText = "the cat sat on the mat and the dog sat on the log";
         lab.Seed = 5;
         await lab.StartCommand.ExecuteAsync(null).WaitAsync(Patience);
         lab.Reset();
 
-        Assert.False(lab.UseOwnText);
-        Assert.Equal("", lab.OwnText);
-        Assert.Equal(32, lab.Width);
-        Assert.Equal("600", lab.StepsText);
+        Assert.False(lab.Settings.UseOwnText);
+        Assert.Equal("", lab.Settings.OwnText);
+        Assert.Equal(32, lab.Settings.Width);
+        Assert.Equal("600", lab.Settings.StepsText);
         Assert.Equal(1, lab.Seed);
         Assert.Empty(lab.Reports);
         Assert.Empty(lab.LossSeries);
@@ -374,6 +487,7 @@ public class TrainTests : IDisposable
         Assert.Equal("about 0.8 steps per second", TrainLabViewModel.Speed(0.84, 0));
         Assert.Equal("about 2 steps per second; about 8 minutes left", TrainLabViewModel.Speed(2, 1000));
         Assert.Equal("", TrainLabViewModel.Speed(0, 10));
+        Assert.Equal("about 60 steps per second; about 1 second left", TrainLabViewModel.Speed(60, 30));
     }
 
     [Fact]
