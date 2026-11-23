@@ -1,17 +1,17 @@
 [
   {
     "id": "vaswani2017",
-    "citation": "Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, L., and Polosukhin, I. (2017). Attention Is All You Need. Advances in Neural Information Processing Systems 30 (NeurIPS 2017).",
+    "citation": "Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., and Polosukhin, I. (2017). Attention Is All You Need. Advances in Neural Information Processing Systems 30 (NIPS 2017).",
     "url": "https://arxiv.org/abs/1706.03762"
   },
   {
     "id": "radford2019",
     "citation": "Radford, A., Wu, J., Child, R., Luan, D., Amodei, D., and Sutskever, I. (2019). Language Models are Unsupervised Multitask Learners. OpenAI technical report (the GPT-2 paper).",
-    "url": null
+    "url": "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf"
   },
   {
     "id": "openai-gpt2-release",
-    "citation": "OpenAI (2019). gpt-2: code and models from the paper 'Language Models are Unsupervised Multitask Learners'. GitHub repository.",
+    "citation": "OpenAI (2019). gpt-2: code for the paper 'Language Models are Unsupervised Multitask Learners', with the released models. GitHub repository.",
     "url": "https://github.com/openai/gpt-2"
   },
   {
@@ -21,7 +21,7 @@
   },
   {
     "id": "olsson2022",
-    "citation": "Olsson, C., Elhage, N., Nanda, N., Joseph, N., DasSarma, N., Henighan, T., et al. (2022). In-context Learning and Induction Heads. Transformer Circuits Thread.",
+    "citation": "Olsson, C., Elhage, N., Nanda, N., Joseph, N., DasSarma, N., Henighan, T., et al. (2022). In-context Learning and Induction Heads. Transformer Circuits Thread (Anthropic).",
     "url": "https://arxiv.org/abs/2209.11895"
   },
   {
@@ -46,7 +46,7 @@
   },
   {
     "id": "bai2022",
-    "citation": "Bai, Y., Kadavath, S., Kundu, S., Askell, A., Kernion, J., et al. (2022). Constitutional AI: Harmlessness from AI Feedback. arXiv preprint.",
+    "citation": "Bai, Y., Kadavath, S., Kundu, S., Askell, A., Kernion, J., et al. (2022). Constitutional AI: Harmlessness from AI Feedback. arXiv preprint (Anthropic).",
     "url": "https://arxiv.org/abs/2212.08073"
   },
   {
@@ -63,5 +63,45 @@
     "id": "suttonbarto2018",
     "citation": "Sutton, R. S. and Barto, A. G. (2018). Reinforcement Learning: An Introduction, 2nd edition. MIT Press (a book).",
     "url": "http://incompleteideas.net/book/the-book-2nd.html"
+  },
+  {
+    "id": "haviv2022",
+    "citation": "Haviv, A., Ram, O., Press, O., Izsak, P., and Levy, O. (2022). Transformer Language Models without Positional Encodings Still Learn Positional Information. Findings of the Association for Computational Linguistics: EMNLP 2022.",
+    "url": "https://arxiv.org/abs/2203.16634"
+  },
+  {
+    "id": "templeton2024",
+    "citation": "Templeton, A., Conerly, T., Marcus, J., Lindsey, J., Bricken, T., et al. (2024). Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet. Transformer Circuits Thread (Anthropic).",
+    "url": "https://transformer-circuits.pub/2024/scaling-monosemanticity/index.html"
+  },
+  {
+    "id": "anthropic2024-claude3",
+    "citation": "Anthropic (2024a). Introducing the next generation of Claude. Anthropic news post, 4 March 2024 (the Claude 3 models).",
+    "url": "https://www.anthropic.com/news/claude-3-family"
+  },
+  {
+    "id": "anthropic2024-mapping",
+    "citation": "Anthropic (2024b). Mapping the mind of a large language model. Anthropic research post, 21 May 2024.",
+    "url": "https://www.anthropic.com/research/mapping-mind-language-model"
+  },
+  {
+    "id": "anthropic2025-tracing",
+    "citation": "Anthropic (2025). Tracing the thoughts of a large language model. Anthropic research post, 27 March 2025.",
+    "url": "https://www.anthropic.com/research/tracing-thoughts-language-model"
+  },
+  {
+    "id": "gemma2024",
+    "citation": "Gemma Team, Mesnard, T., Hardin, C., et al. (2024). Gemma: Open Models Based on Gemini Research and Technology. arXiv preprint (Google DeepMind).",
+    "url": "https://arxiv.org/abs/2403.08295"
+  },
+  {
+    "id": "azevedo2009",
+    "citation": "Azevedo, F. A. C., Carvalho, L. R. B., Grinberg, L. T., Farfel, J. M., Ferretti, R. E. L., Leite, R. E. P., Jacob Filho, W., Lent, R., and Herculano-Houzel, S. (2009). Equal numbers of neuronal and nonneuronal cells make the human brain an isometrically scaled-up primate brain. Journal of Comparative Neurology, 513(5), 532-541.",
+    "url": "https://doi.org/10.1002/cne.21974"
+  },
+  {
+    "id": "lillicrap2020",
+    "citation": "Lillicrap, T. P., Santoro, A., Marris, L., Akerman, C. J., and Hinton, G. (2020). Backpropagation and the brain. Nature Reviews Neuroscience, 21(6), 335-346.",
+    "url": "https://doi.org/10.1038/s41583-020-0277-3"
   }
 ]

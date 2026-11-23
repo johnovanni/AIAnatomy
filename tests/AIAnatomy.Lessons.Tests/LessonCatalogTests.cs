@@ -65,7 +65,7 @@ public class LessonCatalogTests
     {
         var catalog = LessonCatalog.Load(Content);
         var sources = SourceList.Load(Path.Combine(Content, "sources.json"));
-        Assert.Equal(13, sources.All.Count);
+        Assert.Equal(21, sources.All.Count);
         foreach (var lesson in catalog.All)
             foreach (var id in lesson.SourceIds)
                 Assert.NotNull(sources.Find(id));
@@ -79,9 +79,10 @@ public class LessonCatalogTests
         var rules = catalog.Get("rules-vs-learning");
         Assert.True(rules.IsTextbookMaterial);
         Assert.Empty(rules.SourceIds);
+        // A lesson may cite sources and also be marked textbook; "textbook" itself is never a source id.
         var tokens = catalog.Get("tokens");
-        Assert.False(tokens.IsTextbookMaterial);
-        Assert.Equal(new[] { "sennrich2016", "radford2019" }, tokens.SourceIds.ToArray());
+        Assert.True(tokens.IsTextbookMaterial);
+        Assert.Equal(new[] { "sennrich2016", "radford2019", "gemma2024" }, tokens.SourceIds.ToArray());
     }
 
     [Fact]
@@ -89,7 +90,9 @@ public class LessonCatalogTests
     {
         var attention = LessonCatalog.Load(Content).Get("attention");
         Assert.NotNull(attention.Formula);
-        Assert.Contains("softmax", Assert.IsType<FormulaBlock>(attention.Formula!.Blocks.Single()).Latex);
+        var main = attention.Formula!.Blocks.OfType<FormulaBlock>().First().Latex;
+        Assert.Contains("softmax", main);
+        Assert.Contains("+ M", main);   // the causal mask is part of the formula
         Assert.NotNull(attention.BrainsAndModels);
         Assert.DoesNotContain(attention.Explanation.Blocks, b => b is Heading);
     }
@@ -97,10 +100,10 @@ public class LessonCatalogTests
     [Fact]
     public void MissingOptionalSections_AreNull()
     {
-        var tokens = LessonCatalog.Load(Content).Get("tokens");
-        Assert.Null(tokens.Formula);
-        Assert.Null(tokens.BrainsAndModels);
-        Assert.NotEmpty(tokens.Explanation.Blocks);
+        var coming = LessonCatalog.Load(Content).Get("family-coming");
+        Assert.Null(coming.Formula);
+        Assert.Null(coming.BrainsAndModels);
+        Assert.NotEmpty(coming.Explanation.Blocks);
     }
 
     [Fact]

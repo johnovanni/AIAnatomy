@@ -15,3 +15,5 @@ To include the slow tests, run them in Release:
 ```
 dotnet test AIAnatomy.slnx -c Release --filter Category=Slow
 ```
+
+`tests/AIAnatomy.App.Tests` needs Windows: it checks that every lesson formula can be read and drawn by WpfMath, the formula renderer the app uses.
