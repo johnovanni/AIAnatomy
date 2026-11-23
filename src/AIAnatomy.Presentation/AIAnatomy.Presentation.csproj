@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AIAnatomy.Lessons\AIAnatomy.Lessons.csproj" />
+    <ProjectReference Include="..\AIAnatomy.Models\AIAnatomy.Models.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />

@@ -1,0 +1,158 @@
+using AIAnatomy.Lessons;
+using AIAnatomy.Presentation.Labs;
+
+namespace AIAnatomy.Presentation.Tests;
+
+public class MainViewModelTests : IDisposable
+{
+    private readonly TestEnvironment _env = new();
+    public void Dispose() => _env.Dispose();
+
+    private sealed class FakeLab : LabViewModel
+    {
+        public int Resets, ModelChanges;
+        public override string LabId => "AttentionLab";
+        public override void Reset() => Resets++;
+        public override void OnActiveModelChanged() => ModelChanges++;
+    }
+
+    [Fact]
+    public void Main_StartsOnFirstLessonOfMap()
+    {
+        var vm = _env.NewMain();
+        Assert.Equal(Section.Map, vm.SelectedSection);
+        Assert.Equal("rules-vs-learning", vm.SelectedLesson!.Id);
+        Assert.NotNull(vm.Explanation);
+        Assert.Equal(new[] { Section.Map, Section.Parts, Section.Whole, Section.Family, Section.Beyond }, vm.Sections);
+    }
+
+    [Fact]
+    public void Main_SelectingSection_ShowsItsLessons()
+    {
+        var vm = _env.NewMain();
+        vm.SelectedSection = Section.Parts;
+        Assert.Equal(9, vm.Lessons.Count);
+        Assert.All(vm.Lessons, l => Assert.Equal(Section.Parts, l.Section));
+        Assert.Equal("tokens", vm.SelectedLesson!.Id);
+    }
+
+    [Fact]
+    public void Main_SelectingLesson_CreatesItsLab_AndExposesItsText()
+    {
+        var vm = _env.NewMain();
+        vm.Labs.Register("AttentionLab", () => new FakeLab());
+        vm.SelectedSection = Section.Parts;
+        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "attention");
+
+        Assert.IsType<FakeLab>(vm.CurrentLab);
+        Assert.Same(vm.SelectedLesson.Explanation, vm.Explanation);
+        Assert.Same(vm.SelectedLesson.Formula, vm.Formula);
+        Assert.Same(vm.SelectedLesson.BrainsAndModels, vm.BrainsAndModels);
+    }
+
+    [Fact]
+    public void Main_LabNotRegisteredYet_ShowsComingLater()
+    {
+        var vm = _env.NewMain();
+        vm.SelectedSection = Section.Parts;
+        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "attention");
+
+        var lab = Assert.IsType<ComingLaterLabViewModel>(vm.CurrentLab);
+        Assert.Equal("ComingLaterLab", lab.LabId);
+        Assert.Equal("This lab is being built.", lab.Message);
+    }
+
+    [Fact]
+    public void Main_NavigateToLesson_SwitchesSection()
+    {
+        var vm = _env.NewMain();
+        vm.NavigateToLessonCommand.Execute("scale");
+        Assert.Equal(Section.Whole, vm.SelectedSection);
+        Assert.Equal("scale", vm.SelectedLesson!.Id);
+        Assert.Equal(3, vm.Lessons.Count);
+    }
+
+    [Fact]
+    public void Main_NavigateToLesson_CreatesLabOnce()
+    {
+        var vm = _env.NewMain();
+        int created = 0;
+        vm.Labs.Register("AttentionLab", () => { created++; return new FakeLab(); });
+        vm.NavigateToLesson("attention");
+        Assert.Equal(1, created);
+    }
+
+    [Fact]
+    public void Main_ModelChange_NotifiesCurrentLab()
+    {
+        var models = _env.NewActiveModels();
+        var vm = _env.NewMain(models);
+        vm.Labs.Register("AttentionLab", () => new FakeLab());
+        vm.NavigateToLesson("attention");
+        var lab = (FakeLab)vm.CurrentLab!;
+
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+
+        Assert.Equal(1, lab.ModelChanges);
+    }
+
+    [Fact]
+    public void Main_SelectingModelEntry_ActivatesIt()
+    {
+        var models = _env.NewActiveModels();
+        var vm = _env.NewMain(models);
+        Assert.Equal("Fables model", vm.SelectedModelEntry!.Name);
+
+        vm.SelectedModelEntry = vm.ModelEntries.Single(e => e.Name == "Induction demo");
+
+        Assert.Equal("Induction demo", models.Current.Info.Name);
+    }
+
+    [Fact]
+    public void Main_SelectingUnreadableModel_IsRefused_AndShowsProblem()
+    {
+        Directory.CreateDirectory(_env.UserModels);
+        File.WriteAllText(Path.Combine(_env.UserModels, "broken.aimodel"), "not a model");
+        var models = _env.NewActiveModels();
+        var vm = _env.NewMain(models);
+        var broken = vm.ModelEntries.Single(e => !e.IsReadable);
+
+        vm.SelectedModelEntry = broken;
+
+        Assert.Equal("Fables model", vm.SelectedModelEntry!.Name);
+        Assert.Equal("Fables model", models.Current.Info.Name);
+        Assert.Contains(broken.Problem!, vm.StatusMessage);
+    }
+
+    [Fact]
+    public void Main_ShowSources_ThenSelectingLesson_HidesThem()
+    {
+        var vm = _env.NewMain();
+        vm.ShowSourcesCommand.Execute(null);
+        Assert.True(vm.IsShowingSources);
+        Assert.NotEmpty(vm.Sources.All);
+
+        vm.SelectedLesson = vm.Lessons[1];
+
+        Assert.False(vm.IsShowingSources);
+    }
+
+    [Fact]
+    public void Main_ResetLab_ResetsCurrentLab()
+    {
+        var vm = _env.NewMain();
+        vm.Labs.Register("AttentionLab", () => new FakeLab());
+        vm.NavigateToLesson("attention");
+        vm.ResetLabCommand.Execute(null);
+        Assert.Equal(1, ((FakeLab)vm.CurrentLab!).Resets);
+    }
+
+    [Fact]
+    public void LabFactory_UnknownId_Throws()
+    {
+        var vm = _env.NewMain();
+        Assert.False(vm.Labs.IsRegistered("NopeLab"));
+        Assert.Throws<ArgumentException>(() => vm.Labs.Create("NopeLab"));
+        Assert.True(vm.Labs.IsRegistered("ComingLaterLab"));
+    }
+}
