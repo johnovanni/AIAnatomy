@@ -23,7 +23,7 @@ public sealed class LabFactory
         var fables = new Lazy<string>(() => File.ReadAllText(Path.Combine(contentFolder, "texts", "aesop-fables.txt")));
         Register(ComingLaterLabViewModel.Id, () => new ComingLaterLabViewModel());
         Register(RulesVsLearningLabViewModel.Id, () => new RulesVsLearningLabViewModel(() => fables.Value));
-        Register(ArchitectureMapLabViewModel.Id, () => new ArchitectureMapLabViewModel(models, navigate));
+        Register(ArchitectureMapLabViewModel.Id, () => new ArchitectureMapLabViewModel(models));
         Register(TokensLabViewModel.Id, () => new TokensLabViewModel(() => fables.Value));
         Register(PositionLabViewModel.Id, () => new PositionLabViewModel(models));
     }

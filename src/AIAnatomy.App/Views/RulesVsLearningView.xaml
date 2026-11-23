@@ -7,12 +7,13 @@
     <UserControl.Resources><v:NullToCollapsedConverter x:Key="VisibleIfSet" /></UserControl.Resources>
     <StackPanel>
         <TextBlock Style="{StaticResource BodyText}"
-                   Text="Both writers predict the next letter, one letter at a time, starting from the same text." />
+                   Text="Both writers predict the next character, one character at a time, starting from the same text." />
         <TextBlock Style="{StaticResource MutedText}" Text="Start text" Margin="0,0,0,2" />
         <TextBox Text="{Binding StartText, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" AutomationProperties.Name="Start text" />
         <TextBlock Style="{StaticResource BodyText}" Text="{Binding Message}" FontWeight="SemiBold"
                    Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
 
+        <TextBlock Style="{StaticResource MutedText}" Text="↵ is a new line; � stands for a character the model has never seen." />
         <Grid Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -39,7 +40,7 @@
                 <StackPanel>
                     <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="A model that learns" />
                     <TextBlock Style="{StaticResource MutedText}"
-                               Text="A table of scores: one row per letter, one column per possible next letter. It learns from the fables, 20 steps at a time." />
+                               Text="A table of scores: one row per character, one column per possible next character. It learns from the opening pages of the fables, 20 steps at a time." />
                     <StackPanel Orientation="Horizontal">
                         <Button Content="Learn" Command="{Binding LearnCommand}" ToolTip="Train in chunks of 20 steps" />
                         <Button Content="Stop" Command="{Binding LearnCancelCommand}" ToolTip="Stop training after the current chunk" />

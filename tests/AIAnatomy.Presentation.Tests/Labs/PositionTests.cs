@@ -61,6 +61,7 @@ public class PositionTests : IDisposable
         lab.Text = new string('a', 70) + "\U0001F642";
         Assert.Equal("Only the last 64 characters are used: that is this model's context length.", lab.Notice);
         Assert.Equal(5, lab.WithPositions.Count);
+        Assert.EndsWith("\uFFFD", lab.ShownText);
     }
 
     [Fact]

@@ -133,7 +133,7 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
     {
         LossSeries = [new LineSeries("loss", _lossPoints.ToList())];
         LossText = StepsTrained == 0
-            ? $"Loss {NumberText.Short(_untrainedLoss)}: nothing learned yet, so every letter is equally likely."
+            ? $"Loss {NumberText.Short(_untrainedLoss)}: nothing learned yet, so every character is equally likely."
             : $"Loss {NumberText.Short(Loss)} after {NumberText.Short(StepsTrained)} steps (lower is better; {NumberText.Short(_untrainedLoss)} is pure guessing).";
         if (string.IsNullOrEmpty(StartText))
         {

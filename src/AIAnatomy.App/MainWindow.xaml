@@ -101,7 +101,7 @@
              for the Sources or Settings page, so clicking a lesson there goes straight back to it. -->
         <Grid x:Name="Body" Margin="12">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="0.75*" MinWidth="200" />
+                <ColumnDefinition Width="0.75*" MinWidth="{DynamicResource LessonsColumnWidth}" />
                 <ColumnDefinition Width="12" />
                 <ColumnDefinition Width="2*" MinWidth="360" />
                 <ColumnDefinition Width="12" />

@@ -5,11 +5,10 @@ namespace AIAnatomy.Presentation.Tests.Labs;
 public class ArchitectureMapTests : IDisposable
 {
     private readonly TestEnvironment _env = new();
-    private readonly List<string> _visited = new();
     public void Dispose() => _env.Dispose();
 
     private ArchitectureMapLabViewModel NewLab() =>
-        new(_env.NewActiveModels(), id => { _visited.Add(id); return Task.CompletedTask; });
+        new(_env.NewActiveModels());
 
     [Fact]
     public void TypingText_UpdatesTop10()
@@ -63,14 +62,42 @@ public class ArchitectureMapTests : IDisposable
     }
 
     [Fact]
-    public async Task ClickingBox_NavigatesToLesson()
+    public void EveryLinkedBox_OpensARealLesson()
+    {
+        // NetworkDiagram navigates through its LinkLessonId; the catalog throws for an id that does not exist.
+        var catalog = AIAnatomy.Lessons.LessonCatalog.Load(TestEnvironment.Content);
+        var models = _env.NewActiveModels();
+        var lab = new ArchitectureMapLabViewModel(models);
+        foreach (var entry in models.Library.List())
+        {
+            models.SetActive(entry);
+            lab.OnActiveModelChanged();
+            foreach (var link in lab.Nodes.Select(n => n.LinkLessonId).Where(l => !string.IsNullOrEmpty(l)))
+                Assert.Equal(link, catalog.Get(link!).Id);
+        }
+    }
+
+    [Fact]
+    public void Diagram_ShowsTheRealBlockStructure()
     {
         var lab = NewLab();
-        await lab.OpenNodeCommand.ExecuteAsync("attention");
-        await lab.OpenNodeCommand.ExecuteAsync("output");
-        await lab.OpenNodeCommand.ExecuteAsync("norm");      // no lesson: nothing happens
-        await lab.OpenNodeCommand.ExecuteAsync("missing");
-        Assert.Equal(new[] { "attention", "output-sampling" }, _visited);
+        bool Edge(string from, string to) => lab.Edges.Any(e => e.FromId == from && e.ToId == to);
+        Assert.True(Edge("multihead", "residual"));     // each sublayer adds its result back into the residual stream
+        Assert.True(Edge("feedforward", "residual"));
+        Assert.True(Edge("attention", "multihead"));    // the heads sit side by side inside multi-head attention
+        Assert.Contains("side by side", lab.Edges.Single(e => e.FromId == "attention").Label);
+        Assert.False(Edge("multihead", "feedforward")); // not a chain: both sublayers work on the residual stream
+        Assert.False(Edge("feedforward", "norm"));
+        Assert.True(Edge("residual", "norm"));          // the final norm reads the residual stream after the last block
+    }
+
+    [Fact]
+    public void ShownText_ShowsTheTextTheModelReads_WithReplacementMarks()
+    {
+        var lab = NewLab();
+        Assert.Equal("The fox and the ", lab.ShownText);
+        lab.Text = "a\U0001F642b";
+        Assert.Equal("a\uFFFDb", lab.ShownText);
     }
 
     [Fact]
@@ -92,7 +119,7 @@ public class ArchitectureMapTests : IDisposable
     public void InductionDemo_HasNoFeedForwardBox_AndItsOwnLayerCount()
     {
         var models = _env.NewActiveModels();
-        var lab = new ArchitectureMapLabViewModel(models, _ => Task.CompletedTask);
+        var lab = new ArchitectureMapLabViewModel(models);
         models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
         lab.OnActiveModelChanged();
 

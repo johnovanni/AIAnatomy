@@ -30,6 +30,10 @@
         <TextBlock Style="{StaticResource SubheadingText}" Text="Predictions with and without position" />
         <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
         <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Your text" />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2" Text="What the model reads (␣ is a space, ↵ a new line, � a character it has never seen)"
+                   Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
+        <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Margin="0,0,0,8" Text="{Binding ShownText}"
+                   AutomationProperties.Name="What the model reads" />
         <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}"
                    Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
         <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}"

@@ -31,6 +31,7 @@ public sealed partial class PositionLabViewModel : LabViewModel
     public override string LabId => Id;
 
     [ObservableProperty] private string text = DefaultText;
+    [ObservableProperty] private string shownText = "";
     [ObservableProperty] private string? message;
     [ObservableProperty] private string? notice;
     [ObservableProperty] private double[,]? modelPositions;
@@ -67,11 +68,13 @@ public sealed partial class PositionLabViewModel : LabViewModel
         {
             Message = LabText.EmptyPrompt;
             Notice = null;
+            ShownText = "";
             WithPositions = WithoutPositions = [];
             Comparison = "";
             return;
         }
         Message = null;
+        ShownText = LabText.ShowNewlines(model.Tokenizer.Decode(model.Tokenizer.Encode(Text)));
         var with = model.Predict(Text);
         var without = model.Predict(Text, new ForwardOptions { RemovePositions = true });
         Notice = with.WasTruncated ? LabText.TruncationNote(config.ContextLength) : null;
