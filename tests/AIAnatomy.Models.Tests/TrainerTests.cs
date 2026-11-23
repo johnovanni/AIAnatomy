@@ -190,12 +190,32 @@ public class TrainerTests
         Assert.NotNull(first.ValidationLoss);
     }
 
+    [Fact]
+    public async Task Trainer_StepInProgress_BlocksRunAsyncAndStep()
+    {
+        var (model, _) = Setup();
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var source = new RepeatingSource(new[] { 1, 2, 3, 1, 2, 3, 1, 2 }) { OnDraw = () => { started.Set(); release.Wait(); } };
+        var trainer = new Trainer(model, source, new TrainingSettings(BatchSize: 1));
+
+        var step = Task.Run(() => trainer.Step());
+        Assert.True(started.Wait(TimeSpan.FromSeconds(30)));
+        Assert.Throws<InvalidOperationException>(() => { _ = trainer.RunAsync(1, new ListProgress(), CancellationToken.None); });
+        Assert.Throws<InvalidOperationException>(() => trainer.Step());
+
+        release.Set();
+        Assert.Equal(1, (await step).Step);
+        Assert.Equal(2, trainer.Step().Step);   // the flag was released
+    }
+
     private sealed class RepeatingSource : IBatchSource
     {
         private readonly int[] _window;
         public RepeatingSource(int[] window) { _window = window; }
         public IReadOnlyList<IReadOnlyList<int>> ValidationWindows => new[] { (IReadOnlyList<int>)_window };
-        public IReadOnlyList<int> NextTrainingWindow(SeededRandom rng) => _window;
+        public Action? OnDraw { get; init; }
+        public IReadOnlyList<int> NextTrainingWindow(SeededRandom rng) { OnDraw?.Invoke(); return _window; }
     }
 
     [Fact]

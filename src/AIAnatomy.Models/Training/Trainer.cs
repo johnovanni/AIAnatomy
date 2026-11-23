@@ -85,8 +85,9 @@ public sealed class Trainer
     /// <summary>One batch and one Adam step. Validation loss is measured at step 1 and every 25 steps.</summary>
     public TrainingStepReport Step()
     {
-        if (Volatile.Read(ref _running) != 0) throw new InvalidOperationException(AlreadyRunningMessage);
-        return StepCore();
+        if (Interlocked.CompareExchange(ref _running, 1, 0) != 0) throw new InvalidOperationException(AlreadyRunningMessage);
+        try { return StepCore(); }
+        finally { Volatile.Write(ref _running, 0); }
     }
 
     private TrainingStepReport StepCore()
