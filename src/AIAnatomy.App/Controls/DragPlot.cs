@@ -129,15 +129,16 @@ public sealed class DragPlot : ChartBase
     private FormattedText LabelText(int i) => Text(Handles![i].Label, LabelSize, Foreground, i == SelectedIndex ? BoldFace : TextFace);
 
     /// <summary>
-    /// Where each label goes: right of its point, else left, above or below, taking the first place that stays inside the
-    /// plot and covers no earlier label and no point (final review I6; the same idea as NetworkDiagram's arrow labels).
-    /// If no place is free, the one that covers least is used.
+    /// Where each label goes: right of its point, else left, above or below, then the corners, taking the first place that
+    /// stays inside the plot and covers no earlier label, no point and no arrow from the origin, its own included (final
+    /// review I6 and the residual batch). If no place is free, the one that covers least is used (<see cref="LabelPlacement"/>).
     /// </summary>
     private Point[] PlaceLabels(IReadOnlyList<DragHandle> handles, AxisFrame frame, double marker, double readoutTop)
     {
         var points = handles.Select(h => frame.Map(h.X, h.Y)).ToArray();
-        var markers = points.Select(p => new Rect(p.X - marker * 1.2, p.Y - marker * 1.2, marker * 2.4, marker * 2.4)).ToArray();
-        var placed = new List<Rect>();
+        var centre = frame.Map(0, 0);
+        var obstacles = points.Select(p => new LabelBox(p.X - marker * 1.2, p.Y - marker * 1.2, marker * 2.4, marker * 2.4)).ToList();
+        var lines = points.Select(p => new LabelLine(centre.X, centre.Y, p.X, p.Y)).ToList();
         var result = new Point[handles.Count];
         double bottom = Math.Max(0, readoutTop);
         for (int i = 0; i < handles.Count; i++)
@@ -145,36 +146,22 @@ public sealed class DragPlot : ChartBase
             var text = LabelText(i);
             var at = points[i];
             double w = text.Width, h = text.Height, d = marker + 6;
-            var candidates = new[]
-            {
-                new Point(at.X + d, at.Y - h / 2),              // right
-                new Point(at.X - d - w, at.Y - h / 2),          // left
-                new Point(at.X - w / 2, at.Y - d - h),          // above
-                new Point(at.X - w / 2, at.Y + d),              // below
-                new Point(at.X + d, at.Y - d - h),              // above right
-                new Point(at.X + d, at.Y + d / 2),              // below right
-                new Point(at.X - d - w, at.Y - d - h),          // above left
-                new Point(at.X - d - w, at.Y + d / 2),          // below left
-            };
-            Rect best = Rect.Empty;
-            double bestCover = double.MaxValue;
-            foreach (var c in candidates)
-            {
-                var box = new Rect(Math.Clamp(c.X, 0, Math.Max(0, ActualWidth - w)), Math.Clamp(c.Y, 0, Math.Max(0, bottom - h)), w, h);
-                double cover = placed.Concat(markers).Sum(r => Overlap(box, r));
-                if (cover < bestCover) { best = box; bestCover = cover; }
-                if (cover == 0) break;
-            }
-            placed.Add(best);
-            result[i] = best.TopLeft;
+            (double X, double Y)[] candidates =
+            [
+                (at.X + d, at.Y - h / 2),              // right
+                (at.X - d - w, at.Y - h / 2),          // left
+                (at.X - w / 2, at.Y - d - h),          // above
+                (at.X - w / 2, at.Y + d),              // below
+                (at.X + d, at.Y - d - h),              // above right
+                (at.X + d, at.Y + d / 2),              // below right
+                (at.X - d - w, at.Y - d - h),          // above left
+                (at.X - d - w, at.Y + d / 2),          // below left
+            ];
+            var (x, y) = LabelPlacement.Choose(candidates, w, h, ActualWidth, bottom, obstacles, lines);
+            obstacles.Add(new LabelBox(x, y, w, h));
+            result[i] = new Point(x, y);
         }
         return result;
-
-        static double Overlap(Rect a, Rect b)
-        {
-            var x = Rect.Intersect(a, b);
-            return x.IsEmpty ? 0 : x.Width * x.Height;
-        }
     }
 
     private string Describe(int i)

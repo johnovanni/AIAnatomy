@@ -263,7 +263,7 @@ public sealed partial class SamplingLabViewModel : LabViewModel
         bool cut = Bars.Concat(Frequencies).Any(b => b.Label == OthersLabel && b.Value > BarScaleMaximum);
         BarScaleCaption = Bars.Count == 0 ? ""
             : $"Both charts use the same scale: a full bar is {NumberText.Percent(BarScaleMaximum)}."
-              + (cut ? $" The “{OthersLabel}” bar is longer than that, so it is cut off at full width (marked “cut off”); its real percentage is written beside it." : "");
+              + (cut ? $" The “{OthersLabel}” bar is longer than that, so it is cut off at full width and drawn with a break near its end; its real percentage is written beside it." : "");
     }
 
     private static string Name(LanguageModel model, int id) => LabText.Visible(model.Tokenizer.TokenText(id));

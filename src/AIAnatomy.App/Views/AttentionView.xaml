@@ -16,9 +16,9 @@
             <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
                 <TextBlock MinWidth="48" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Label}" />
                 <TextBlock VerticalAlignment="Center" Margin="0,0,4,0" Text="x" />
-                <TextBox Width="84" Text="{Binding X, StringFormat=0.##, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="{Binding Label, StringFormat={}{0} x}" />
+                <TextBox MinWidth="84" Text="{Binding X, StringFormat=0.##, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="{Binding Label, StringFormat={}{0} x}" />
                 <TextBlock VerticalAlignment="Center" Margin="12,0,4,0" Text="y" />
-                <TextBox Width="84" Text="{Binding Y, StringFormat=0.##, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="{Binding Label, StringFormat={}{0} y}" />
+                <TextBox MinWidth="84" Text="{Binding Y, StringFormat=0.##, ConverterCulture={x:Static glob:CultureInfo.InvariantCulture}}" AutomationProperties.Name="{Binding Label, StringFormat={}{0} y}" />
             </StackPanel>
         </DataTemplate>
 

@@ -58,12 +58,12 @@
 
         <TextBlock Style="{StaticResource SubheadingText}" Text="Count the letters" />
         <TextBlock Style="{StaticResource MutedText}" Text="Pick a word and a letter. The chips are the pieces the BPE sees, with the letter counted inside each." />
-        <StackPanel Orientation="Horizontal">
+        <WrapPanel>
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,8" Text="Word" />
-            <TextBox Width="260" Text="{Binding Word, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" AutomationProperties.Name="Word" />
+            <TextBox MinWidth="260" Text="{Binding Word, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" AutomationProperties.Name="Word" />
             <TextBlock VerticalAlignment="Center" Margin="16,0,8,8" Text="Letter" />
-            <TextBox Width="70" Text="{Binding Letter, UpdateSourceTrigger=PropertyChanged}" MaxLength="1" AutomationProperties.Name="Letter" />
-        </StackPanel>
+            <TextBox MinWidth="70" Text="{Binding Letter, UpdateSourceTrigger=PropertyChanged}" MaxLength="1" AutomationProperties.Name="Letter" />
+        </WrapPanel>
         <ItemsControl ItemsSource="{Binding WordChips}" ItemTemplate="{StaticResource Chip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
         <TextBlock Style="{StaticResource BodyText}" Text="{Binding WordSummary}" />
     </StackPanel>

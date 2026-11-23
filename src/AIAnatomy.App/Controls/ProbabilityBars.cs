@@ -126,7 +126,8 @@ public sealed class ProbabilityBars : ChartBase
         }
         var tag = Text(CutOffTag, LabelSize * 0.8, Foreground, BoldFace);
         var box = new Rect(x - h * 0.4 - tag.Width - 14, track.Top + (h - tag.Height) / 2 - 1, tag.Width + 10, tag.Height + 2);
-        if (box.Left <= track.Left) return;   // too narrow for the words; the break alone still shows the cut
+        // Too narrow for the words: the break alone still shows the cut (the caption names only the break; the tooltip says it too).
+        if (box.Left <= track.Left) return;
         dc.DrawRoundedRectangle(SurfaceBrush, new Pen(Foreground, 1), box, 4, 4);
         dc.DrawText(tag, new Point(box.Left + 5, box.Top + 1));
     }

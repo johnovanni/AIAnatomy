@@ -29,6 +29,8 @@ public sealed partial class ArchitectureMapLabViewModel : LabViewModel
     [ObservableProperty] private IReadOnlyList<LabeledValue> top10 = [];
     [ObservableProperty] private IReadOnlyList<NetworkNode> nodes = [];
     [ObservableProperty] private IReadOnlyList<NetworkEdge> edges = [];
+    /// <summary>The line under the diagram that says what the short arrows between the stream and the sublayers mean (R37).</summary>
+    [ObservableProperty] private string diagramCaption = "";
 
     partial void OnTextChanged(string value) => Refresh();
 
@@ -73,8 +75,6 @@ public sealed partial class ArchitectureMapLabViewModel : LabViewModel
 
     // One block in the pre-norm design (D3): the residual stream runs through the whole block; the attention sublayer
     // (several heads side by side) and the feed-forward sublayer each read a normalised copy of it and add their result back.
-    private const string ReadsLabel = "reads (normalised)";
-
     private void BuildDiagram(AIAnatomy.Models.Transformers.TransformerConfig config, int tokenCount, string? top)
     {
         string layers = config.Layers == 1 ? "1 layer" : $"{config.Layers} layers";
@@ -96,15 +96,16 @@ public sealed partial class ArchitectureMapLabViewModel : LabViewModel
             new("position", "block", "add"), new("block", "residual", "inside"),
             new("attention", "multihead", $"× {heads} side by side"),
             // Each sublayer reads a normalised copy of the stream and adds its result back (final review M1); the diagram
-            // draws a pair of opposite arrows side by side.
-            new("residual", "multihead", ReadsLabel),
-            new("multihead", "residual", "add back"),
+            // draws a pair of opposite arrows side by side. They carry no text: on such short arrows the labels were pushed
+            // beside other arrows and seemed to name them, so DiagramCaption says it instead (R37).
+            new("residual", "multihead", null),
+            new("multihead", "residual", null),
         };
         if (config.UseFeedForward)
         {
             list.Add(new("feedforward", "Feed-forward", 0.78, 0.57, $"norm first, {config.FeedForwardWidth} hidden", "feed-forward"));
-            links.Add(new("residual", "feedforward", ReadsLabel));
-            links.Add(new("feedforward", "residual", "add back"));
+            links.Add(new("residual", "feedforward", null));
+            links.Add(new("feedforward", "residual", null));
         }
         list.Add(new("norm", "Final norm", 0.50, 0.77, null, null));
         list.Add(new("output", "Output", 0.27, 0.90, $"{config.VocabularySize} scores", "output-sampling"));
@@ -114,5 +115,8 @@ public sealed partial class ArchitectureMapLabViewModel : LabViewModel
         links.Add(new("output", "probabilities", "softmax"));
         Nodes = list;
         Edges = links;
+        DiagramCaption = config.UseFeedForward
+            ? "Attention and feed-forward each read a normalised copy of the residual stream and add their result back."
+            : "Attention reads a normalised copy of the residual stream and adds its result back.";
     }
 }

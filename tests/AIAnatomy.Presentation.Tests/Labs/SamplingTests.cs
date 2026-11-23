@@ -183,6 +183,9 @@ public class SamplingTests : IDisposable
         lab.Temperature = 2;   // now the rest outweighs the scale
         Assert.True(lab.Bars.Single(b => b.Label == SamplingLabViewModel.OthersLabel).Value > lab.BarScaleMaximum);
         Assert.Contains("cut off at full width", lab.BarScaleCaption);
+        // Residual batch 3c: the caption names only the break, which is always drawn (the "cut off" tag needs room).
+        Assert.Contains("drawn with a break near its end", lab.BarScaleCaption);
+        Assert.DoesNotContain("marked", lab.BarScaleCaption);
     }
 
     [Fact]

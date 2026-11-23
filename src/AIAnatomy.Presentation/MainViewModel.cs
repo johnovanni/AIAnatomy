@@ -79,10 +79,19 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? statusMessage;
 
     /// <summary>
-    /// A silent line in the header about a Train lab run while another lesson is open, such as "Training in the background:
-    /// step 340 of 600." (R35), or how a run that ended meanwhile ended. Null while the Train lab is on show.
+    /// A silent line in the header about a Train lab run while the lab is out of sight (another lesson is open, or the Sources
+    /// or Settings page covers it), such as "Training in the background: step 340 of 600." (R35), or how a run that ended
+    /// meanwhile ended, or that it could not start. Null while the Train lab is on show.
     /// </summary>
     [ObservableProperty] private string? backgroundStatus;
+
+    // Not halfway through Show (which updates the line itself at the end): a lesson change passes through a moment where
+    // the old Train lab looks uncovered, which would wrongly count as having seen how its run ended.
+    partial void OnIsShowingSourcesChanged(bool value) { if (!_navigating) UpdateBackgroundStatus(); }
+    partial void OnIsShowingSettingsChanged(bool value) { if (!_navigating) UpdateBackgroundStatus(); }
+
+    /// <summary>True when the kept Train lab is the lab on screen (not covered by Sources or Settings).</summary>
+    private bool TrainLabInView => _trainLab != null && ReferenceEquals(_trainLab, CurrentLab) && IsShowingLesson;
 
     private string TrainLessonTitle { get; }
 
@@ -225,7 +234,6 @@ public sealed partial class MainViewModel : ObservableObject
             BrainsAndModels = lesson?.BrainsAndModels;
             CurrentLab = lesson == null ? null : Labs.IsRegistered(lesson.LabId) ? Labs.Create(lesson.LabId) : new ComingLaterLabViewModel();
             if (CurrentLab is TrainLabViewModel train && !ReferenceEquals(train, _trainLab)) WatchTrainLab(train);
-            if (ReferenceEquals(CurrentLab, _trainLab)) _trainEndedAway = false;
             UpdateBackgroundStatus();
         }
         finally { _navigating = false; }
@@ -244,8 +252,10 @@ public sealed partial class MainViewModel : ObservableObject
         if (sender is not TrainLabViewModel train) return;
         switch (e.PropertyName)
         {
-            case nameof(TrainLabViewModel.IsTraining):
-                if (!train.IsTraining && !train.IsPaused && train.HasModel && !ReferenceEquals(train, CurrentLab)) _trainEndedAway = true;
+            // A run that ended out of sight is reported once: finished, stopped, or (with no model yet) could not start.
+            // Message comes after IsTraining when "Getting the model ready" fails, so both are watched.
+            case nameof(TrainLabViewModel.IsTraining) or nameof(TrainLabViewModel.Message):
+                if (!train.IsTraining && !train.IsPaused && (train.HasModel || train.Message != null) && !TrainLabInView) _trainEndedAway = true;
                 break;
             case nameof(TrainLabViewModel.StepsDone) or nameof(TrainLabViewModel.TargetSteps) or nameof(TrainLabViewModel.IsPaused)
                 or nameof(TrainLabViewModel.HasDiverged) or nameof(TrainLabViewModel.HasModel):
@@ -260,11 +270,14 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var t = _trainLab;
         string? text = null;
-        if (t != null && !ReferenceEquals(t, CurrentLab))
+        if (TrainLabInView) _trainEndedAway = false;   // seen: nothing more to report
+        else if (t != null)
         {
             string step = NumberText.Short(t.StepsDone), target = NumberText.Short(t.TargetSteps);
             if (t.IsTraining) text = t.TargetSteps == 0 ? "Training in the background: getting the model ready." : $"Training in the background: step {step} of {target}.";
             else if (t.IsPaused) text = $"Training is paused at step {step} of {target}. Open “{TrainLessonTitle}” to resume or stop it.";
+            else if (_trainEndedAway && !t.HasModel && t.Message != null)
+                text = $"Training could not start. Open “{TrainLessonTitle}” to see why.";
             else if (_trainEndedAway && t.HasModel)
                 text = t.HasDiverged || t.Message != null
                     ? $"Training stopped in the background at step {step}. Open “{TrainLessonTitle}” to see why."

@@ -547,6 +547,47 @@ public class TrainTests : IDisposable
     }
 
     [Fact]
+    public async Task Main_SourcesOrSettingsCoveringTheTrainLab_AlsoShowTheBackgroundLine()
+    {
+        // Residual batch 3a: the Train lab is still the current lab, but out of sight.
+        var vm = _env.NewMain();
+        await vm.NavigateToLesson("train");
+        var lab = Assert.IsType<TrainLabViewModel>(vm.CurrentLab);
+        MakeTiny(lab, 100_000);
+        var run = lab.StartCommand.ExecuteAsync(null);
+        await WaitUntil(() => lab.StepsDone > 0);
+        vm.ShowSourcesCommand.Execute(null);
+        await WaitUntil(() => vm.BackgroundStatus?.StartsWith("Training in the background: step ") == true);
+        vm.ShowSettingsCommand.Execute(null);
+        Assert.StartsWith("Training in the background: step ", vm.BackgroundStatus);
+        vm.BackToLessonCommand.Execute(null);
+        Assert.Null(vm.BackgroundStatus);
+        vm.ResetLabCommand.Execute(null);
+        await run.WaitAsync(Patience);
+    }
+
+    [Fact]
+    public async Task Main_ARunThatCannotStartWhileAway_SaysSoInTheHeader()
+    {
+        // Residual batch 3b. A failure in "Getting the model ready" cannot be caused from outside, so this plays the lab's
+        // own sequence for it (StartAsync's catch): training on, then off, then the could-not-start message.
+        var vm = _env.NewMain();
+        await vm.NavigateToLesson("train");
+        var lab = Assert.IsType<TrainLabViewModel>(vm.CurrentLab);
+        lab.IsTraining = true;
+        await vm.NavigateToLesson("tokens");
+        Assert.Equal("Training in the background: getting the model ready.", vm.BackgroundStatus);
+        lab.IsTraining = false;
+        lab.Status = "";
+        lab.Message = TrainLabViewModel.CouldNotStartMessage;
+        Assert.Equal("Training could not start. Open “Training a model” to see why.", vm.BackgroundStatus);
+        await vm.NavigateToLesson("train");
+        Assert.Null(vm.BackgroundStatus);
+        await vm.NavigateToLesson("tokens");
+        Assert.Null(vm.BackgroundStatus);
+    }
+
+    [Fact]
     public async Task Main_Shutdown_StopsABackgroundRun()
     {
         var vm = _env.NewMain();

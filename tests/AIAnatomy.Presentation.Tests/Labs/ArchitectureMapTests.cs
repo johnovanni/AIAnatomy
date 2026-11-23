@@ -90,8 +90,12 @@ public class ArchitectureMapTests : IDisposable
         Assert.False(Edge("feedforward", "norm"));
         Assert.True(Edge("residual", "norm"));          // the final norm reads the residual stream after the last block
         // Final review M1: each sublayer also reads (a normalised copy of) the stream, so the picture shows its input.
-        Assert.Equal("reads (normalised)", lab.Edges.Single(e => e.FromId == "residual" && e.ToId == "multihead").Label);
-        Assert.Equal("reads (normalised)", lab.Edges.Single(e => e.FromId == "residual" && e.ToId == "feedforward").Label);
+        Assert.True(Edge("residual", "multihead"));
+        Assert.True(Edge("residual", "feedforward"));
+        // R37: the four short arrows carry no text (their labels were pushed beside other arrows); one caption says it instead.
+        foreach (var (from, to) in new[] { ("residual", "multihead"), ("multihead", "residual"), ("residual", "feedforward"), ("feedforward", "residual") })
+            Assert.True(string.IsNullOrEmpty(lab.Edges.Single(e => e.FromId == from && e.ToId == to).Label), $"{from} -> {to}");
+        Assert.Equal("Attention and feed-forward each read a normalised copy of the residual stream and add their result back.", lab.DiagramCaption);
     }
 
     [Fact]
@@ -103,6 +107,7 @@ public class ArchitectureMapTests : IDisposable
         lab.OnActiveModelChanged();
         Assert.Contains(lab.Edges, e => e.FromId == "residual" && e.ToId == "multihead");
         Assert.DoesNotContain(lab.Edges, e => e.ToId == "feedforward");
+        Assert.Equal("Attention reads a normalised copy of the residual stream and adds its result back.", lab.DiagramCaption);
     }
 
     [Fact]

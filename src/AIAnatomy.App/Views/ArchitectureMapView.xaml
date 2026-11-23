@@ -20,6 +20,7 @@
                    Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
 
         <c:NetworkDiagram Nodes="{Binding Nodes}" Edges="{Binding Edges}" Height="{DynamicResource DiagramHeight}" Margin="0,16,0,0" AutomationProperties.Name="Architecture map" />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0" Text="{Binding DiagramCaption}" />
 
         <TextBlock Style="{StaticResource SubheadingText}" Text="The ten most likely next characters" />
         <TextBlock Style="{StaticResource MutedText}" Text="␣ is a space and ↵ a new line; � stands for a character the model has never seen." />
