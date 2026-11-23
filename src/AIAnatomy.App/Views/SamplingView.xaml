@@ -9,12 +9,18 @@
         <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
         <ItemsPanelTemplate x:Key="Wrap"><WrapPanel /></ItemsPanelTemplate>
         <DataTemplate x:Key="ScoreLine" DataType="{x:Type labs:ScoreRow}">
-            <StackPanel Orientation="Horizontal" Margin="0,2" AutomationProperties.Name="{Binding Description}">
-                <TextBlock MinWidth="48" Margin="0,0,8,0" Text="{Binding Rank, StringFormat={}{0}.}" Style="{StaticResource MutedText}" />
-                <TextBlock MinWidth="48" Margin="0,0,8,0" FontFamily="{StaticResource NumberFont}" FontWeight="SemiBold" Text="{Binding Token}" />
-                <TextBlock MinWidth="110" Margin="0,0,8,0" FontFamily="{StaticResource NumberFont}" Text="{Binding ScoreText}" />
-                <TextBlock FontFamily="{StaticResource NumberFont}" Text="{Binding ProbabilityText}" />
-            </StackPanel>
+            <Grid Margin="0,2" AutomationProperties.Name="{Binding Description}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition SharedSizeGroup="ScoreRank" />
+                    <ColumnDefinition SharedSizeGroup="ScoreToken" />
+                    <ColumnDefinition SharedSizeGroup="ScoreValue" />
+                    <ColumnDefinition SharedSizeGroup="ScoreProbability" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Margin="0,0,24,0" Text="{Binding Rank, StringFormat={}{0}.}" Style="{StaticResource MutedText}" />
+                <TextBlock Grid.Column="1" Margin="0,0,24,0" FontFamily="{StaticResource NumberFont}" FontWeight="SemiBold" Text="{Binding Token}" />
+                <TextBlock Grid.Column="2" Margin="0,0,24,0" FontFamily="{StaticResource NumberFont}" Text="{Binding ScoreText}" />
+                <TextBlock Grid.Column="3" FontFamily="{StaticResource NumberFont}" Text="{Binding ProbabilityText}" />
+            </Grid>
         </DataTemplate>
         <DataTemplate x:Key="CountChip" DataType="{x:Type labs:SampleCount}">
             <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1.5" CornerRadius="6" Padding="8,2" Margin="0,0,6,6"
@@ -72,20 +78,10 @@
             <Button Content="Sample 100 times" Command="{Binding SampleHundredCommand}" Margin="0,0,8,4" ToolTip="Draw 100 characters at random from these probabilities, using the seed" />
             <Button Content="Generate 200 characters" Command="{Binding GenerateTextCommand}" Margin="0,0,8,4" ToolTip="Write 200 new characters after your text, one random draw at a time" />
         </WrapPanel>
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                <TextBlock Style="{StaticResource PaneTitle}" Text="Probability of each character" />
-                <c:ProbabilityBars Items="{Binding Bars}" KeepOrder="True" ScaleMaximum="{Binding BarScaleMaximum}" AutomationProperties.Name="Probability of each next character" />
-            </StackPanel>
-            <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                <TextBlock Style="{StaticResource PaneTitle}" Text="How often each was drawn" />
-                <c:ProbabilityBars Items="{Binding Frequencies}" KeepOrder="True" ScaleMaximum="{Binding BarScaleMaximum}" AutomationProperties.Name="How often each character was drawn in 100 samples" />
-            </StackPanel>
-        </Grid>
+        <TextBlock Style="{StaticResource PaneTitle}" Text="Probability of each character" />
+        <c:ProbabilityBars Items="{Binding Bars}" KeepOrder="True" ScaleMaximum="{Binding BarScaleMaximum}" AutomationProperties.Name="Probability of each next character" />
+        <TextBlock Style="{StaticResource PaneTitle}" Text="How often each was drawn" Margin="0,12,0,0" />
+        <c:ProbabilityBars Items="{Binding Frequencies}" KeepOrder="True" ScaleMaximum="{Binding BarScaleMaximum}" AutomationProperties.Name="How often each character was drawn in 100 samples" />
         <TextBlock Style="{StaticResource MutedText}" Text="{Binding BarScaleCaption}" Visibility="{Binding BarScaleCaption, Converter={StaticResource VisibleIfSet}}" />
         <TextBlock Style="{StaticResource MutedText}" Text="{Binding SampleCaption}" Visibility="{Binding SampleCaption, Converter={StaticResource VisibleIfSet}}" />
         <ItemsControl ItemsSource="{Binding SampleCounts}" ItemTemplate="{StaticResource CountChip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
@@ -104,6 +100,6 @@
         <TextBlock Style="{StaticResource SubheadingText}" Text="The scores (logits)" />
         <TextBlock Style="{StaticResource MutedText}"
                    Text="Each line: the character, its raw score from the model, and its probability after your settings. Higher scores mean more likely; a score on its own is not a probability." />
-        <ItemsControl ItemsSource="{Binding Scores}" ItemTemplate="{StaticResource ScoreLine}" Focusable="False" />
+        <ItemsControl ItemsSource="{Binding Scores}" ItemTemplate="{StaticResource ScoreLine}" Focusable="False" Grid.IsSharedSizeScope="True" />
     </StackPanel>
 </UserControl>

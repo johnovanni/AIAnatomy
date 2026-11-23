@@ -68,6 +68,25 @@ public class MainViewModelTests : IDisposable
         Assert.Equal("This lab is being built.", lab.Message);
     }
 
+    [Fact]
+    public void UseStackedLayout_SwitchesAtTwentySixPoints()
+    {
+        var vm = _env.NewMain();
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        Assert.False(vm.UseStackedLayout);          // the default is 20 pt
+        vm.SettingsPage.BodyFontSize = 25;
+        Assert.False(vm.UseStackedLayout);
+        vm.SettingsPage.BodyFontSize = 26;
+        Assert.True(vm.UseStackedLayout);
+        Assert.Contains(nameof(MainViewModel.UseStackedLayout), raised);
+        vm.SettingsPage.BodyFontSize = 32;
+        Assert.True(vm.UseStackedLayout);
+        vm.SettingsPage.BodyFontSize = 16;
+        Assert.False(vm.UseStackedLayout);
+        Assert.Equal(26, MainViewModel.StackedLayoutFromSize);
+    }
+
     private static void CopyFolder(string from, string to)
     {
         Directory.CreateDirectory(to);

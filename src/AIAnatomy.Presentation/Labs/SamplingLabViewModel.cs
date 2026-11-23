@@ -255,9 +255,10 @@ public sealed partial class SamplingLabViewModel : LabViewModel
     /// <summary>Both charts get one scale: the largest bar in either, rounded up to a nice number.</summary>
     private void UpdateScale()
     {
-        double max = Bars.Concat(Frequencies).Select(b => b.Value).DefaultIfEmpty(0).Max();
+        // "others" is left out (it can be most of the probability and would shrink every other bar); its bar is cut off at full width.
+        double max = Bars.Concat(Frequencies).Where(b => b.Label != OthersLabel).Select(b => b.Value).DefaultIfEmpty(0).Max();
         BarScaleMaximum = AxisTicks.NiceCeiling(max);
-        BarScaleCaption = Bars.Count == 0 ? "" : $"Both charts use the same scale: a full bar is {NumberText.Percent(BarScaleMaximum)}.";
+        BarScaleCaption = Bars.Count == 0 ? "" : $"Both charts use the same scale: a full bar is {NumberText.Percent(BarScaleMaximum)}. The “{OthersLabel}” bar is cut off at full width; its real percentage is written beside it.";
     }
 
     private static string Name(LanguageModel model, int id) => LabText.Visible(model.Tokenizer.TokenText(id));

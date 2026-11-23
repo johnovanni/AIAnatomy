@@ -147,12 +147,23 @@ public class SamplingTests : IDisposable
     {
         var lab = new SamplingLabViewModel(_env.NewActiveModels()) { Temperature = 2 };
         lab.SampleHundredCommand.Execute(null);
-        double longest = lab.Bars.Concat(lab.Frequencies).Max(b => b.Value);
+        double longest = lab.Bars.Concat(lab.Frequencies).Where(b => b.Label != SamplingLabViewModel.OthersLabel).Max(b => b.Value);
         Assert.True(lab.BarScaleMaximum >= longest - 1e-12);
         Assert.Equal(AxisTicks.NiceCeiling(longest), lab.BarScaleMaximum, 12);
         Assert.Contains($"a full bar is {NumberText.Percent(lab.BarScaleMaximum)}", lab.BarScaleCaption);
         lab.Temperature = 0;   // one bar at 100%
         Assert.Equal(1.0, lab.BarScaleMaximum, 12);
+    }
+
+    [Fact]
+    public void Scale_IgnoresTheOthersBar()
+    {
+        var lab = new SamplingLabViewModel(_env.NewActiveModels()) { Temperature = 2 };
+        var others = lab.Bars.Single(b => b.Label == SamplingLabViewModel.OthersLabel).Value;
+        var listed = lab.Bars.Where(b => b.Label != SamplingLabViewModel.OthersLabel).Max(b => b.Value);
+        Assert.True(others > listed);   // at temperature 2 the rest outweighs any one character
+        Assert.Equal(AxisTicks.NiceCeiling(listed), lab.BarScaleMaximum, 12);
+        Assert.Contains("cut off at full width", lab.BarScaleCaption);
     }
 
     [Fact]

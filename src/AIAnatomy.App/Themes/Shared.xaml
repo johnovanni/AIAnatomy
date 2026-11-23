@@ -12,6 +12,7 @@
     <sys:Double x:Key="FormulaScale">29.33</sys:Double>
     <sys:Double x:Key="LessonsColumnWidth">293</sys:Double>
     <sys:Double x:Key="DiagramHeight">560</sys:Double>
+    <sys:Double x:Key="GraphDiagramHeight">800</sys:Double>
     <sys:Double x:Key="ScrollBarSize">24</sys:Double>
 
     <FontFamily x:Key="BodyFont">Segoe UI</FontFamily>

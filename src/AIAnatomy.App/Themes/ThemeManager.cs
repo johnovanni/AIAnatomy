@@ -32,6 +32,7 @@ public static class ThemeManager
         resources["SmallFontSize"] = Math.Max(16, bodyPt * 0.85) * PxPerPt;
         resources["FormulaScale"] = bodyPt * 1.1 * PxPerPt;
         resources["LessonsColumnWidth"] = bodyPt * 11 * PxPerPt;   // whole words of lesson titles fit at every text size
+        resources["GraphDiagramHeight"] = bodyPt * 30 * PxPerPt;    // the expression graph has six boxes with two lines of numbers each
         resources["DiagramHeight"] = bodyPt * 21 * PxPerPt;        // the map keeps its text legible at large sizes
         resources["ScrollBarSize"] = 24 * bodyPt / 20;
     }

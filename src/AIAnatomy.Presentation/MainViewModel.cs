@@ -30,6 +30,7 @@ public sealed partial class MainViewModel : ObservableObject
         SettingsPage = new SettingsViewModel(settings);
         RefreshModelEntries();
         _models.Changed += (_, _) => OnActiveModelChanged();
+        SettingsPage.Applied += (_, _) => OnPropertyChanged(nameof(UseStackedLayout));
         settings.SaveFailed += (_, _) =>
             StatusMessage = $"Your settings couldn't be saved: {settings.LastSaveProblem}. They'll apply until you close the app.";
 
@@ -41,6 +42,12 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<Lesson> Lessons { get; } = new();
     public ObservableCollection<ModelEntry> ModelEntries { get; } = new();
     public ISettingsService Settings { get; }
+
+    /// <summary>The body text size (in points) from which the explanation goes under the lab instead of beside it.</summary>
+    public const double StackedLayoutFromSize = 26;
+
+    /// <summary>True at large text sizes: three side-by-side columns would leave the lab too narrow, so the Explanation pane goes below the lab pane.</summary>
+    public bool UseStackedLayout => Settings.Current.BodyFontSize >= StackedLayoutFromSize;
     public SourceList Sources { get; }
 
     /// <summary>The Settings page (text size and theme).</summary>

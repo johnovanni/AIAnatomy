@@ -142,7 +142,23 @@
                     <ColumnDefinition Width="12" />
                     <ColumnDefinition Width="1.25*" MinWidth="260" />
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Style="{StaticResource Pane}">
+                <!-- R32: at large text the explanation goes under the lab (same column span) instead of beside it. -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="3*" />
+                    <RowDefinition Height="12" />
+                    <RowDefinition Height="2*" />
+                </Grid.RowDefinitions>
+                <Border Grid.Column="0" Grid.RowSpan="3" AutomationProperties.Name="Lab pane">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource Pane}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding UseStackedLayout}" Value="True">
+                                    <Setter Property="Grid.ColumnSpan" Value="3" />
+                                    <Setter Property="Grid.RowSpan" Value="1" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource HeadingText}" Text="{Binding SelectedLesson.Title}" />
                         <ScrollViewer Style="{StaticResource PaneScroller}" AutomationProperties.Name="Lab">
@@ -151,7 +167,19 @@
                     </DockPanel>
                 </Border>
 
-                <Border Grid.Column="2" Style="{StaticResource Pane}">
+                <Border Grid.Column="2" Grid.RowSpan="3" AutomationProperties.Name="Explanation pane">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource Pane}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding UseStackedLayout}" Value="True">
+                                    <Setter Property="Grid.Column" Value="0" />
+                                    <Setter Property="Grid.ColumnSpan" Value="3" />
+                                    <Setter Property="Grid.Row" Value="2" />
+                                    <Setter Property="Grid.RowSpan" Value="1" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource PaneTitle}" Text="Explanation" />
                         <ScrollViewer x:Name="ExplanationScroller" Style="{StaticResource PaneScroller}" Padding="0,0,8,0"
