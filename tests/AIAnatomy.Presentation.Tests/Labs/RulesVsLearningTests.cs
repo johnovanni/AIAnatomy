@@ -130,4 +130,145 @@ public class RulesVsLearningTests
         await running;
         Assert.True(lab.StepsTrained < 400);
     }
+
+    [Fact]
+    public void Start_HasOneUntrainedEntry()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables);
+        Assert.Single(lab.History);
+        Assert.Equal(0, lab.History[0].Steps);
+        Assert.Equal(lab.UntrainedLoss, lab.History[0].Loss);
+        Assert.Equal(lab.LearnedOutput, lab.History[0].Text);
+        Assert.Equal("Written from “The ”", lab.HistoryHeading);
+    }
+
+    [Fact]
+    public async Task Learn_AddsOneEntry_UpdatedToTheRunsEnd()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 2 };
+        await lab.LearnCommand.ExecuteAsync(null);
+        Assert.Equal(2, lab.History.Count);
+        Assert.Equal(40, lab.History[0].Steps);
+        Assert.Equal(lab.Loss, lab.History[0].Loss);
+        Assert.Equal(lab.LearnedOutput, lab.History[0].Text);
+        Assert.Equal(0, lab.History[1].Steps);
+    }
+
+    [Fact]
+    public async Task OlderEntries_AreNeverRewritten()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 2 };
+        await lab.LearnCommand.ExecuteAsync(null);
+        var before = lab.History.ToArray();
+        await lab.LearnCommand.ExecuteAsync(null);
+        Assert.Equal(3, lab.History.Count);
+        Assert.Equal(80, lab.History[0].Steps);
+        Assert.Equal(before, lab.History.Skip(1).ToArray());
+    }
+
+    [Fact]
+    public async Task History_KeepsAtMostEight()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 2 };
+        for (int i = 0; i < 9; i++) await lab.LearnCommand.ExecuteAsync(null);
+        Assert.Equal(RulesVsLearningLabViewModel.MaxHistory, lab.History.Count);
+        Assert.Equal(360, lab.History[0].Steps);
+        Assert.True(lab.History[^1].Steps > 0);
+    }
+
+    [Fact]
+    public async Task StartTextChange_ClearsAndStartsFromCurrentModel()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 2 };
+        await lab.LearnCommand.ExecuteAsync(null);
+        lab.StartText = "Once ";
+        Assert.Single(lab.History);
+        Assert.Equal(lab.StepsTrained, lab.History[0].Steps);
+        Assert.Equal(lab.LearnedOutput, lab.History[0].Text);
+        Assert.Equal("Written from “Once ”", lab.HistoryHeading);
+    }
+
+    [Fact]
+    public async Task SeedChange_ClearsAndStartsFromCurrentModel()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 2 };
+        await lab.LearnCommand.ExecuteAsync(null);
+        lab.Seed = 5;
+        Assert.Single(lab.History);
+        Assert.Equal(40, lab.History[0].Steps);
+    }
+
+    [Fact]
+    public async Task ResetDuringRun_LeavesOnlyEntryZero()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 3 };
+        var run = lab.LearnCommand.ExecuteAsync(null);
+        lab.Reset();
+        await run;
+        Assert.Single(lab.History);
+        Assert.Equal(0, lab.History[0].Steps);
+    }
+
+    [Fact]
+    public async Task LeavingDuringRun_AddsNothingAfterwards()
+    {
+        // Deactivate while the first chunk is training: the run ends without adding an entry (none is added until a chunk
+        // has finished), Learning is off at once, and the history is the same after the run's task has completed.
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 5 };
+        var run = lab.LearnCommand.ExecuteAsync(null);
+        lab.Deactivate();
+        Assert.False(lab.IsLearning);
+        var snapshot = lab.History.ToArray();
+        await run;
+        Assert.Equal(snapshot, lab.History.ToArray());
+        Assert.Single(lab.History);
+        Assert.False(lab.IsLearning);
+    }
+
+    [Fact]
+    public async Task NewEntryAppears_OnlyOnceAChunkHasFinished()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 1 };
+        var run = lab.LearnCommand.ExecuteAsync(null);
+        Assert.Single(lab.History);   // still only entry zero: no second entry labelled newest with the same table
+        await run;
+        Assert.Equal(2, lab.History.Count);
+    }
+
+    [Fact]
+    public async Task StartTextChangeDuringRun_NoOldTextEntryAppearsAfterwards()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 3 };
+        var run = lab.LearnCommand.ExecuteAsync(null);
+        lab.StartText = "Once ";
+        Assert.Empty(lab.History);   // cleared at once; the first entry waits for the end of the chunk in progress
+        await run;
+        var entry = Assert.Single(lab.History);
+        Assert.Equal(60, entry.Steps);
+        Assert.Equal(lab.LearnedOutput, entry.Text);
+        Assert.Equal("Written from “Once ”", lab.HistoryHeading);
+    }
+
+    [Fact]
+    public async Task LearnedScreen_LightsOnceWhenTheRunEnds()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 3 };
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        await lab.LearnCommand.ExecuteAsync(null);
+        Assert.Equal(["learned"], raised);
+    }
+
+    [Fact]
+    public void ScreensLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = new RulesVsLearningLabViewModel(Fables);
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+        lab.StartText = "Once a";
+        Assert.Contains("rules", raised);
+        raised.Clear();
+        lab.StartText = "Once a";
+        Assert.Empty(raised);
+    }
 }

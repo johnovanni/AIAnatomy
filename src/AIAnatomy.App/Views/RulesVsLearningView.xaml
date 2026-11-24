@@ -14,45 +14,84 @@
                    Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
 
         <TextBlock Style="{StaticResource MutedText}" Text="↵ is a new line; � stands for a character the model has never seen." />
-        <Grid Margin="0,8,0,0">
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,8,0,6" Text="{Binding LearnBlurb}" />
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Learn" Command="{Binding LearnCommand}" ToolTip="{Binding LearnToolTip}" />
+            <Button Content="Stop" Command="{Binding LearnCancelCommand}" ToolTip="Stop training after the current chunk" />
+        </StackPanel>
+
+        <!-- The two output screens: side by side, one above the other when the pane is narrow (see the code-behind). -->
+        <Grid x:Name="Screens">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="Gap" Width="16" />
+                <ColumnDefinition x:Name="SecondColumn" Width="*" />
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition x:Name="GapRow" Height="0" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-            <Border Grid.Column="0" Style="{StaticResource Pane}" Padding="12">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="Hand-written rules" />
-                    <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="What the rules write" />
-                    <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding RuleOutput}"
-                               AutomationProperties.Name="Rule output" Margin="0,0,0,12" />
-                    <TextBlock Style="{StaticResource MutedText}" Text="The rules, in order. The first one that fits wins." />
-                    <ItemsControl ItemsSource="{Binding Rules}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate><TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4" Text="{Binding}" /></DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Column="2" Style="{StaticResource Pane}" Padding="12">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="A model that learns" />
-                    <TextBlock Style="{StaticResource MutedText}"
-                               Text="A table of scores: one row per character, one column per possible next character. It learns from the opening pages of the fables, 20 steps at a time." />
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="Learn" Command="{Binding LearnCommand}" ToolTip="Train in chunks of 20 steps" />
-                        <Button Content="Stop" Command="{Binding LearnCancelCommand}" ToolTip="Stop training after the current chunk" />
+            <StackPanel x:Name="RulesPanel" Grid.Column="0">
+                <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,2" Text="Written rules" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6" Text="Rules a person wrote down. They never change." />
+                <c:Screen ScreenName="rules" HorizontalAlignment="Stretch">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="What the rules write" />
+                        <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding RuleOutput}"
+                                   Foreground="{DynamicResource TextBrush}" AutomationProperties.Name="Rule output" />
                     </StackPanel>
-                    <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,4" Text="What the learned model writes" />
-                    <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding LearnedOutput}"
-                               AutomationProperties.Name="Learned output" />
-                    <TextBlock Style="{StaticResource BodyText}" Margin="0,12,0,4" Text="{Binding LossText}" />
-                    <c:LineChart Series="{Binding LossSeries}" XAxisTitle="training step" YAxisTitle="loss" Height="260" />
-                </StackPanel>
-            </Border>
+                </c:Screen>
+            </StackPanel>
+
+            <StackPanel x:Name="LearnedPanel" Grid.Column="2">
+                <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,2" Text="Learned from examples" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6" Text="{Binding HistoryHeading}" AutomationProperties.Name="History heading" />
+                <c:Screen ScreenName="learned" HorizontalAlignment="Stretch">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="After each press of Learn (newest first)" />
+                        <ItemsControl ItemsSource="{Binding History}" AlternationCount="100" Focusable="False" AutomationProperties.Name="Learned history">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="Bar" BorderThickness="4,0,0,0" Padding="8,2,0,2" Margin="0,0,0,6"
+                                            BorderBrush="{DynamicResource BorderBrush}">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock x:Name="Newest" Style="{StaticResource BodyText}" FontWeight="Bold" Margin="0,0,8,0"
+                                                           Foreground="{DynamicResource TextBrush}" Text="Newest" Visibility="Collapsed" />
+                                                <TextBlock x:Name="Label" Style="{StaticResource MutedText}" Text="{Binding Label}" />
+                                            </StackPanel>
+                                            <TextBlock x:Name="Written" FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding Text}"
+                                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                        </StackPanel>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <Trigger Property="ItemsControl.AlternationIndex" Value="0">
+                                            <Setter TargetName="Newest" Property="Visibility" Value="Visible" />
+                                            <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource TextBrush}" />
+                                            <Setter TargetName="Written" Property="Foreground" Value="{DynamicResource TextBrush}" />
+                                            <Setter TargetName="Bar" Property="c:PartResource.BorderBrush"
+                                                    Value="{Binding Path=(c:Screen.PartBrush), RelativeSource={RelativeSource Self}}" />
+                                        </Trigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </c:Screen>
+            </StackPanel>
         </Grid>
+
+        <TextBlock Style="{StaticResource BodyText}" Margin="0,10,0,0" Text="{Binding LossText}" />
+
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,10,0,4" Text="The written rules, in order. The first one that fits wins." />
+        <ItemsControl ItemsSource="{Binding Rules}" Focusable="False">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate><TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4" Text="{Binding}" /></DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <c:LineChart Series="{Binding LossSeries}" XAxisTitle="training step" YAxisTitle="loss" Height="180" Margin="0,8,0,0" />
 
         <WrapPanel Margin="0,12,0,0">
             <TextBlock Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="0,0,8,8" Text="Seed (for the learned model's random choices)" />

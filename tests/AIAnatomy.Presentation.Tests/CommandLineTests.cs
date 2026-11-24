@@ -147,6 +147,15 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void RulesVsLearningTrained_IsARenderViewThatTakesFullLab()
+    {
+        var o = DiagnosticOptions.Parse(["--render-png", DiagnosticOptions.RulesVsLearningTrained, "t.png", "--full-lab", "--width", "700"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "rules-vs-learning-trained" }, o.Views);
+        Assert.True(o.FullLab);
+    }
+
+    [Fact]
     public void ContentsView_IsAKnownView_ButNotForFullLab()
     {
         var ok = DiagnosticOptions.Parse(["--render-png", "contents,tokens", "c.png"]);

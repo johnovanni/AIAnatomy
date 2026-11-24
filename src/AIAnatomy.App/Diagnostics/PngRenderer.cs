@@ -6,6 +6,7 @@ using System.Windows.Threading;
 using AIAnatomy.App.Themes;
 using AIAnatomy.App.Views;
 using AIAnatomy.Presentation;
+using AIAnatomy.Presentation.Labs;
 using AIAnatomy.Presentation.Services;
 
 namespace AIAnatomy.App.Diagnostics;
@@ -37,7 +38,15 @@ public static class PngRenderer
     {
         var viewModel = services.NewMainViewModel();
         var window = new MainWindow(viewModel);
-        var map = Show(window, viewModel, services, view);
+        if (view == DiagnosticOptions.RulesVsLearningTrained)
+        {
+            await viewModel.NavigateToLesson("rules-vs-learning");
+            if (viewModel.CurrentLab is not RulesVsLearningLabViewModel rules) throw new InvalidOperationException("The rules-vs-learning lesson did not open its lab.");
+            rules.ChunksPerRun = 2;
+            await rules.LearnCommand.ExecuteAsync(null);
+            await rules.LearnCommand.ExecuteAsync(null);
+        }
+        var map = view == DiagnosticOptions.RulesVsLearningTrained ? null : Show(window, viewModel, services, view);
 
         if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
 

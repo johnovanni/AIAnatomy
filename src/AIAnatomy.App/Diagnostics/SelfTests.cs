@@ -52,6 +52,14 @@ public static class SelfTests
                     return Fail($"Lesson '{lesson.Id}': there is no view for {lab.GetType().Name}.");
                 lab.Reset();
                 await lab.WorkCompleted.WaitAsync(Patience);
+                if (lab is RulesVsLearningLabViewModel rules)
+                {
+                    rules.ChunksPerRun = 2;
+                    await rules.LearnCommand.ExecuteAsync(null).WaitAsync(Patience);
+                    if (rules.History.Count != 2)
+                        return Fail($"Lesson '{lesson.Id}': after one press of Learn the history has {rules.History.Count} entries, not 2.");
+                    rules.Reset();
+                }
                 lab.Deactivate();
                 checkedLabs++;
                 Console.WriteLine($"{lesson.Id}: {lab.LabId} created, reset and deactivated.");

@@ -6,7 +6,7 @@ public enum DiagnosticMode { Normal, RenderPng, SelfTest }
 
 /// <summary>
 /// The app's command line, for checks and diagnostics only:
-/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
+/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning|rules-vs-learning-trained&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
 /// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 13 pt unless
 /// told otherwise, so pictures do not depend on the user's own settings. Several views may be given as
 /// <c>gallery,sources,settings</c>; each then goes to "file-view.png". <c>--full-lab</c> (lesson ids only) draws the lab
@@ -36,6 +36,8 @@ public sealed record DiagnosticOptions(
     public const string IdeaMapLoopLearning = "ideamap-loop-learning";   // Learning chosen
     public static bool IsIdeaMapView(string v) =>
         v is IdeaMapRadial or IdeaMapLoop or IdeaMapRadialChosen or IdeaMapLoopChosen or IdeaMapLoopLearning;
+    /// <summary>The Rules vs learning lesson after two presses of Learn, so its history shows (a render cannot press Learn).</summary>
+    public const string RulesVsLearningTrained = "rules-vs-learning-trained";
     public const string AllLabsTest = "all-labs";
     public const string TrainTest = "train";
 
