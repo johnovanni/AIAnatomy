@@ -6,6 +6,8 @@ title: Learning
 lab: LearningLab
 sources: lillicrap2020, textbook
 branches: One neuron learning a rule=neuron; Walking down a loss surface=surface; Backpropagation on a small graph=backprop; The loss of the real model=crossentropy
+idea: A model learns by nudging its numbers downhill, guided by gradients from backpropagation, to make its loss, a measure of error, smaller.
+part: learning
 ---
 Learning, for a model, means changing its numbers so that a **loss**, a single number that measures how wrong it is, gets smaller. The lab shows four small pieces of that idea.
 
@@ -18,6 +20,36 @@ Learning, for a model, means changing its numbers so that a **loss**, a single n
 **4. The loss of the real model.** For each place in your text, the loss is −ln p, where p is the probability the model gave to the character that really came next. A sure, right guess costs almost nothing; a confident wrong one costs a lot. Training lowers the average of these losses over a great deal of text, as the [train](lesson:train) lesson shows.
 
 *Sources: standard textbook material (Lillicrap et al., 2020, is cited in the note below).*
+
+## Try this
+1. In part 1, choose XOR under Rule to learn and press Run: some point always stays on the wrong side of the dashed line.
+2. In part 2, move the Learning rate above 0.1 and watch the path fly off the plot.
+3. In part 3, change a, b, c or f and read the working, from L back to the inputs.
+4. In part 4, pick a Place in the text: the lower the probability the model gave the character that really came next, the higher the loss.
+
+## Check yourself
+? Why can the single neuron in part 1 never learn XOR?
+* No straight line separates its 1s from its 0s
+- Its learning rate is too small; a larger one would fix it
+- XOR needs more than the 100 epochs the lab allows
+why: The neuron splits the plane with one straight line: 1 on one side, 0 on the other. XOR's points cannot be split that way, which is why networks need hidden layers. Choose XOR and press Run: after 100 epochs some points are still wrong.
+see: neuron
+checked-by-code: Learning_PerceptronNeverLearnsXor
+
+? On the loss surface in part 2, what happens with a Learning rate of 0.12?
+- The path creeps along and stops well short of the bottom
+* Each step overshoots further and the path flies off
+- It reaches the bottom faster than at 0.04 and stops there
+why: Along w2 each step multiplies w2 by 1 − 20 × 0.12 = −1.4, so every step jumps over the bottom and lands further away. Set the Learning rate to 0.12 and read the bold message above the plot.
+see: surface
+checked-by-code: Learning_RateAbovePointOneOvershoots
+
+? In part 4, which kind of guess adds the most to the loss?
+- A sure guess that turns out right
+- A guess that gives the real character 50%
+* A confident guess that turns out wrong
+why: The loss at one place is −ln p, where p is the probability given to the character that really came next. A sure, right guess costs almost nothing and 50% costs about 0.69, but a confident wrong guess leaves p tiny, so −ln p is large.
+see: crossentropy
 
 ## Formula
 

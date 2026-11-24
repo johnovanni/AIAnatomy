@@ -20,6 +20,8 @@ public class CheckedQuestionTests : IDisposable
     private readonly TestEnvironment _env = new();
     public void Dispose() => _env.Dispose();
 
+    private static string N(long n) => n.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+
     private static string Fables() => File.ReadAllText(Path.Combine(TestEnvironment.Content, "texts", "aesop-fables.txt"));
 
     /// <summary>The shipped Fables model, as a fresh install has it.</summary>
@@ -248,5 +250,244 @@ public class CheckedQuestionTests : IDisposable
             Assert.True(darkest == row - 1, $"row {row + 1} looks most at token {darkest + 1}");
         }
         Assert.Equal("At the token just before", Correct(nameof(MultiHead_FablesLayer1Head2LooksAtThePreviousToken)));
+    }
+
+    // ---- 2.6 Feed-forward layers ----
+
+    [Fact]
+    public async Task FeedForward_FablesLayersHave256Neurons()
+    {
+        var models = Shipped();
+        var lab = new FeedForwardLabViewModel(models, Fables);
+        await lab.WorkCompleted;
+        var config = models.Current.Transformer.Config;
+        int neurons = lab.NeuronNumbers.Count;
+        Assert.Equal(256, neurons);
+        Assert.Equal(neurons, config.FeedForwardWidth);
+        Assert.Equal(1, lab.NeuronNumbers[0]);
+        Assert.Equal(neurons, lab.NeuronNumbers[^1]);
+        Assert.Contains($"of {neurons}:", lab.ActivationCaption);
+        // The answer and the why: four times the width of 64, and the Neuron list runs from 1 to 256.
+        Assert.Equal(4 * config.ModelWidth, neurons);
+        Assert.Equal(64, config.ModelWidth);
+        var question = QuestionNaming(nameof(FeedForward_FablesLayersHave256Neurons));
+        Assert.Contains($"The Neuron list in the lab runs from 1 to {neurons}.", question.Why);
+        Assert.Equal($"{neurons}, four times the width of {config.ModelWidth}", Correct(nameof(FeedForward_FablesLayersHave256Neurons)));
+    }
+
+    // ---- 2.7 The residual stream ----
+
+    [Fact]
+    public void Residual_FablesVectorGrowsAfterEachBlock()
+    {
+        var lab = new ResidualLabViewModel(Shipped());
+        Assert.Equal("the fox and the ", lab.Text);
+        Assert.Equal(lab.PositionChoices.Count - 1, lab.PositionIndex);   // the last token is followed
+        var sizes = lab.Sizes.Select(s => s.Value).ToList();
+        Assert.Equal(["after the embeddings", "after block 1", "after block 2"], lab.Sizes.Select(s => s.Label));
+        for (int i = 1; i < sizes.Count; i++) Assert.True(sizes[i] > sizes[i - 1], $"stage {i} is not longer than stage {i - 1}");
+        // The why: "from about 2.2 after the embeddings to about 32 after block 1 and 72 after block 2".
+        Assert.Equal(2.2, Math.Round(sizes[0], 1));
+        Assert.Equal(32, Math.Round(sizes[1]));
+        Assert.Equal(72, Math.Round(sizes[2]));
+        var question = QuestionNaming(nameof(Residual_FablesVectorGrowsAfterEachBlock));
+        Assert.Contains("about 2.2 after the embeddings to about 32 after block 1 and 72 after block 2", question.Why);
+        Assert.Contains($"\"{lab.Text}\"", question.Prompt);
+        Assert.Equal("It grows after each block", Correct(nameof(Residual_FablesVectorGrowsAfterEachBlock)));
+    }
+
+    [Fact]
+    public void Residual_LogitLensLastRowIsTheModelsPrediction()
+    {
+        var models = Shipped();
+        var lab = new ResidualLabViewModel(models);
+        var sampling = new SamplingLabViewModel(models);   // the model's own probabilities at temperature 1
+        Assert.Equal(lab.Text, sampling.Text);
+        var last = lab.LensRows[^1];
+        Assert.Equal("after block 2", last.Label);
+        Assert.Equal(sampling.Scores.Take(5).Select(s => s.Token), last.Guesses.Select(g => g.Token));
+        Assert.Equal(sampling.Scores.Take(5).Select(s => s.ProbabilityText), last.Guesses.Select(g => g.PercentText));
+        // The earlier rows are a rougher reading: the first row's top guess is not the model's.
+        Assert.NotEqual(last.Guesses[0].Token, lab.LensRows[0].Guesses[0].Token);
+        Assert.Equal("The last row, after the final block", Correct(nameof(Residual_LogitLensLastRowIsTheModelsPrediction)));
+    }
+
+    // ---- 2.8 Output and sampling ----
+
+    [Fact]
+    public void Sampling_TemperatureZeroGivesTheTopChoiceEverything()
+    {
+        var lab = new SamplingLabViewModel(Shipped());
+        Assert.Equal("the fox and the ", lab.Text);
+        Assert.Equal(SamplingLabViewModel.DefaultTemperature, lab.Temperature);
+        string top = lab.Scores[0].Token;
+        lab.Temperature = 0;
+        Assert.Equal(1, lab.Probabilities.Count(p => p > 0));
+        Assert.Equal(1.0, lab.Probabilities.Max());
+        Assert.Equal(top, lab.Scores[0].Token);
+        Assert.Equal($"Most likely next character: {top} at 100.00%.", lab.TopChoiceText);
+        Assert.Equal("F", top);
+        Assert.Contains($"with \"{lab.Text}\" in Your text, {top} then gets 100%", QuestionNaming(nameof(Sampling_TemperatureZeroGivesTheTopChoiceEverything)).Why);
+        Assert.Equal("The top choice gets all the probability", Correct(nameof(Sampling_TemperatureZeroGivesTheTopChoiceEverything)));
+    }
+
+    [Fact]
+    public void Sampling_SameSeedGivesTheSameDraws()
+    {
+        var models = Shipped();
+        var lab = new SamplingLabViewModel(models);
+        Assert.Equal(1, lab.Seed);
+        lab.SampleHundredCommand.Execute(null);
+        var first = lab.SampleCounts.ToList();
+        Assert.Equal(SamplingLabViewModel.SampleSize, lab.SampleTotal);
+        lab.SampleHundredCommand.Execute(null);
+        Assert.Equal(first, lab.SampleCounts);
+        var again = new SamplingLabViewModel(models);
+        again.SampleHundredCommand.Execute(null);
+        Assert.Equal(first, again.SampleCounts);
+        // The why: a different seed gives different draws.
+        lab.Seed = 2;
+        lab.SampleHundredCommand.Execute(null);
+        Assert.NotEqual(first, lab.SampleCounts);
+
+        // Draw for draw: the lab's 100 draws (SampleHundred draws from Probabilities with a new SeededRandom(Seed)),
+        // made twice with seed 1, are the same sequence, and they add up to the counts the lab shows.
+        lab.Seed = 1;
+        lab.SampleHundredCommand.Execute(null);
+        int[] Draws(int seed)
+        {
+            var rng = new AIAnatomy.Core.SeededRandom(seed);
+            return Enumerable.Range(0, SamplingLabViewModel.SampleSize).Select(_ => AIAnatomy.Models.Language.Sampling.Sample(lab.Probabilities, rng)).ToArray();
+        }
+        var draws = Draws(lab.Seed);
+        Assert.Equal(draws, Draws(lab.Seed));
+        Assert.NotEqual(draws, Draws(2));
+        var model = models.Current;
+        var counted = draws.GroupBy(id => id).OrderByDescending(g => g.Count()).ThenBy(g => g.Key)
+            .Select(g => new SampleCount(LabText.Visible(model.Tokenizer.TokenText(g.Key)), g.Count())).ToList();
+        Assert.Equal(first, counted);
+        Assert.Equal(first, lab.SampleCounts);
+        Assert.Equal("Exactly the same, draw for draw", Correct(nameof(Sampling_SameSeedGivesTheSameDraws)));
+    }
+
+    // ---- 2.9 Learning ----
+
+    [Fact]
+    public void Learning_PerceptronNeverLearnsXor()
+    {
+        var lab = new LearningLabViewModel(Shipped());
+        var p = lab.Perceptron;
+        foreach (double rate in new[] { PerceptronPanelViewModel.MinRate, PerceptronPanelViewModel.DefaultRate, PerceptronPanelViewModel.MaxRate })
+        {
+            p.Dataset = PerceptronPanelViewModel.XorName;
+            p.Rate = rate;
+            Assert.Equal(PerceptronPanelViewModel.XorEpochLimit, p.EpochLimit);
+            p.RunCommand.Execute(null);
+            Assert.Equal(PerceptronPanelViewModel.XorEpochLimit, p.Epochs.Count);
+            Assert.All(p.Epochs, e => Assert.True(e.Errors > 0, $"rate {rate}: epoch {e.Epoch} had no wrong point"));
+            Assert.StartsWith("On the wrong side now:", p.WrongPoints);
+        }
+        // AND and OR are learned, so the epochs are not the problem.
+        foreach (var rule in new[] { PerceptronPanelViewModel.AndName, PerceptronPanelViewModel.OrName })
+        {
+            p.Dataset = rule;
+            p.RunCommand.Execute(null);
+            Assert.Equal(0, p.Epochs[^1].Errors);
+        }
+        Assert.Contains($"after {PerceptronPanelViewModel.XorEpochLimit} epochs some points are still wrong", QuestionNaming(nameof(Learning_PerceptronNeverLearnsXor)).Why);
+        Assert.Equal("No straight line separates its 1s from its 0s", Correct(nameof(Learning_PerceptronNeverLearnsXor)));
+    }
+
+    [Fact]
+    public void Learning_RateAbovePointOneOvershoots()
+    {
+        var lab = new LearningLabViewModel(Shipped());
+        var loss = lab.Loss;
+        Assert.Equal(0.04, LossPanelViewModel.DefaultRate);
+        Assert.False(loss.IsDiverging);
+        loss.Rate = 0.12;
+        Assert.True(loss.IsDiverging);
+        Assert.Equal(LossPanelViewModel.TooLargeMessage, loss.Message);
+        Assert.Contains("1 − 20 × 0.12 = −1.400", loss.FactorText);
+        var question = QuestionNaming(nameof(Learning_RateAbovePointOneOvershoots));
+        Assert.Contains("a Learning rate of 0.12", question.Prompt);
+        Assert.Contains("1 − 20 × 0.12 = −1.4", question.Why);
+        Assert.Contains("than at 0.04", string.Join(" ", question.Answers));
+        Assert.Equal("Each step overshoots further and the path flies off", Correct(nameof(Learning_RateAbovePointOneOvershoots)));
+    }
+
+    // ---- 3.1 Training a model ----
+
+    [Fact]
+    public void Train_DefaultNewModelHas32005Numbers()
+    {
+        var models = Shipped();
+        var settings = new TrainSettingsPanelViewModel(models, Fables);
+        Assert.False(settings.UseOwnText);
+        Assert.False(settings.ContinueActive);
+        Assert.Equal((32, "2", "4", "64", "600"), (settings.Width, settings.LayersText, settings.HeadsText, settings.ContextText, settings.StepsText));
+        long total = settings.ParameterRows.Sum(r => r.Count);
+        Assert.Equal(32_005, total);
+        Assert.Equal("Total: 32,005 learnable numbers (parameters).", settings.ParameterTotalText);
+        // The distractors: the shipped Fables model's total, and the default number of steps.
+        long shipped = new ScaleLabViewModel(models).OurCount;
+        Assert.Equal(113_093, shipped);
+        var question = QuestionNaming(nameof(Train_DefaultNewModelHas32005Numbers));
+        Assert.Equal(["32,005", "113,093", TrainSettingsPanelViewModel.DefaultSteps], question.Answers);
+        Assert.Contains("Width 32, 2 layers, 4 heads and context 64 give 32,005", question.Why);
+        Assert.Contains($"has {N(shipped)}", question.Why);
+        Assert.Equal("32,005", Correct(nameof(Train_DefaultNewModelHas32005Numbers)));
+    }
+
+    // ---- 3.2 Step through a prediction ----
+
+    [Fact]
+    public void StepThrough_ChangingAnEarlierCharacterFirstChangesAttention()
+    {
+        var models = Shipped();
+        var lab = new StepThroughLabViewModel(models);
+        Assert.Equal("the fox and the ", lab.Text);
+        var before = lab.Stages.ToList();
+        lab.Text = "The fox and the ";   // the first character changes; the last token is still followed
+        var after = lab.Stages.ToList();
+        Assert.Equal(lab.PositionChoices.Count - 1, lab.PositionIndex);
+        Assert.Equal(before.Select(s => s.Title), after.Select(s => s.Title));
+
+        static double[] Numbers(AIAnatomy.Presentation.Visuals.PipelineStage s) => s.Values ?? s.Items!.Select(i => i.Value).ToArray();
+        int firstChanged = Enumerable.Range(1, after.Count - 1).First(i => !Numbers(before[i]).SequenceEqual(Numbers(after[i])));
+        Assert.Equal("Block 1: where each head looks", after[firstChanged].Title);
+        Assert.Equal("Block 1: layer norm before attention", after[firstChanged - 1].Title);
+        Assert.Equal($"{after[firstChanged].Title}", Correct(nameof(StepThrough_ChangingAnEarlierCharacterFirstChangesAttention)));
+    }
+
+    // ---- 3.3 Scale ----
+
+    [Fact]
+    public void Scale_FablesFeedForwardHoldsTheMost()
+    {
+        var lab = new ScaleLabViewModel(Shipped());
+        var most = lab.Parts.MaxBy(p => p.Count)!;
+        Assert.Equal("Feed-forward", most.Part);
+        Assert.Equal(66_176, most.Count);
+        Assert.Equal(113_093, lab.OurCount);
+        Assert.True(2 * most.Count > lab.OurCount, "more than half");
+        Assert.Contains($"{N(most.Count)} of the {N(lab.OurCount)}, more than half", QuestionNaming(nameof(Scale_FablesFeedForwardHoldsTheMost)).Why);
+        Assert.Equal(most.Part, Correct(nameof(Scale_FablesFeedForwardHoldsTheMost)));
+    }
+
+    [Fact]
+    public void Scale_Gpt3IsAbout1Point5MillionTimesFables()
+    {
+        var lab = new ScaleLabViewModel(Shipped());
+        Assert.Equal(175_000_000_000, ScaleLabViewModel.Gpt3Count);
+        double ratio = ScaleLabViewModel.Gpt3Count / (double)lab.OurCount;
+        Assert.Equal(1.5, Math.Round(ratio / 1e6, 1));
+        Assert.Contains("about 1.5 million times", lab.RatioSentence);
+        // The why: "just over six steps of ten" on the logarithmic scale.
+        Assert.InRange(Math.Log10(ratio), 6, 6.5);
+        var question = QuestionNaming(nameof(Scale_Gpt3IsAbout1Point5MillionTimesFables));
+        Assert.Contains("175 billion", question.Prompt);
+        Assert.Contains($"÷ {N(lab.OurCount)} is about 1.5 million", question.Why);
+        Assert.Equal("About 1.5 million times", Correct(nameof(Scale_Gpt3IsAbout1Point5MillionTimesFables)));
     }
 }

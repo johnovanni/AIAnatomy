@@ -6,6 +6,8 @@ title: Scale
 lab: ScaleLab
 sources: radford2019, openai-gpt2-release, brown2020, azevedo2009, textbook
 branches: Our model, part by part=by-part; Next to real models=real-models
+idea: GPT-2 small and GPT-3 are built much like our model; mainly they differ in size, with millions and billions of learnable numbers.
+part: whole
 ---
 How big is the model you are using next to real ones? Size here means the number of **parameters**: the learnable numbers inside the model, every entry of every table and matrix. **Our model, part by part** lists where they are. In the Fables model there are 113,093, and more than half of them are in the feed-forward layers.
 
@@ -20,6 +22,35 @@ GPT-2's design is nearly the same as ours (GPT-2 reuses its token table as its o
 Our model stores each number in 64 bits, so that the app's own checks of its arithmetic are precise. Large models usually store theirs in 16 or 32 bits, or fewer, because at billions of parameters every bit costs memory and time.
 
 *Sources: Radford et al. (2019); OpenAI (2019); Brown et al. (2020); Azevedo et al. (2009) in the note below; the rest is standard textbook material.*
+
+## Try this
+1. Under Our model, part by part, find the part with the most learnable numbers.
+2. Under Next to real models, compare the bars: each faint line is ten times the one before.
+3. Read the sentence under the bars: how many times as many parameters GPT-3 has as this model.
+
+## Check yourself
+? In the shipped Fables model, which part holds the most learnable numbers?
+- Attention
+* Feed-forward
+- Token embeddings
+why: 66,176 of the 113,093, more than half: each block's feed-forward layer widens 64 numbers into 256 neurons and back. Read Our model, part by part.
+see: by-part
+checked-by-code: Scale_FablesFeedForwardHoldsTheMost
+
+? GPT-3 has 175 billion parameters (Brown et al., 2020). About how many times as many as the shipped Fables model is that?
+- About ten thousand times
+- About a billion times
+* About 1.5 million times
+why: 175,000,000,000 ÷ 113,093 is about 1.5 million. On the logarithmic scale that is just over six steps of ten. Read the sentence under the bars.
+see: real-models
+checked-by-code: Scale_Gpt3IsAbout1Point5MillionTimesFables
+
+? Why does Next to real models use a logarithmic scale?
+* On an ordinary scale our bar would be invisible
+- Because GPT-3 is only a little larger than our model
+- To hide how much bigger the real models really are
+why: Each faint line is ten times the one before, so counts from about a hundred thousand to 175 billion fit on one row. On an ordinary scale GPT-3's bar would be over a million times as long as ours.
+see: real-models
 
 ## Formula
 

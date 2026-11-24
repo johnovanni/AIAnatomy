@@ -6,6 +6,8 @@ title: Training a model
 lab: TrainLab
 sources: anthropic2024-claude3, textbook
 branches: The model and its learnable numbers=the-model; Training and the loss chart=the-run; What the model writes=what-it-writes; Keep your model=keep
+idea: Training repeats one step many times: predict each next character in pieces of the text, measure the loss, and nudge every number downhill.
+part: learning
 ---
 Now put all the parts together and train a transformer of your own.
 
@@ -22,6 +24,34 @@ Keep a result with **Save to library…**, or **Use in the labs** to make it the
 **Context** is how many characters the model can read at once; anything earlier is not seen. Assistants have the same kind of limit, much larger: Anthropic gave the Claude 3 models a context window of 200,000 tokens at launch (Anthropic, 2024a).
 
 *Sources: Anthropic (2024a); the rest is standard textbook material.*
+
+## Try this
+1. Under 2. The model, read Learnable numbers in each part, then change Width or Layers and watch the total change.
+2. Press Start and watch the Training loss and Validation loss lines on the chart.
+3. Under 4. What the model writes, compare the writing after step 50 with the newest writing at the top.
+
+## Check yourself
+? In the Train lab at its default settings, with the fables, how many learnable numbers does a new model have?
+* 32,005
+- 113,093
+- 600
+why: Width 32, 2 layers, 4 heads and context 64 give 32,005. The shipped Fables model, at width 64, has 113,093, and 600 is the default number of Steps. Read the total under Learnable numbers in each part.
+see: the-model
+checked-by-code: Train_DefaultNewModelHas32005Numbers
+
+? Training loss keeps falling, but validation loss has stopped falling. What does that suggest?
+- Training is finished: the model has learned all it can
+* The model is memorising its text
+- The learning rate is too high and the loss is running away
+why: Validation loss is measured on the end of the text, which training never uses. When only the training loss still falls, the model is learning its own text rather than patterns that carry over.
+see: the-run
+
+? What does the Context box in the Train lab set?
+- How many pieces of text each step learns from
+- How many training steps the run takes
+* How many characters the model reads at once
+why: The model never sees anything earlier than its context; Batch sets the pieces per step, and Steps the length of the run. Assistants have the same kind of limit, much larger: Anthropic gave the Claude 3 models a context window of 200,000 tokens at launch (Anthropic, 2024a).
+see: the-model
 
 ## Formula
 

@@ -6,6 +6,8 @@ title: Output and sampling
 lab: SamplingLab
 sources: anthropic2025-tracing, textbook
 branches: Probabilities and 100 samples=draws; Writing 200 characters=writing; The scores (logits)=logits
+idea: The model scores every possible next character; softmax turns the scores into probabilities, and sampling draws one at random with those chances.
+part: output
 ---
 At the end of the model, the output layer gives every character in the vocabulary a score, called a **logit**. Higher means more likely, but a score on its own is not a probability. **Softmax** turns the scores into probabilities that add up to 100%, shown as bars. **The scores (logits)** at the bottom lists both side by side.
 
@@ -26,6 +28,36 @@ Whatever is left is scaled to add up to 100% again.
 Writing one token at a time does not mean a model only ever thinks one token ahead. Anthropic reports that Claude (in research on Claude 3.5 Haiku) writes text one token at a time, yet when writing rhyming verse it picks out possible rhyming words before writing the line that ends with one (Anthropic, 2025).
 
 *Sources: Anthropic (2025); the rest is standard textbook material.*
+
+## Try this
+1. Press Sample 100 times and compare How often each was drawn with the Probability of each character bars above it.
+2. Press Sample 100 times again with the same Seed: the draws are the same. Change the Seed and press it once more.
+3. Move Temperature to 0, then to 2, and watch the bars: at 0 one character gets 100%.
+4. Press Generate 200 characters and read the text under Writing 200 characters.
+
+## Check yourself
+? What happens to the probabilities when you move Temperature to 0?
+- Every character becomes equally likely, as with a fair die
+* The top choice gets all the probability
+- The model stops and writes nothing at all
+why: Temperature divides the scores before softmax. As it goes towards 0, nearly all the probability goes to the top score, and at 0 the model always takes its top choice. In the shipped Fables model, with "the fox and the " in Your text, F then gets 100%.
+see: draws
+checked-by-code: Sampling_TemperatureZeroGivesTheTopChoiceEverything
+
+? You press Sample 100 times twice, without changing the Seed. How do the two sets of draws compare?
+- Different, because random draws never repeat
+- Different, though both follow the same probabilities
+* Exactly the same, draw for draw
+why: The Seed fixes the random numbers, so the same seed gives the same draws every time and a different seed gives different ones. Change the Seed and press Sample 100 times again.
+see: draws
+checked-by-code: Sampling_SameSeedGivesTheSameDraws
+
+? The model gives a character a probability of 90%. What does that tell you?
+* Text like its training text usually went on that way
+- The character is right: a high probability means a true answer
+- Nine people out of ten would have chosen that character
+why: The probability measures how text like the training text tended to continue, not what is true, so a confident-sounding choice can still be wrong.
+see: explanation
 
 ## Formula
 

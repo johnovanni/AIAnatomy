@@ -92,29 +92,14 @@ public class LessonContentTests
         Assert.True(leaks.Count == 0, string.Join("; ", leaks));
     }
 
-    /// <summary>Lessons whose big idea, Try this and Check yourself are still to be written (Task 17 empties this set
-    /// and deletes it).</summary>
-    private static readonly HashSet<string> NotYetWritten =
-        ["feed-forward", "residual-stream", "output-sampling", "learning", "train", "step-through", "scale"];
-
-    /// <summary>Every lesson that is not a "coming later" placeholder and is not still waiting for its content.</summary>
-    private static IEnumerable<Lesson> BuiltLessons =>
-        Catalog.All.Where(l => !l.IsPlaceholder && !NotYetWritten.Contains(l.Id));
-
-    [Fact]
-    public void NotYetWritten_NamesOnlyRealLessonsWithNoContentYet()
-    {
-        foreach (var id in NotYetWritten)
-        {
-            var lesson = Catalog.Get(id);
-            Assert.True(lesson.Idea == null && lesson.TryThis.Count == 0 && lesson.Questions.Count == 0,
-                $"{id} has content now: take it out of NotYetWritten");
-        }
-    }
+    /// <summary>Every lesson that is not a "coming later" placeholder.</summary>
+    private static IEnumerable<Lesson> BuiltLessons => Catalog.All.Where(l => !l.IsPlaceholder);
 
     [Fact]
     public void EveryBuiltLesson_HasIdeaPartTryThisAndTwoToThreeQuestions()
     {
+        // Only the two "coming later" lessons are placeholders, so every other lesson is held to the checks below.
+        Assert.Equal(["beyond-coming", "family-coming"], Catalog.All.Where(l => l.IsPlaceholder).Select(l => l.Id).Order(StringComparer.Ordinal));
         var problems = new List<string>();
         foreach (var lesson in BuiltLessons)
         {
