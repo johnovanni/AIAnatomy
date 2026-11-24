@@ -1,0 +1,22 @@
+[
+  { "from": "your-text", "to": "tokens", "sentence": "The text is split into tokens, and each token gets its id number. The models in this app use one token per character.", "sourceIds": ["textbook"] },
+  { "from": "tokens", "to": "embeddings", "sentence": "Each token id picks one row of numbers from the embedding table.", "sourceIds": ["textbook"] },
+  { "from": "position", "to": "embeddings", "sentence": "Position numbers are added to each token's embedding, so the model gets a signal of the order of the text.", "sourceIds": ["vaswani2017", "textbook"] },
+  { "from": "embeddings", "to": "residual-stream", "sentence": "The embedding plus the position numbers is where the residual stream starts, before the first block.", "sourceIds": ["textbook"] },
+  { "from": "attention", "to": "multi-head", "sentence": "Multi-head attention runs several attention heads side by side, each with its own query, key and value matrices.", "sourceIds": ["vaswani2017", "textbook"] },
+  { "from": "residual-stream", "to": "multi-head", "sentence": "Multi-head attention reads a normalised copy of the stream and adds its result back to the stream.", "sourceIds": ["radford2019", "textbook"] },
+  { "from": "residual-stream", "to": "feed-forward", "sentence": "The feed-forward layer reads a normalised copy of the stream and adds its result back to the stream.", "sourceIds": ["radford2019", "textbook"] },
+  { "from": "residual-stream", "to": "output-sampling", "sentence": "After the last block, a final norm and the output layer turn the stream into a score for every character the model knows.", "sourceIds": ["radford2019", "textbook"] },
+  { "from": "output-sampling", "to": "next-character", "sentence": "Softmax turns the scores into probabilities, and sampling picks one character from them.", "sourceIds": ["textbook"] },
+  { "from": "next-character", "to": "your-text", "sentence": "The new character is added to the text, and the model runs again to pick the one after it.", "sourceIds": ["textbook"] },
+  { "from": "learning", "to": "embeddings", "sentence": "Learning adjusts the embedding numbers: they start random, and training changes them.", "sourceIds": ["textbook"] },
+  { "from": "learning", "to": "position", "sentence": "When the position numbers are learned, as in the Fables model, learning adjusts them too. The sine and cosine kind is fixed and is not adjusted.", "sourceIds": ["vaswani2017", "textbook"] },
+  { "from": "learning", "to": "attention", "sentence": "Learning adjusts the attention weights, the matrices that make each head's queries, keys and values.", "sourceIds": ["textbook"] },
+  { "from": "learning", "to": "feed-forward", "sentence": "Learning adjusts the feed-forward weights.", "sourceIds": ["textbook"] },
+  { "from": "learning", "to": "output-sampling", "sentence": "Learning adjusts the output layer, the weights that turn the final vector into one score per character.", "sourceIds": ["textbook"] },
+  { "from": "rules-vs-learning", "to": "learning", "sentence": "Rules versus learning is a first look at learning: a small table of scores that improves from examples, beside a writer that follows hand-written rules.", "sourceIds": ["textbook"] },
+  { "from": "train", "to": "learning", "sentence": "Training a model puts learning to work: it adjusts every number in a transformer, using the text you choose.", "sourceIds": ["textbook"] },
+  { "from": "architecture-map", "to": "LOOP", "sentence": "The architecture map shows the whole model on one page, with every part in its place.", "sourceIds": ["vaswani2017", "radford2019", "textbook"] },
+  { "from": "step-through", "to": "LOOP", "sentence": "Step through follows one prediction through the model, part by part, with the real numbers.", "sourceIds": ["vaswani2017", "radford2019", "textbook"] },
+  { "from": "scale", "to": "LOOP", "sentence": "Scale counts the numbers in each part of the model, and compares the total with GPT-2 and GPT-3.", "sourceIds": ["radford2019", "brown2020", "textbook"] }
+]
