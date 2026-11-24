@@ -1,4 +1,4 @@
-<!-- Light theme. Text on every background here is at least 7:1 (WCAG AAA), muted text at least 7:1, links 6.6:1. Brushes are swapped by ThemeManager; the HeatMap ramp (RampLow/Mid/High) is the same in both themes. -->
+<!-- Light theme. Text on every background here (Window, Surface, Screen) is at least 7:1 (WCAG AAA), muted text at least 7:1, links 6.6:1. Brushes are swapped by ThemeManager; the HeatMap ramp (RampLow/Mid/High) is the same in both themes. -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
@@ -28,21 +28,21 @@
     <SolidColorBrush x:Key="ScrollThumbBrush" Color="#8F8C85" />
     <SolidColorBrush x:Key="HighlightBrush" Color="#1A1A1A" />
     <SolidColorBrush x:Key="LabelPlateBrush" Color="#FFFFFF" />
-    <!-- Screens (inset displays), connection gold and the part palette (Okabe-Ito based; each at least 3:1 on Surface and Screen). -->
+    <!-- Screens (inset displays), connection gold and the part palette (Okabe-Ito flavoured; each at least 3:1 on Surface and Screen, and at least 15 CIE76 DeltaE apart, 8 under protanopia and deuteranopia simulation). -->
     <SolidColorBrush x:Key="ScreenBrush" Color="#EAEFF6" />
     <SolidColorBrush x:Key="ScreenTextBrush" Color="#1A1A1A" />
     <SolidColorBrush x:Key="ConnectionBrush" Color="#8A5F00" />
-    <SolidColorBrush x:Key="PartIntroBrush" Color="#0072B2" />
-    <SolidColorBrush x:Key="PartTokensBrush" Color="#A85F00" />
-    <SolidColorBrush x:Key="PartEmbeddingsBrush" Color="#007A5A" />
-    <SolidColorBrush x:Key="PartPositionBrush" Color="#7A6E00" />
-    <SolidColorBrush x:Key="PartAttentionBrush" Color="#C0400A" />
-    <SolidColorBrush x:Key="PartFeedforwardBrush" Color="#A8447F" />
-    <SolidColorBrush x:Key="PartResidualBrush" Color="#2C50C4" />
-    <SolidColorBrush x:Key="PartOutputBrush" Color="#7646C4" />
-    <SolidColorBrush x:Key="PartLearningBrush" Color="#3A7A14" />
-    <SolidColorBrush x:Key="PartWholeBrush" Color="#33383F" />
-    <SolidColorBrush x:Key="PartLaterBrush" Color="#6A6F76" />
+    <SolidColorBrush x:Key="PartIntroBrush" Color="#1E81C2" />
+    <SolidColorBrush x:Key="PartTokensBrush" Color="#A36A01" />
+    <SolidColorBrush x:Key="PartEmbeddingsBrush" Color="#146C4F" />
+    <SolidColorBrush x:Key="PartPositionBrush" Color="#873A0F" />
+    <SolidColorBrush x:Key="PartAttentionBrush" Color="#CA2F32" />
+    <SolidColorBrush x:Key="PartFeedforwardBrush" Color="#C62CA4" />
+    <SolidColorBrush x:Key="PartResidualBrush" Color="#713AB9" />
+    <SolidColorBrush x:Key="PartOutputBrush" Color="#6067FF" />
+    <SolidColorBrush x:Key="PartLearningBrush" Color="#085757" />
+    <SolidColorBrush x:Key="PartWholeBrush" Color="#1C1C1C" />
+    <SolidColorBrush x:Key="PartLaterBrush" Color="#848484" />
     <sys:Double x:Key="ScreenGlowOpacity">0</sys:Double>
     <!-- Single-hue sequential ramp for heat maps, light (small) to dark (large). -->
     <Color x:Key="RampLowColor">#F1F6FB</Color>

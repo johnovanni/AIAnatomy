@@ -83,6 +83,68 @@ public class ThemeContrastTests
                 Assert.True(Contrast(theme, name, bg) >= 3.0, $"{theme} {name} on {bg}: {Contrast(theme, name, bg):F2}");
     }
 
+    // Machado et al. 2009, severity 1.0, applied to linear RGB.
+    private static readonly double[][] Protan =
+        [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]];
+    private static readonly double[][] Deutan =
+        [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]];
+
+    private static double[] LinearRgb(string hex)
+    {
+        var h = hex.TrimStart('#');
+        double Ch(int i)
+        {
+            var c = int.Parse(h.AsSpan(i, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture) / 255.0;
+            return c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+        return [Ch(0), Ch(2), Ch(4)];
+    }
+
+    private static double[] Lab(double[] rgb)
+    {
+        double[] xyz =
+        [
+            (0.4124564 * rgb[0] + 0.3575761 * rgb[1] + 0.1804375 * rgb[2]) / 0.95047,
+            0.2126729 * rgb[0] + 0.7151522 * rgb[1] + 0.0721750 * rgb[2],
+            (0.0193339 * rgb[0] + 0.1191920 * rgb[1] + 0.9503041 * rgb[2]) / 1.08883,
+        ];
+        double F(double t) => t > 0.008856 ? Math.Cbrt(t) : 7.787 * t + 16.0 / 116;
+        var (fx, fy, fz) = (F(xyz[0]), F(xyz[1]), F(xyz[2]));
+        return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+    }
+
+    private static double[] Simulate(double[][] m, double[] rgb) =>
+        m.Select(r => Math.Clamp(r[0] * rgb[0] + r[1] * rgb[1] + r[2] * rgb[2], 0, 1)).ToArray();
+
+    private static double DeltaE(double[] a, double[] b) =>
+        Math.Sqrt(a.Zip(b, (x, y) => (x - y) * (x - y)).Sum());
+
+    [Theory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public void PartBrushes_AreDistinguishable_ForColourBlindViewers(string theme)
+    {
+        var map = Brushes(theme);
+        var keys = Parts.All.ToArray();
+        (string Name, double Min, Func<double[], double[]> View)[] views =
+        [
+            ("normal vision", 15, c => c),
+            ("protanopia", 8, c => Simulate(Protan, c)),
+            ("deuteranopia", 8, c => Simulate(Deutan, c)),
+        ];
+        for (var i = 0; i < keys.Length; i++)
+            for (var j = 0; j < i; j++)
+            {
+                var a = LinearRgb(map[PartBrush(keys[i])]);
+                var b = LinearRgb(map[PartBrush(keys[j])]);
+                foreach (var (name, min, view) in views)
+                {
+                    var de = DeltaE(Lab(view(a)), Lab(view(b)));
+                    Assert.True(de >= min, $"{theme} {keys[j]} vs {keys[i]} under {name}: DeltaE {de:F1} < {min}");
+                }
+            }
+    }
+
     [Theory]
     [InlineData("Dark")]
     [InlineData("Light")]
