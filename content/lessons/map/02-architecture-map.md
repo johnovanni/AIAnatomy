@@ -5,6 +5,7 @@ order: 2
 title: The architecture map
 lab: ArchitectureMapLab
 sources: vaswani2017, radford2019, templeton2024, textbook
+branches: The ten most likely next characters=next-characters
 ---
 The diagram is the whole model on one page: text goes in at the top, and out at the bottom comes a probability for every possible next character. The real model runs underneath it: type in **Your text** and the bars at the bottom show its ten most likely next characters, recomputed as you type. Click an underlined box to open its lesson.
 

@@ -148,6 +148,10 @@ public sealed partial class TokensLabViewModel : LabViewModel
             : $"{Plural(BpeChips.Count, "token")} with {Plural(_bpeMerges, "merge")}, about "
               + $"{ratio} {(ratio == "1" ? "character" : "characters")} per token";
         RefreshWord();
+        // The first report of each screen is its baseline. The pieces wait for the first BPE, so its arrival is not a light-up.
+        ReportScreen("characters", new object[] { CharacterChips.ToArray(), CharacterCountText });
+        if (_bpe != null) ReportScreen("pieces", new object[] { BpeChips.ToArray(), BpeCountText });
+        if (_bpe != null) ReportScreen("word", new object[] { WordChips.ToArray(), WordSummary });
     }
 
     private void RefreshWord()

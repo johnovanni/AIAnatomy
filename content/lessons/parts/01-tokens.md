@@ -5,6 +5,7 @@ order: 1
 title: Tokens
 lab: TokensLab
 sources: sennrich2016, radford2019, gemma2024, textbook
+branches: Byte-pair encoding=bpe; Count the letters=count-letters
 ---
 A model never sees letters on a page. It sees a list of whole numbers. The first step is to cut the text into pieces called **tokens** and give each piece its number, its **id**. Type in **Your text** and the lab cuts it up two ways.
 

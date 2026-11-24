@@ -5,6 +5,7 @@ order: 3
 title: Position
 lab: PositionLab
 sources: vaswani2017, haviv2022, openai-gpt2-release, textbook
+branches: Predictions with and without position=with-without
 ---
 "Dog bites man" and "man bites dog" use the same words. Only the order differs. Yet attention on its own has no idea of order: in the first block, if you swapped two earlier tokens, a later token would gather exactly the same mixture from them. So the model is told each token's place in a second way: every position (1, 2, 3, …) has its own vector of numbers, which is added to the token's embedding before the first block.
 

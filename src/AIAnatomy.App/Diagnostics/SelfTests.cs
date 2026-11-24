@@ -50,6 +50,8 @@ public static class SelfTests
                 var lab = viewModel.CurrentLab ?? throw new InvalidOperationException("it has no lab.");
                 if (window.TryFindResource(new DataTemplateKey(lab.GetType())) == null)
                     return Fail($"Lesson '{lesson.Id}': there is no view for {lab.GetType().Name}.");
+                if (await MissingAnchorAsync(window, lesson) is { } anchor)
+                    return Fail($"Lesson '{lesson.Id}': the branch anchor '{anchor}' is not in the {lab.GetType().Name} view.");
                 lab.Reset();
                 await lab.WorkCompleted.WaitAsync(Patience);
                 if (lab is RulesVsLearningLabViewModel rules)
@@ -73,6 +75,24 @@ public static class SelfTests
             return Fail($"{checkedLabs} labs passed, but these lessons name a lab that is not registered: {string.Join(", ", missing)}.");
         Console.WriteLine($"All {checkedLabs} labs created, reset and deactivated.");
         return 0;
+    }
+
+    /// <summary>
+    /// The first branch anchor of <paramref name="lesson"/> that is not on its page (the lab view is laid out first, in a
+    /// window that is never shown), or null when every one is there. Generic: it covers every lesson's branches.
+    /// </summary>
+    private static async Task<string?> MissingAnchorAsync(MainWindow window, AIAnatomy.Lessons.Lesson lesson)
+    {
+        if (lesson.Branches.Count == 0) return null;
+        var content = window.Shell;
+        for (int pass = 0; pass < 3; pass++)
+        {
+            content.Measure(new Size(1600, 1000));
+            content.Arrange(new Rect(0, 0, 1600, 1000));
+            content.UpdateLayout();
+            await content.Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+        }
+        return lesson.Branches.Select(b => b.Anchor).FirstOrDefault(a => AIAnatomy.App.Controls.LessonAnchor.Find(content, a) == null);
     }
 
     /// <summary>Opens the Train lab with its default settings and trains for 5 steps through its view-model.</summary>

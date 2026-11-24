@@ -82,6 +82,8 @@ public sealed partial class EmbeddingsLabViewModel : LabViewModel
             (UntrainedPoints, UntrainedSpreadText) = Plot(model, _untrainedRows);
         }
         finally { _refreshing = false; }
+        ReportScreen("trained", new object[] { TrainedTitle, TrainedPoints.ToArray(), TrainedSpreadText });
+        ReportScreen("untrained", new object[] { UntrainedPoints.ToArray(), UntrainedSpreadText });
         ShowSelection();
     }
 
@@ -93,13 +95,18 @@ public sealed partial class EmbeddingsLabViewModel : LabViewModel
             SelectedLabel = "";
             TrainedVector = UntrainedVector = null;
             SelectedSummary = "Click a point, or use the arrow keys, to see that token's vector.";
+            ReportVector();
             return;
         }
         SelectedLabel = TrainedPoints[i].Label;
         TrainedVector = _trainedRows[i];
         UntrainedVector = _untrainedRows[i];
         SelectedSummary = $"Token “{SelectedLabel}” ({TrainedPoints[i].Group}) is a list of {_trainedRows[i].Length} numbers.";
+        ReportVector();
     }
+
+    private void ReportVector() =>
+        ReportScreen("vector", new object[] { SelectedSummary, TrainedVector ?? [], UntrainedVector ?? [] });
 
     private static double[][] TableRows(Transformer transformer)
     {

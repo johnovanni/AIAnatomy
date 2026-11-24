@@ -71,6 +71,7 @@ public sealed partial class PositionLabViewModel : LabViewModel
             ShownText = "";
             WithPositions = WithoutPositions = [];
             Comparison = "";
+            ReportScreens();
             return;
         }
         Message = null;
@@ -89,6 +90,15 @@ public sealed partial class PositionLabViewModel : LabViewModel
         Comparison = $"Top choice with positions: {WithPositions[0].Label} ({NumberText.Percent(WithPositions[0].Value)}). " +
                      $"Without: {WithoutPositions[0].Label} ({NumberText.Percent(WithoutPositions[0].Value)}). " +
                      $"{NumberText.Percent(moved)} of the probability moved to other characters.";
+        ReportScreens();
+    }
+
+    // Snapshots (the values are replaced, never edited, but a fingerprint is taken now all the same).
+    private void ReportScreens()
+    {
+        ReportScreen("learned", new object[] { ModelPositionsTitle, ModelPositions ?? new double[0, 0] });
+        ReportScreen("wave", SinusoidalPositions ?? new double[0, 0]);
+        ReportScreen("predictions", new object[] { ShownText, WithPositions.ToArray(), WithoutPositions.ToArray(), Comparison });
     }
 
     private static double[] Probabilities(PredictionResult result)

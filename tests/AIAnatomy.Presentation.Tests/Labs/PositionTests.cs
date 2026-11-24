@@ -84,4 +84,18 @@ public class PositionTests : IDisposable
         Assert.Equal(5, lab.WithoutPositions.Count);
         Assert.Equal(models.Current.Transformer.Config.ContextLength, lab.SinusoidalPositions!.GetLength(0));
     }
+
+    [Fact]
+    public void ScreensLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = new PositionLabViewModel(_env.NewActiveModels());
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+
+        lab.Text = "The crow sat on the ";
+        Assert.Equal(["predictions"], raised);
+        raised.Clear();
+        lab.Text = "The crow sat on the ";
+        Assert.Empty(raised);
+    }
 }

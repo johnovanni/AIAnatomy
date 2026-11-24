@@ -10,20 +10,28 @@
                    Text="Type some text and watch the model's next-character choices change. Click an underlined box to open its lesson." />
         <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
         <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Your text" />
-        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2" Text="What the model reads (␣ is a space, ↵ a new line, � a character it has never seen)"
-                   Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
-        <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Margin="0,0,0,8" Text="{Binding ShownText}"
-                   AutomationProperties.Name="What the model reads" />
         <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}"
                    Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
         <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}"
                    Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
 
-        <c:NetworkDiagram Nodes="{Binding Nodes}" Edges="{Binding Edges}" Height="{DynamicResource DiagramHeight}" Margin="0,16,0,0" AutomationProperties.Name="Architecture map" />
-        <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0" Text="{Binding DiagramCaption}" />
+        <c:Screen ScreenName="diagram" HorizontalAlignment="Stretch" Margin="0,16,0,0">
+            <StackPanel>
+                <c:NetworkDiagram Nodes="{Binding Nodes}" Edges="{Binding Edges}" Height="{DynamicResource DiagramHeight}" AutomationProperties.Name="Architecture map" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0" Text="{Binding DiagramCaption}" />
+            </StackPanel>
+        </c:Screen>
 
-        <TextBlock Style="{StaticResource SubheadingText}" Text="The ten most likely next characters" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="The ten most likely next characters" c:LessonAnchor.Name="next-characters" />
         <TextBlock Style="{StaticResource MutedText}" Text="␣ is a space and ↵ a new line; � stands for a character the model has never seen." />
-        <c:ProbabilityBars Items="{Binding Top10}" AutomationProperties.Name="Top 10 next characters" />
+        <c:Screen ScreenName="probabilities" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2" Text="What the model reads (␣ is a space, ↵ a new line, � a character it has never seen)"
+                           Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Margin="0,0,0,8" Text="{Binding ShownText}"
+                           AutomationProperties.Name="What the model reads" />
+                <c:ProbabilityBars Items="{Binding Top10}" AutomationProperties.Name="Top 10 next characters" />
+            </StackPanel>
+        </c:Screen>
     </StackPanel>
 </UserControl>

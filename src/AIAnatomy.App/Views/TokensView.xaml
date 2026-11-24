@@ -39,9 +39,14 @@
         <TextBlock Style="{StaticResource MutedText}" Text="␣ is a space and ↵ a new line; � stands for a character the tokenizer has never seen." />
 
         <TextBlock Style="{StaticResource SubheadingText}" Text="One token per character" />
-        <TextBlock Style="{StaticResource BodyText}" Text="{Binding CharacterCountText}" />
-        <ItemsControl ItemsSource="{Binding CharacterChips}" ItemTemplate="{StaticResource Chip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
+        <c:Screen ScreenName="characters" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding CharacterCountText}" />
+                <ItemsControl ItemsSource="{Binding CharacterChips}" ItemTemplate="{StaticResource Chip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
+            </StackPanel>
+        </c:Screen>
 
+        <StackPanel c:LessonAnchor.Name="bpe">
         <TextBlock Style="{StaticResource SubheadingText}" Text="Byte-pair encoding (BPE)" />
         <TextBlock Style="{StaticResource MutedText}"
                    Text="Starts with single characters, then repeatedly joins the pair that occurs most often in the fables. Each join is one merge." />
@@ -53,9 +58,15 @@
         </StackPanel>
         <TextBlock Style="{StaticResource MutedText}" Text="{Binding BpeStatus}" AutomationProperties.LiveSetting="Polite"
                    Visibility="{Binding BpeStatus, Converter={StaticResource VisibleIfSet}}" />
-        <TextBlock Style="{StaticResource BodyText}" Text="{Binding BpeCountText}" />
-        <ItemsControl ItemsSource="{Binding BpeChips}" ItemTemplate="{StaticResource Chip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
+        <c:Screen ScreenName="pieces" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding BpeCountText}" />
+                <ItemsControl ItemsSource="{Binding BpeChips}" ItemTemplate="{StaticResource Chip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
+            </StackPanel>
+        </c:Screen>
+        </StackPanel>
 
+        <StackPanel c:LessonAnchor.Name="count-letters">
         <TextBlock Style="{StaticResource SubheadingText}" Text="Count the letters" />
         <TextBlock Style="{StaticResource MutedText}" Text="Pick a word and a letter. The chips are the pieces the BPE sees, with the letter counted inside each." />
         <WrapPanel>
@@ -64,7 +75,12 @@
             <TextBlock VerticalAlignment="Center" Margin="16,0,8,8" Text="Letter" />
             <TextBox MinWidth="70" Text="{Binding Letter, UpdateSourceTrigger=PropertyChanged}" MaxLength="1" AutomationProperties.Name="Letter" />
         </WrapPanel>
-        <ItemsControl ItemsSource="{Binding WordChips}" ItemTemplate="{StaticResource Chip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
-        <TextBlock Style="{StaticResource BodyText}" Text="{Binding WordSummary}" />
+        <c:Screen ScreenName="word" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <ItemsControl ItemsSource="{Binding WordChips}" ItemTemplate="{StaticResource Chip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding WordSummary}" />
+            </StackPanel>
+        </c:Screen>
+        </StackPanel>
     </StackPanel>
 </UserControl>

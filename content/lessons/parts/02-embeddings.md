@@ -5,6 +5,7 @@ order: 2
 title: Embeddings
 lab: EmbeddingsLab
 sources: textbook
+branches: The model before training=untrained; One token's numbers=token-numbers
 ---
 A token id is only a label: id 40 is not "more" than id 20. So the first thing the model does with an id is look it up in a table with one row per token. The row it finds is the token's **embedding**, a list of numbers (a vector). In the Fables model each embedding has 64 numbers. Nobody chose them: they started random and were adjusted during training, like every other number in the model.
 

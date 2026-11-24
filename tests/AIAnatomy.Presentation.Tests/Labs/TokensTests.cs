@@ -156,4 +156,42 @@ public class TokensTests
         Assert.Equal(200, lab.Merges);
         Assert.Contains("200 merges", lab.BpeCountText);
     }
+
+    [Fact]
+    public async Task ScreensLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = NewLab();
+        await lab.BpeReady;
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+
+        lab.Text = "the crow";
+        Assert.Contains("characters", raised);
+        Assert.Contains("pieces", raised);
+        raised.Clear();
+        lab.Text = "the crow";
+        Assert.Empty(raised);
+
+        lab.Merges = 20;
+        await lab.BpeReady;
+        Assert.Contains("pieces", raised);
+        Assert.DoesNotContain("characters", raised);
+        raised.Clear();
+
+        lab.Word = "banana";
+        Assert.Equal(["word"], raised);
+        raised.Clear();
+        lab.Word = "banana";
+        Assert.Empty(raised);
+    }
+
+    [Fact]
+    public async Task TheFirstFillOfThePieces_IsABaseline_NotALightUp()
+    {
+        var lab = NewLab();
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        await lab.BpeReady;
+        Assert.Empty(raised);
+    }
 }

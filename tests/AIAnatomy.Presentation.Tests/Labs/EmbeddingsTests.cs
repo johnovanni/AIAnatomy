@@ -83,4 +83,24 @@ public class EmbeddingsTests : IDisposable
     [InlineData("\n", "space or new line")]
     public void GroupOf_ClassifiesCharacters(string text, string group) =>
         Assert.Equal(group, EmbeddingsLabViewModel.GroupOf(3, text));
+
+    [Fact]
+    public void ScreensLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = new EmbeddingsLabViewModel(_env.NewActiveModels());
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+
+        lab.SelectedIndex = 5;
+        Assert.Equal(["vector"], raised);
+        raised.Clear();
+        lab.SelectedIndex = 5;
+        Assert.Empty(raised);
+
+        lab.Seed = lab.Seed + 1;   // the untrained picture and the selected token's untrained numbers change; the trained ones do not
+        Assert.Equal(["untrained", "vector"], raised);
+        raised.Clear();
+        lab.Seed = lab.Seed;
+        Assert.Empty(raised);
+    }
 }

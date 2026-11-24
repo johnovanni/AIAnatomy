@@ -71,6 +71,8 @@ public sealed partial class ArchitectureMapLabViewModel : LabViewModel
         }
 
         BuildDiagram(config, tokenCount, top);
+        ReportScreen("diagram", new object[] { Nodes.ToArray(), Edges.ToArray(), DiagramCaption });
+        ReportScreen("probabilities", new object[] { ShownText, Top10.ToArray() });
     }
 
     // One block in the pre-norm design (D3): the residual stream runs through the whole block; the attention sublayer

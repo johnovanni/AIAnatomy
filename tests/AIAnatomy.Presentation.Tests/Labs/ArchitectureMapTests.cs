@@ -174,4 +174,19 @@ public class ArchitectureMapTests : IDisposable
         lab.Reset();
         Assert.Equal(ArchitectureMapLabViewModel.DefaultText, lab.Text);
     }
+
+    [Fact]
+    public void ScreensLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = NewLab();
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+
+        lab.Text = "The crow sat on the ";
+        Assert.Contains("probabilities", raised);
+        Assert.Contains("diagram", raised);
+        raised.Clear();
+        lab.Text = "The crow sat on the ";
+        Assert.Empty(raised);
+    }
 }
