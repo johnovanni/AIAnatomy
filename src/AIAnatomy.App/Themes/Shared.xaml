@@ -448,8 +448,12 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
                     <DockPanel>
+                        <!-- The header text is the ToggleButton's logical child, so it inherits colour and size from the
+                             ToggleButton itself, not from the ContentPresenter in its template: set them here, or the
+                             text falls back to the system's black (dark on dark grey in the Dark theme). -->
                         <ToggleButton x:Name="Header" DockPanel.Dock="Top" HorizontalAlignment="Left"
                                       IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                      Foreground="{DynamicResource ButtonTextBrush}" FontSize="{DynamicResource SmallFontSize}"
                                       FocusVisualStyle="{StaticResource FocusRing}">
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="ToggleButton">
@@ -503,8 +507,12 @@
         </Style.Triggers>
     </Style>
 
-    <!-- A pane's scroll area is a tab stop, so it can be scrolled with the arrow and Page keys. -->
+    <!-- A pane's scroll area is a tab stop, so it can be scrolled with the arrow and Page keys. Its focus ring is drawn
+         at its edges, so the content is kept in from them (Padding) and the scroller reaches out into the pane's own
+         padding (negative Margin): the text stays lined up with the pane title, and the ring never covers it. -->
     <Style x:Key="PaneScroller" TargetType="ScrollViewer">
+        <Setter Property="Margin" Value="-10,0,0,0" />
+        <Setter Property="Padding" Value="10,6,10,6" />
         <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
         <Setter Property="Focusable" Value="True" />

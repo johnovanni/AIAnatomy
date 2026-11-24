@@ -212,7 +212,7 @@
                     </Border.Style>
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource PaneTitle}" Text="Explanation" />
-                        <ScrollViewer x:Name="ExplanationScroller" Style="{StaticResource PaneScroller}" Padding="0,0,8,0"
+                        <ScrollViewer x:Name="ExplanationScroller" Style="{StaticResource PaneScroller}"
                                       AutomationProperties.Name="Explanation">
                             <StackPanel>
                                 <c:MarkdownView Document="{Binding Explanation}" />
