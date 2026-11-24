@@ -8,7 +8,7 @@ namespace AIAnatomy.App.Controls;
 
 /// <summary>
 /// One or two lines (such as training and validation loss). The first line is solid, the second dashed, the third
-/// dotted, so they differ without colour. The legend gives each line's latest value exactly; hovering shows the
+/// dotted, so they differ without colour. The legend gives each line's latest value to 3 decimals; hovering shows the
 /// exact values nearest the pointer.
 /// </summary>
 public sealed class LineChart : ChartBase
@@ -99,10 +99,10 @@ public sealed class LineChart : ChartBase
         double line = Text("Ag", LabelSize, Foreground).Height;
         for (int i = 0; i < series.Count; i++)
         {
-            var last = series[i].Points.LastOrDefault();
-            string name = series[i].Name + (series[i].Points.Count > 0 ? ": latest " : ": no points yet");
+            string? latest = series[i].LatestText;
+            string name = series[i].Name + (latest != null ? ": latest " : ": no points yet");
             var nameText = Text(name, LabelSize, Foreground);
-            var valueText = series[i].Points.Count > 0 ? Number(NumberText.Exact(last.Y), LabelSize, Foreground, bold: true) : null;
+            var valueText = latest != null ? Number(latest, LabelSize, Foreground, bold: true) : null;
             double itemWidth = 48 + nameText.WidthIncludingTrailingWhitespace + (valueText?.Width ?? 0) + 28;
             if (x > 0 && x + itemWidth > ActualWidth) { x = 0; y += line + 4; }
             if (dc != null)
