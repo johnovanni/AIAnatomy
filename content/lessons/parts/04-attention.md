@@ -5,6 +5,7 @@ order: 4
 title: Attention
 lab: AttentionLab
 sources: vaswani2017, olsson2022, textbook
+branches: Attention by hand=toy; Attention in the model you are using=heads; Can attention learn to copy?=induction
 ---
 Attention is how a token gathers information from itself and the tokens before it. Each token makes three vectors: a **query** (what am I looking for?), a **key** (what do I offer?) and a **value** (what I hand over if chosen).
 

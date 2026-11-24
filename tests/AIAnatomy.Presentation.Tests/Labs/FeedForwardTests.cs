@@ -129,4 +129,59 @@ public class FeedForwardTests : IDisposable
         Assert.DoesNotContain("0:", lab.TokenKey.Split("   ")[0]);
         Assert.DoesNotContain($"{lab.Activations.Length + 1}:", lab.TokenKey);
     }
+
+    [Fact]
+    public async Task OpeningTheLab_LightsNothing()
+    {
+        var lab = NewLab();
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        await lab.WorkCompleted;   // the first search result is the baseline of its screen
+        Assert.Empty(raised);
+    }
+
+    [Fact]
+    public async Task ScreensLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+
+        lab.Text = "The crow sat on the ";
+        Assert.Equal(["activations"], raised);
+        raised.Clear();
+        lab.Text = "The crow sat on the ";
+        Assert.Empty(raised);
+
+        lab.Neuron = 2;   // the strip lights at once; the ten places light once when the search ends
+        await lab.WorkCompleted;
+        lock (raised)
+        {
+            Assert.Equal(1, raised.Count(s => s == "activations"));
+            Assert.Equal(1, raised.Count(s => s == "contexts"));
+        }
+    }
+
+    [Fact]
+    public async Task ResetAndModelSwitch_LightChangedScreens()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new FeedForwardLabViewModel(models, () => Fables);
+        await lab.WorkCompleted;
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+
+        lab.Text = "x";
+        raised.Clear();
+        lab.Reset();
+        await lab.WorkCompleted;
+        lock (raised) Assert.Contains("activations", raised);
+
+        raised.Clear();
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));   // attention-only
+        lab.OnActiveModelChanged();
+        await lab.WorkCompleted;
+        lock (raised) { Assert.Contains("activations", raised); Assert.Contains("contexts", raised); }
+    }
 }

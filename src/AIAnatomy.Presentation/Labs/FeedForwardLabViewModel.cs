@@ -101,6 +101,14 @@ public sealed partial class FeedForwardLabViewModel : LabViewModel
 
     private void Refresh()
     {
+        Show();
+        ReportScreen("activations", new object?[] { Message, Notice, HasFeedForward, ActivationCaption, Activations, TokenKey });
+    }
+
+    private void ReportContexts() => ReportScreen("contexts", new object[] { ContextsStatus, Contexts.ToArray() });
+
+    private void Show()
+    {
         var model = _models.Current;
         var config = model.Transformer.Config;
         HasFeedForward = config.UseFeedForward && config.Layers > 0;
@@ -151,6 +159,7 @@ public sealed partial class FeedForwardLabViewModel : LabViewModel
             Contexts = [];
             ContextsStatus = "";
             _background = Task.CompletedTask;
+            ReportContexts();
             return;
         }
         var key = (model, Layer - 1, Neuron - 1);
@@ -159,15 +168,17 @@ public sealed partial class FeedForwardLabViewModel : LabViewModel
             Contexts = cached;
             ContextsStatus = Done(cached);
             _background = Task.CompletedTask;
+            ReportContexts();
             return;
         }
         Contexts = [];
         ContextsStatus = $"Searching the first {ProbeCharacters:N0} characters of the fables…";
         var cts = _search = new CancellationTokenSource();
-        _background = SearchAsync(key, generation, cts);
+        // The ten places arrive later: the screen lights once when the search ends (and not at all when the same ten are back).
+        _background = SearchAsync(key, generation, cts, BeginRun());
     }
 
-    private async Task SearchAsync((LanguageModel Model, int Layer, int Neuron) key, int generation, CancellationTokenSource cts)
+    private async Task SearchAsync((LanguageModel Model, int Layer, int Neuron) key, int generation, CancellationTokenSource cts, IDisposable run)
     {
         try
         {
@@ -182,14 +193,20 @@ public sealed partial class FeedForwardLabViewModel : LabViewModel
             if (generation != _generation) return;
             Contexts = rows;
             ContextsStatus = Done(rows);
+            ReportContexts();
         }
         catch (OperationCanceledException) { /* a newer search or leaving the lab */ }
         catch (Exception e)
         {
-            if (generation == _generation) ContextsStatus = "The search could not be done: " + e.Message;
+            if (generation == _generation)
+            {
+                ContextsStatus = "The search could not be done: " + e.Message;
+                ReportContexts();
+            }
         }
         finally
         {
+            run.Dispose();
             if (ReferenceEquals(_search, cts)) _search = null;
             cts.Dispose();
         }

@@ -4,3 +4,4 @@ obj/
 *.user
 private/
 .superpowers/
+TestResults/

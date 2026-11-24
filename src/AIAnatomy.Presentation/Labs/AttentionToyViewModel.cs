@@ -52,6 +52,9 @@ public sealed partial class AttentionToyViewModel : ObservableObject
         Recompute();
     }
 
+    /// <summary>Raised at the end of each recalculation (once the rows, texts and answer are all current), so a lab can report its screen.</summary>
+    public event EventHandler? Recomputed;
+
     public DragHandle Query { get; }
     public DragHandle Output { get; }
     public IReadOnlyList<DragHandle> AllKeys => _keys;
@@ -159,5 +162,6 @@ public sealed partial class AttentionToyViewModel : ObservableObject
         }
         AddKeyCommand.NotifyCanExecuteChanged();
         RemoveKeyCommand.NotifyCanExecuteChanged();
+        Recomputed?.Invoke(this, EventArgs.Empty);
     }
 }

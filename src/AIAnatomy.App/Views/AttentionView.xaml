@@ -57,7 +57,7 @@
 
     <StackPanel>
         <!-- ================= Part 1: the toy ================= -->
-        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,4" Text="1. Attention by hand: a toy with two numbers per vector" />
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,4" Text="1. Attention by hand: a toy with two numbers per vector" c:LessonAnchor.Name="toy" />
         <TextBlock Style="{StaticResource BodyText}"
                    Text="One token (the query, Q) looks at two to four others (the keys, K). Each key has a value (V) to hand over. Q · K measures how well they match; the best matches get the most weight; the answer is the weights times the values, added up. Move the points, or type the numbers." />
         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
@@ -79,7 +79,7 @@
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         </ItemsControl>
 
-        <Border Style="{StaticResource Pane}" Padding="12" Margin="0,12,0,0">
+        <c:Screen ScreenName="toy" Margin="0,12,0,0" HorizontalAlignment="Stretch">
             <StackPanel>
                 <TextBlock Style="{StaticResource PaneTitle}" Text="Step 1. Dot products: how well does the query match each key?" />
                 <ItemsControl ItemsSource="{Binding Toy.Rows}" ItemTemplate="{StaticResource DotLine}" Focusable="False" />
@@ -94,10 +94,10 @@
                 <ItemsControl ItemsSource="{Binding Toy.Rows}" ItemTemplate="{StaticResource ShareLine}" Focusable="False" />
                 <TextBlock FontFamily="{StaticResource NumberFont}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,0" Text="{Binding Toy.AnswerText}" />
             </StackPanel>
-        </Border>
+        </c:Screen>
 
         <!-- ================= Part 2: real attention ================= -->
-        <TextBlock Style="{StaticResource SubheadingText}" Text="2. The real thing: attention in the model you are using" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="2. The real thing: attention in the model you are using" c:LessonAnchor.Name="heads" />
         <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
         <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MaxLength="300" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140"
                  AutomationProperties.Name="Your text" />
@@ -109,15 +109,19 @@
             <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding LayerNumbers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Layer" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Head" />
             <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding HeadNumbers}" SelectedItem="{Binding Head}" AutomationProperties.Name="Head" />
-            <TextBlock VerticalAlignment="Center" Margin="0,0,0,4" Style="{StaticResource MutedText}" Text="{Binding RealCaption}" />
         </WrapPanel>
-        <c:HeatMap Values="{Binding RealWeights}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}"
-                   RowAxisTitle="the token that is looking" ColumnAxisTitle="the token it looks at" Minimum="0" Maximum="1"
-                   AutomationProperties.Name="Attention weights of the chosen head" />
+        <c:Screen ScreenName="real-heads" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource MutedText}" Text="{Binding RealCaption}" />
+                <c:HeatMap Values="{Binding RealWeights}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}"
+                           RowAxisTitle="the token that is looking" ColumnAxisTitle="the token it looks at" Minimum="0" Maximum="1"
+                           AutomationProperties.Name="Attention weights of the chosen head" />
+            </StackPanel>
+        </c:Screen>
         <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:AttentionLabViewModel.FutureNote}" />
 
         <!-- ================= Part 3: induction heads ================= -->
-        <TextBlock Style="{StaticResource SubheadingText}" Text="3. An experiment: can attention learn to copy?" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="3. An experiment: can attention learn to copy?" c:LessonAnchor.Name="induction" />
         <TextBlock Style="{StaticResource BodyText}"
                    Text="A tiny model (two layers, two heads each, letters A to O) is shown sequences where a stretch of letters appears twice. To continue the second copy, it has to find the first copy and look at the letter that came after it. A head that does this is called an induction head." />
         <StackPanel DataContext="{Binding Induction}">
@@ -129,14 +133,18 @@
             <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
             <TextBlock Style="{StaticResource MutedText}" Text="{Binding Source, StringFormat=Showing: {0}}" Visibility="{Binding Source, Converter={StaticResource VisibleIfSet}}" />
 
-            <StackPanel Visibility="{Binding ProgressText, Converter={StaticResource VisibleIfSet}}">
-                <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress, Mode=OneWay}" Height="16" Margin="0,4,0,4" AutomationProperties.Name="Training progress" />
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding ProgressText}" />
-                <c:LineChart Series="{Binding LossSeries}" XAxisTitle="training step" YAxisTitle="loss" Height="260" />
-                <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:InductionPanelViewModel.LossNote}" />
-            </StackPanel>
+            <c:Screen ScreenName="loss" Margin="0,4,0,4" HorizontalAlignment="Stretch" Visibility="{Binding ProgressText, Converter={StaticResource VisibleIfSet}}">
+                <StackPanel>
+                    <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress, Mode=OneWay}" Height="16" Margin="0,4,0,4" AutomationProperties.Name="Training progress" />
+                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding ProgressText}" />
+                    <c:LineChart Series="{Binding LossSeries}" XAxisTitle="training step" YAxisTitle="loss" Height="260" />
+                    <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:InductionPanelViewModel.LossNote}" />
+                </StackPanel>
+            </c:Screen>
 
-            <TextBlock Style="{StaticResource PaneTitle}" Margin="0,12,0,4" Text="An example sequence (letters A to O)" />
+            <c:Screen ScreenName="sequence" Margin="0,12,0,4" HorizontalAlignment="Stretch">
+            <StackPanel>
+            <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="An example sequence (letters A to O)" />
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Focusable="False">
                 <StackPanel>
                     <ItemsControl ItemsSource="{Binding CopySpans}" ItemTemplate="{StaticResource CopyBracket}" ItemsPanel="{StaticResource SeventeenColumns}" Focusable="False">
@@ -158,7 +166,11 @@
             </ScrollViewer>
             <TextBlock Style="{StaticResource MutedText}"
                        Text="A stretch of letters appears twice; a bracket over each copy names it. The small numbers are positions." />
+            </StackPanel>
+            </c:Screen>
 
+            <c:Screen ScreenName="scores" Margin="0,4,0,4" HorizontalAlignment="Stretch">
+            <StackPanel>
             <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding ScoreSummary}" Visibility="{Binding ScoreSummary, Converter={StaticResource VisibleIfSet}}" />
             <StackPanel Visibility="{Binding HasModel, Converter={StaticResource VisibleIfTrue}}">
                 <TextBlock Style="{StaticResource PaneTitle}" Text="Induction score of every head" />
@@ -168,6 +180,8 @@
                 <TextBlock Style="{StaticResource MutedText}" Text="Average share of attention that each letter gives to the letter just before it." />
                 <c:ProbabilityBars Items="{Binding PreviousTokenBars}" AutomationProperties.Name="Previous-token scores" />
             </StackPanel>
+            </StackPanel>
+            </c:Screen>
             <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:InductionPanelViewModel.CircuitNote}" />
 
             <TextBlock Style="{StaticResource PaneTitle}" Margin="0,12,0,4" Text="Where one head looks on the example sequence" />
@@ -177,9 +191,11 @@
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Head" />
                 <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding HeadNumbers}" SelectedItem="{Binding Head}" AutomationProperties.Name="Induction head" />
             </WrapPanel>
-            <c:HeatMap Values="{Binding HeatMap}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}" OutlinedCells="{Binding OutlinedCells}"
-                       RowAxisTitle="the letter that is looking" ColumnAxisTitle="the letter it looks at" Minimum="0" Maximum="1"
-                       AutomationProperties.Name="Attention of one head on the example sequence" />
+            <c:Screen ScreenName="heat" HorizontalAlignment="Stretch">
+                <c:HeatMap Values="{Binding HeatMap}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}" OutlinedCells="{Binding OutlinedCells}"
+                           RowAxisTitle="the letter that is looking" ColumnAxisTitle="the letter it looks at" Minimum="0" Maximum="1"
+                           AutomationProperties.Name="Attention of one head on the example sequence" />
+            </c:Screen>
             <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:InductionPanelViewModel.OutlineNote}" />
         </StackPanel>
 

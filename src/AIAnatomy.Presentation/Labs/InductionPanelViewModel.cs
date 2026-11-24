@@ -70,6 +70,21 @@ public sealed partial class InductionPanelViewModel : ObservableObject
         BuildSequence();
     }
 
+    /// <summary>Raised when what the panel shows has settled (the demo or a training run ended, the example sequence or the
+    /// chosen head changed, Reset). The lab reports its screens from it.</summary>
+    public event Action? Updated;
+
+    /// <summary>A run (showing the demo, training, measuring again after a seed change) has started. Every start is followed
+    /// by exactly one <see cref="RunEnded"/>, and <see cref="Updated"/> is raised just before it.</summary>
+    public event Action? RunStarted;
+    public event Action? RunEnded;
+
+    private void FinishRun()
+    {
+        try { Updated?.Invoke(); }
+        finally { RunEnded?.Invoke(); }   // a fault while reporting cannot leave a run open
+    }
+
     /// <summary>The training length; the lesson uses <see cref="InductionExperiment.DefaultSteps"/>, tests may lower it.</summary>
     public int Steps { get; set; } = InductionExperiment.DefaultSteps;
 
@@ -88,8 +103,16 @@ public sealed partial class InductionPanelViewModel : ObservableObject
                 return;
             }
             if (!SetProperty(ref _seed, value)) return;
-            BuildSequence();
-            if (_snapshot?.Model is { } model) Remeasure(model);
+            // The new sequence and the heads measured on it are one change: with a model to measure again, the screens
+            // light together when the measuring ends.
+            RunStarted?.Invoke();
+            try
+            {
+                BuildSequence();
+                Updated?.Invoke();
+                if (_snapshot?.Model is { } model) Remeasure(model);
+            }
+            finally { RunEnded?.Invoke(); }
         }
     }
 
@@ -124,6 +147,13 @@ public sealed partial class InductionPanelViewModel : ObservableObject
     /// <summary>Loads the shipped trained model (it does not become the app's active model). The measuring runs off the UI thread.</summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task ShowDemoAsync()
+    {
+        RunStarted?.Invoke();
+        try { await ShowDemoCoreAsync(); }
+        finally { FinishRun(); }
+    }
+
+    private async Task ShowDemoCoreAsync()
     {
         Deactivate();   // any training stops and its later reports are not shown
         int generation;
@@ -166,6 +196,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
     [RelayCommand(IncludeCancelCommand = true)]
     private async Task TrainAsync(CancellationToken token)
     {
+        RunStarted?.Invoke();
         StopTraining();
         int generation;
         lock (_gate) generation = ++_generation;
@@ -226,6 +257,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
         {
             if (generation == _generation) IsTraining = false;
             if (ReferenceEquals(_training, linked)) _training = null;
+            FinishRun();
         }
     }
 
@@ -310,6 +342,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
         lock (_gate) generation = _generation;
         var sequence = _sequence;
         int seed = Seed;
+        RunStarted?.Invoke();
         _background = RemeasureAsync(model, sequence, seed, generation);
     }
 
@@ -326,6 +359,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
             ErrorLog.ReportBackground(e);
             if (generation == _generation) Message = "The heads could not be measured for this seed: " + e.Message;
         }
+        finally { FinishRun(); }
     }
 
     private void Apply(Snapshot snapshot, bool chooseBestHead = false)
@@ -356,6 +390,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
         {
             HeatMap = null;
             OutlinedCells = [];
+            Updated?.Invoke();
             return;
         }
         int l = Math.Clamp(Layer, 1, snapshot.Heat.Length) - 1;
@@ -365,6 +400,7 @@ public sealed partial class InductionPanelViewModel : ObservableObject
         CopySpans = Spans(snapshot.Sequence);
         TokenLabels = Labels(snapshot.Sequence);
         OutlinedCells = InductionCells(snapshot.Sequence);
+        Updated?.Invoke();
     }
 
     /// <summary>The squares an induction head fills: row SecondStart + j, column FirstStart + j + 1, for rows inside the context (R16).</summary>

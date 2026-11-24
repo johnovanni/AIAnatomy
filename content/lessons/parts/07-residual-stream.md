@@ -5,6 +5,7 @@ order: 7
 title: The residual stream
 lab: ResidualLab
 sources: radford2019, nostalgebraist2020, textbook
+branches: How long the vector is after each stage=vector-length; The logit lens=logit-lens; Layer norm=layer-norm
 ---
 Each token has one vector that travels through the whole model, like a page of running notes. It starts as the token's embedding plus its position vector. Then every attention layer and every feed-forward layer reads the notes and **adds** its result to them. Nothing ever replaces the notes; each part only writes more on top. This running total is called the **residual stream**.
 

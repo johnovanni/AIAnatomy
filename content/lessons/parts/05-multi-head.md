@@ -5,6 +5,7 @@ order: 5
 title: Multi-head attention
 lab: MultiHeadLab
 sources: vaswani2017, textbook
+branches: Switch a head off and compare the guesses=compare-guesses; Joining the heads at one token=joining
 ---
 One attention head makes one weighted average per token, so it tends to follow one kind of pattern. A transformer runs several heads side by side in each layer, so one head can, for example, look at the token just before while another looks further back. The Fables model has 4 heads in each of its 2 layers.
 

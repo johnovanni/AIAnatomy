@@ -353,4 +353,141 @@ public class AttentionTests : IDisposable
         Assert.True(induction.HasModel);
         Assert.Contains("trained demo", induction.Source);
     }
+
+    [Fact]
+    public async Task OpeningTheLab_LightsNothing()
+    {
+        var lab = NewLab();
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        await lab.WorkCompleted;   // the trained demo arrives: that first fill is the baseline
+        Assert.Empty(raised);
+    }
+
+    [Fact]
+    public async Task ToyAndRealScreensLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+
+        lab.Toy.Query.X = 2.0;
+        Assert.Equal(["toy"], raised);
+        raised.Clear();
+        lab.Toy.Query.X = 2.0;
+        Assert.Empty(raised);
+
+        lab.Text = "the fox";
+        Assert.Equal(["real-heads"], raised);
+        raised.Clear();
+        lab.Text = "the fox";
+        Assert.Empty(raised);
+
+        lab.Head = 2;
+        Assert.Equal(["real-heads"], raised);
+    }
+
+    [Fact]
+    public async Task InductionScreens_StayDarkDuringARun_AndLightOnceAtItsEnd()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+
+        var induction = lab.Induction;
+        induction.Steps = 100_000;
+        var run = induction.TrainCommand.ExecuteAsync(null);
+        await FirstReport(induction);
+        lock (raised) Assert.Empty(raised);   // the live loss and progress are not light-ups
+        induction.TrainCancelCommand.Execute(null);
+        await run.WaitAsync(TimeSpan.FromSeconds(60));
+        await lab.WorkCompleted;
+
+        lock (raised)
+        {
+            Assert.Equal(1, raised.Count(s => s == "loss"));
+            Assert.Equal(1, raised.Count(s => s == "scores"));
+            Assert.Equal(1, raised.Count(s => s == "heat"));
+            Assert.DoesNotContain("sequence", raised);
+            Assert.Equal(raised.Count, raised.Distinct().Count());
+            raised.Clear();
+        }
+
+        await induction.ShowDemoCommand.ExecuteAsync(null);   // a second run: back to the demo
+        await lab.WorkCompleted;
+        lock (raised)
+        {
+            Assert.Equal(raised.Count, raised.Distinct().Count());
+            Assert.Contains("loss", raised);
+            Assert.Contains("scores", raised);
+        }
+    }
+
+    [Fact]
+    public async Task ChangingTheSeed_LightsTheSequenceAndTheHeadsOnceTogether()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+
+        lab.Seed = 9;
+        await lab.WorkCompleted;   // the sequence and the heads measured on it light together, when the measuring ends
+        lock (raised)
+        {
+            Assert.True(raised.Count == raised.Distinct().Count(), string.Join(",", raised));
+            Assert.Contains("sequence", raised);
+            Assert.Contains("heat", raised);
+        }
+        raised.Clear();
+        lab.Seed = 9;
+        await lab.WorkCompleted;
+        Assert.Empty(raised);
+    }
+
+    [Fact]
+    public async Task ResetAndModelSwitch_LightTheScreensThatChanged_AndToyResetAtStartIsDark()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new AttentionLabViewModel(models);
+        await lab.WorkCompleted;
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+
+        lab.Toy.Reset();   // already at the start: the net change is nothing
+        Assert.Empty(raised);
+
+        lab.Toy.Query.X = 2.0;
+        raised.Clear();
+        lab.Toy.Reset();
+        Assert.Equal(["toy"], raised);
+
+        lab.Text = "the fox";
+        raised.Clear();
+        lab.Reset();
+        await lab.WorkCompleted;
+        lock (raised) Assert.Contains("real-heads", raised);
+
+        raised.Clear();
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+        lab.OnActiveModelChanged();
+        lock (raised) Assert.Contains("real-heads", raised);
+    }
+
+    [Fact]
+    public async Task AFaultWhileReportingTheEndOfARun_DoesNotLeaveTheRunOpen()
+    {
+        var lab = NewLab();
+        await lab.WorkCompleted;
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        lab.Induction.Updated += () => throw new InvalidOperationException("boom");
+        try { await lab.Induction.ShowDemoCommand.ExecuteAsync(null); } catch (InvalidOperationException) { }
+
+        lock (raised) raised.Clear();
+        lab.Text = "the fox";
+        lock (raised) Assert.Contains("real-heads", raised);   // a run left open would hold this back
+    }
 }

@@ -31,19 +31,27 @@
                 <ComboBox MinWidth="100" Margin="0,0,16,4" ItemsSource="{Binding NeuronNumbers}" SelectedItem="{Binding Neuron}" AutomationProperties.Name="Neuron" />
             </WrapPanel>
 
-            <TextBlock Style="{StaticResource SubheadingText}" Text="Along your text" />
+            <TextBlock Style="{StaticResource SubheadingText}" Text="Along your text" c:LessonAnchor.Name="along-text" />
             <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
             <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MaxLength="300" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" AutomationProperties.Name="Your text" />
             <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}" Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
-            <TextBlock Style="{StaticResource MutedText}" Text="{Binding ActivationCaption}" />
-            <c:VectorStrip Values="{Binding Activations}" IndexBase="1" AutomationProperties.Name="Activation of the chosen neuron along your text" />
-            <TextBlock Style="{StaticResource MutedText}" Text="The bars, left to right, numbered from 1 as under the bars (␣ is a space, ↵ a new line, � a character the model has never seen):" Margin="0,4,0,0" />
-            <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding TokenKey}" />
+            <c:Screen ScreenName="activations" HorizontalAlignment="Stretch">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource MutedText}" Text="{Binding ActivationCaption}" />
+                    <c:VectorStrip Values="{Binding Activations}" IndexBase="1" AutomationProperties.Name="Activation of the chosen neuron along your text" />
+                    <TextBlock Style="{StaticResource MutedText}" Text="The bars, left to right, numbered from 1 as under the bars (␣ is a space, ↵ a new line, � a character the model has never seen):" Margin="0,4,0,0" />
+                    <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding TokenKey}" />
+                </StackPanel>
+            </c:Screen>
 
-            <TextBlock Style="{StaticResource SubheadingText}" Text="Where this neuron fires most" />
-            <TextBlock Style="{StaticResource BodyText}" Text="{Binding ContextsStatus}" />
-            <TextBlock Style="{StaticResource MutedText}" Text="Each line: the activation, then the text just before, ending with the character the neuron had just read (bold, in a box). ␣ is a space, ↵ a new line." />
-            <ItemsControl ItemsSource="{Binding Contexts}" ItemTemplate="{StaticResource ContextLine}" Focusable="False" />
+            <TextBlock Style="{StaticResource SubheadingText}" Text="Where this neuron fires most" c:LessonAnchor.Name="fires-most" />
+            <c:Screen ScreenName="contexts" HorizontalAlignment="Stretch">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding ContextsStatus}" />
+                    <TextBlock Style="{StaticResource MutedText}" Text="Each line: the activation, then the text just before, ending with the character the neuron had just read (bold, in a box). ␣ is a space, ↵ a new line." />
+                    <ItemsControl ItemsSource="{Binding Contexts}" ItemTemplate="{StaticResource ContextLine}" Focusable="False" />
+                </StackPanel>
+            </c:Screen>
         </StackPanel>
         <Border Style="{StaticResource Pane}" Padding="12" Margin="0,12,0,0">
             <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:FeedForwardLabViewModel.ResearchNote}" />

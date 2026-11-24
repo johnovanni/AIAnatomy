@@ -20,6 +20,9 @@ public sealed partial class HeadPanelViewModel : ObservableObject
     /// <summary>1-based.</summary>
     public int Number { get; }
 
+    /// <summary>The name of this head's screen in the lab (one screen per head, so switching one off lights only its own).</summary>
+    public string ScreenName => $"head-{Number}";
+
     /// <summary>The check box: ticked means the head works; cleared switches it off (its output becomes zeros).</summary>
     [ObservableProperty] private bool isEnabled = true;
     [ObservableProperty] private string title = "";
@@ -113,6 +116,22 @@ public sealed partial class MultiHeadLabViewModel : LabViewModel
     private void Refresh()
     {
         if (_syncing) return;
+        Show();
+        ReportScreens();
+    }
+
+    // Snapshots (the lists are replaced, never edited, but a fingerprint is taken now all the same).
+    private void ReportScreens()
+    {
+        var labels = TokenLabels.ToArray();
+        foreach (var head in Heads)
+            ReportScreen(head.ScreenName, new object?[] { head.Title, head.Status, head.Weights, labels });
+        ReportScreen("guesses", new object[] { PredictionCaption, Predictions.ToArray(), BasePredictions.ToArray() });
+        ReportScreen("joined", new object?[] { VectorCaption, Heads.Select(h => h.Output).ToArray(), ConcatenatedVector, ProjectedVector });
+    }
+
+    private void Show()
+    {
         var model = _models.Current;
         var config = model.Transformer.Config;
         LayerNumbers = Enumerable.Range(1, config.Layers).ToList();

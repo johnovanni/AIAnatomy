@@ -48,28 +48,38 @@
             <ComboBox MinWidth="120" Margin="0,0,16,4" ItemsSource="{Binding PositionChoices}" SelectedIndex="{Binding PositionIndex}" AutomationProperties.Name="Token to follow" />
         </WrapPanel>
 
-        <TextBlock Style="{StaticResource SubheadingText}" Text="How long the vector is after each stage" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="How long the vector is after each stage" c:LessonAnchor.Name="vector-length" />
         <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:ResidualLabViewModel.SizeNote}" />
-        <ItemsControl ItemsSource="{Binding Sizes}" ItemTemplate="{StaticResource SizeRow}" Focusable="False" />
+        <c:Screen ScreenName="sizes" HorizontalAlignment="Stretch">
+            <ItemsControl ItemsSource="{Binding Sizes}" ItemTemplate="{StaticResource SizeRow}" Focusable="False" />
+        </c:Screen>
 
-        <TextBlock Style="{StaticResource SubheadingText}" Text="What would the model guess at each stage?" />
-        <TextBlock Style="{StaticResource BodyText}" Text="{Binding LensCaption}" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="What would the model guess at each stage?" c:LessonAnchor.Name="logit-lens" />
         <TextBlock Style="{StaticResource MutedText}" Text="Each line: the stage, then its five best guesses for the next character, with probabilities." />
-        <ItemsControl ItemsSource="{Binding LensRows}" ItemTemplate="{StaticResource LensLine}" Focusable="False" />
+        <c:Screen ScreenName="lens" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding LensCaption}" />
+                <ItemsControl ItemsSource="{Binding LensRows}" ItemTemplate="{StaticResource LensLine}" Focusable="False" />
+            </StackPanel>
+        </c:Screen>
         <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0" Text="{x:Static labs:ResidualLabViewModel.LensNote}" />
 
-        <TextBlock Style="{StaticResource SubheadingText}" Text="Layer norm: tidying a vector" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="Layer norm: tidying a vector" c:LessonAnchor.Name="layer-norm" />
         <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:ResidualLabViewModel.NormNote}" />
         <WrapPanel Margin="0,0,0,8">
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Which layer norm" />
             <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding NormStageNumbers}" SelectedItem="{Binding NormStage}" AutomationProperties.Name="Which layer norm" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,0,4" Style="{StaticResource MutedText}" Text="{Binding NormStageName}" />
         </WrapPanel>
-        <TextBlock Style="{StaticResource PaneTitle}" Text="{Binding NormBeforeText}" />
-        <c:VectorStrip Values="{Binding NormBefore}" AutomationProperties.Name="The vector before layer norm" />
-        <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,0" Text="{Binding NormAfterText}" />
-        <c:VectorStrip Values="{Binding NormAfter}" AutomationProperties.Name="The vector after layer norm" />
-        <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,0" Text="{Binding NormScaledText}" />
-        <c:VectorStrip Values="{Binding NormScaled}" AutomationProperties.Name="The vector after gamma and beta" />
+        <c:Screen ScreenName="norm" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource PaneTitle}" Text="{Binding NormBeforeText}" />
+                <c:VectorStrip Values="{Binding NormBefore}" AutomationProperties.Name="The vector before layer norm" />
+                <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,0" Text="{Binding NormAfterText}" />
+                <c:VectorStrip Values="{Binding NormAfter}" AutomationProperties.Name="The vector after layer norm" />
+                <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,0" Text="{Binding NormScaledText}" />
+                <c:VectorStrip Values="{Binding NormScaled}" AutomationProperties.Name="The vector after gamma and beta" />
+            </StackPanel>
+        </c:Screen>
     </StackPanel>
 </UserControl>

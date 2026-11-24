@@ -49,7 +49,8 @@ public abstract partial class LabViewModel : ObservableObject
 
     /// <summary>
     /// Says that a screen now shows <paramref name="value"/>. The first report of a screen is only a baseline (labs report
-    /// one before <see cref="BeginRun"/> and again after Reset or a model change). Later, it raises
+    /// every screen once at construction or activation); Reset and a model change are learner actions, so a later report
+    /// after them raises like any other. Later, it raises
     /// <see cref="ScreenChanged"/> only if the value differs from the last one reported and no run is active; during a run
     /// it only remembers the value. A collection is compared by its contents (a text fingerprint taken now, so pass a
     /// snapshot such as <c>ToArray()</c> if the collection can change on another thread). Safe to call from any thread.

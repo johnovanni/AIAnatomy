@@ -21,12 +21,23 @@ public sealed partial class AttentionLabViewModel : LabViewModel
     private readonly IActiveModelService _models;
     private string _lastDefault;
     private bool _refreshing;
+    private readonly Stack<IDisposable> _runs = new();   // one scope per induction run that is still going (they may overlap)
 
     public AttentionLabViewModel(IActiveModelService models)
     {
         _models = models ?? throw new ArgumentNullException(nameof(models));
         Toy = new AttentionToyViewModel();
         Induction = new InductionPanelViewModel(models);
+        Toy.Recomputed += (_, _) => ReportToy();
+        Induction.Updated += ReportInduction;
+        Induction.RunStarted += () => { lock (_runs) _runs.Push(BeginRun()); };
+        Induction.RunEnded += () =>
+        {
+            IDisposable? run;
+            lock (_runs) run = _runs.Count > 0 ? _runs.Pop() : null;
+            run?.Dispose();
+        };
+        ReportToy();
         _lastDefault = text = DefaultFor(models.Current);
         Refresh();
         Induction.ShowDemoCommand.Execute(null);   // the lab opens with the trained demo on show, so there is something to look at at once
@@ -65,8 +76,11 @@ public sealed partial class AttentionLabViewModel : LabViewModel
     public override void Reset()
     {
         Toy.Reset();
+        // Resetting the experiment and showing the demo again is one run: its screens light once, when the demo is back.
+        var run = BeginRun();
         Induction.Reset();
         Induction.ShowDemoCommand.Execute(null);   // the measuring runs in the background
+        run.Dispose();
         _refreshing = true;
         Seed = 1;
         Layer = 1;
@@ -92,6 +106,25 @@ public sealed partial class AttentionLabViewModel : LabViewModel
     private void Refresh()
     {
         if (_refreshing) return;
+        Show();
+        ReportScreen("real-heads", new object?[] { Message, Notice, RealCaption, RealWeights, TokenLabels.ToArray() });
+    }
+
+    // Snapshots: the lists are replaced, never edited, but the induction numbers can arrive from the training thread.
+    private void ReportToy() =>
+        ReportScreen("toy", new object[] { Toy.Rows.ToArray(), Toy.ScaleText, Toy.SoftmaxText, Toy.AnswerText });
+
+    private void ReportInduction()
+    {
+        var i = Induction;
+        ReportScreen("sequence", new object[] { i.SequenceCells.ToArray(), i.CopySpans.ToArray() });
+        ReportScreen("scores", new object[] { i.ScoreSummary, i.HasModel, i.InductionBars.ToArray(), i.PreviousTokenBars.ToArray() });
+        ReportScreen("heat", new object?[] { i.HeatMap, i.OutlinedCells.ToArray(), i.TokenLabels.ToArray() });
+        ReportScreen("loss", new object[] { i.ProgressText, i.LossSeries.SelectMany(s => s.Points).SelectMany(p => new[] { p.X, p.Y }).ToArray() });
+    }
+
+    private void Show()
+    {
         var model = _models.Current;
         var config = model.Transformer.Config;
         LayerNumbers = Enumerable.Range(1, config.Layers).ToList();

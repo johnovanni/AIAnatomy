@@ -126,4 +126,41 @@ public class ResidualTests : IDisposable
         Assert.Equal(LabText.DefaultText, lab.Text);
         Assert.NotEmpty(lab.LensRows);
     }
+
+    [Fact]
+    public void ScreensLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = new ResidualLabViewModel(_env.NewActiveModels());
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+
+        lab.Text = "The crow sat on the ";
+        Assert.Contains("sizes", raised);
+        Assert.Contains("lens", raised);
+        raised.Clear();
+        lab.Text = "The crow sat on the ";
+        Assert.Empty(raised);
+
+        lab.NormStage = 2;
+        Assert.Equal(["norm"], raised);
+    }
+
+    [Fact]
+    public void ResetAndModelSwitch_LightChangedScreens()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new ResidualLabViewModel(models);
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+
+        lab.Text = "x";
+        raised.Clear();
+        lab.Reset();
+        Assert.Contains("lens", raised);
+
+        raised.Clear();
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+        lab.OnActiveModelChanged();
+        Assert.Contains("lens", raised);
+    }
 }

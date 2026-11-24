@@ -5,6 +5,7 @@ order: 6
 title: Feed-forward layers
 lab: FeedForwardLab
 sources: geva2021, anthropic2024-mapping, textbook
+branches: One neuron along your text=along-text; Where this neuron fires most=fires-most
 ---
 Attention moves information between tokens. The **feed-forward layer** then works on each token by itself. It is one small network, the same one for every token in the text: each token's vector goes through it separately, and no token sees another here.
 

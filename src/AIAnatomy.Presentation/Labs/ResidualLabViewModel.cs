@@ -116,6 +116,14 @@ public sealed partial class ResidualLabViewModel : LabViewModel
     private void Refresh()
     {
         if (_syncing) return;
+        Show();
+        ReportScreen("sizes", new object[] { Sizes.ToArray(), SizeMaximum });
+        ReportScreen("lens", new object[] { LensCaption, LensRows.Select(r => r.Description).ToArray() });
+        ReportScreen("norm", new object?[] { NormStageName, NormBeforeText, NormAfterText, NormScaledText, NormBefore, NormAfter, NormScaled });
+    }
+
+    private void Show()
+    {
         var model = _models.Current;
         var config = model.Transformer.Config;
         if (NormStageNumbers.Count != config.Layers + 1) NormStageNumbers = Enumerable.Range(1, config.Layers + 1).ToList();

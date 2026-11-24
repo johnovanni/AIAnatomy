@@ -106,4 +106,46 @@ public class MultiHeadTests : IDisposable
         var lab = NewLab();
         Assert.Contains("each reads the whole 64-number vector and works with 16 numbers of its own", lab.LayerCaption);
     }
+
+    [Fact]
+    public void ScreensLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = NewLab();
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+
+        lab.Text = "The crow sat on the ";
+        Assert.Contains("guesses", raised);
+        Assert.Contains("head-1", raised);
+        Assert.Contains("joined", raised);
+        raised.Clear();
+        lab.Text = "The crow sat on the ";
+        Assert.Empty(raised);
+
+        lab.Heads[0].IsEnabled = false;
+        Assert.Contains("head-1", raised);
+        Assert.Contains("guesses", raised);
+        Assert.DoesNotContain("head-2", raised);
+    }
+
+    [Fact]
+    public void ResetAndModelSwitch_LightChangedScreens_AndHeadScreensStayConsistent()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new MultiHeadLabViewModel(models);
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+
+        lab.Text = "x";
+        raised.Clear();
+        lab.Reset();
+        Assert.Contains("guesses", raised);
+
+        raised.Clear();
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));   // fewer heads
+        lab.OnActiveModelChanged();
+        Assert.Equal(models.Current.Transformer.Config.Heads, lab.Heads.Count);
+        Assert.Contains("guesses", raised);
+        Assert.All(raised.Where(s => s.StartsWith("head-")), s => Assert.Contains(s, lab.Heads.Select(h => h.ScreenName)));
+    }
 }
