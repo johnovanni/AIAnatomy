@@ -23,6 +23,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Sample}">
@@ -83,6 +84,24 @@
                             <Button Content="Another button" />
                             <Button Content="Turned off" IsEnabled="False" />
                         </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource Sample}" c:Screen.PartBrush="attention">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="Screen (left: at rest; right: lit, in the attention colour)" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <c:Screen ScreenName="sample" Margin="0,0,6,0">
+                                <TextBlock Text="Next letter: &quot; &quot; 41.27%" />
+                            </c:Screen>
+                            <c:Screen Grid.Column="1" ScreenName="sample" Lit="1" Margin="6,0,0,0">
+                                <TextBlock Text="Next letter: &quot;r&quot; 52.10%" />
+                            </c:Screen>
+                        </Grid>
                     </StackPanel>
                 </Border>
             </Grid>

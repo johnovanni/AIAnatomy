@@ -1,3 +1,7 @@
+using System.Collections;
+using System.Globalization;
+using System.Text;
+using AIAnatomy.Presentation.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AIAnatomy.Presentation;
@@ -32,4 +36,96 @@ public abstract partial class LabViewModel : ObservableObject
     protected virtual void OnSeedEdited() { }
 
     partial void OnSeedChanged(int value) => OnSeedEdited();
+
+    private readonly object _screenLock = new();
+    private readonly Dictionary<string, object?> _lastScreenValues = new(StringComparer.Ordinal);
+    private Dictionary<string, object?>? _valuesAtRunStart;
+    private int _runDepth;
+
+    /// <summary>Raised (possibly off the UI thread) when a screen's value has changed after a direct user action, or
+    /// when a run the user started has ended with a different value. Screens in the view listen for their own name and light up.
+    /// A handler that throws is logged through <see cref="ErrorLog.ReportBackground"/> and the others still run.</summary>
+    public event EventHandler<ScreenChangedEventArgs>? ScreenChanged;
+
+    /// <summary>
+    /// Says that a screen now shows <paramref name="value"/>. The first report of a screen is only a baseline (labs report
+    /// one before <see cref="BeginRun"/> and again after Reset or a model change). Later, it raises
+    /// <see cref="ScreenChanged"/> only if the value differs from the last one reported and no run is active; during a run
+    /// it only remembers the value. A collection is compared by its contents (a text fingerprint taken now, so pass a
+    /// snapshot such as <c>ToArray()</c> if the collection can change on another thread). Safe to call from any thread.
+    /// </summary>
+    protected void ReportScreen(string screen, object? value)
+    {
+        object? current = Fingerprint(value);
+        lock (_screenLock)
+        {
+            bool known = _lastScreenValues.TryGetValue(screen, out var last);
+            if (known && Equals(last, current)) return;
+            _lastScreenValues[screen] = current;
+            if (!known || _runDepth > 0) return;   // a baseline, or a run that raises at its end
+        }
+        Raise(screen);
+    }
+
+    /// <summary>
+    /// Starts a run the user asked for (training, say). Disposing it raises once for each screen whose value at the end
+    /// differs from its value at the start (a change that is undone stays dark). Runs may nest; only the outermost raises.
+    /// </summary>
+    protected IDisposable BeginRun()
+    {
+        lock (_screenLock)
+        {
+            if (_runDepth++ == 0) _valuesAtRunStart = new Dictionary<string, object?>(_lastScreenValues, StringComparer.Ordinal);
+        }
+        return new RunScope(this);
+    }
+
+    private void EndRun()
+    {
+        List<string> changed = [];
+        lock (_screenLock)
+        {
+            if (--_runDepth > 0) return;
+            foreach (var (screen, before) in _valuesAtRunStart!)
+                if (!Equals(before, _lastScreenValues[screen])) changed.Add(screen);
+            _valuesAtRunStart = null;
+        }
+        foreach (var screen in changed) Raise(screen);
+    }
+
+    private void Raise(string screen)
+    {
+        var handler = ScreenChanged;
+        if (handler == null) return;
+        var args = new ScreenChangedEventArgs(screen);
+        foreach (var one in handler.GetInvocationList().Cast<EventHandler<ScreenChangedEventArgs>>())
+        {
+            try { one(this, args); }
+            catch (Exception e) when (e is not OutOfMemoryException) { ErrorLog.ReportBackground(e); }
+        }
+    }
+
+    private sealed class RunScope(LabViewModel owner) : IDisposable
+    {
+        private int _disposed;
+        public void Dispose() { if (Interlocked.Exchange(ref _disposed, 1) == 0) owner.EndRun(); }
+    }
+
+    private static object? Fingerprint(object? value)
+    {
+        if (value is null or string || value is not IEnumerable items) return value;
+        var sb = new StringBuilder("[");
+        foreach (var item in items)
+        {
+            string text = Fingerprint(item) switch
+            {
+                double d => d.ToString("R", CultureInfo.InvariantCulture),
+                float f => f.ToString("R", CultureInfo.InvariantCulture),
+                IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+                var o => o?.ToString() ?? "null",
+            };
+            sb.Append(text.Length).Append(':').Append(text);   // length-prefixed, so ["a|b"] differs from ["a","b"]
+        }
+        return sb.Append(']').ToString();
+    }
 }

@@ -2,7 +2,8 @@
      comes from BodyFontSize, SmallFontSize, HeadingFontSize or TitleFontSize (set by ThemeManager), so changes apply at once. -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:c="clr-namespace:AIAnatomy.App.Controls">
 
     <!-- Fallback sizes (13 pt body); ThemeManager.Apply replaces them. -->
     <sys:Double x:Key="BodyFontSize">17.33</sys:Double>
@@ -52,6 +53,24 @@
         <Setter Property="CornerRadius" Value="10" />
         <Setter Property="Padding" Value="12" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+    <!-- Screen: a ScreenFrame with the part-coloured edge on top: dimmed at rest, full when the learner's change alters the screen. -->
+    <Style TargetType="{x:Type c:Screen}">
+        <Setter Property="Foreground" Value="{DynamicResource ScreenTextBrush}" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type c:Screen}">
+                    <Grid>
+                        <Border Style="{StaticResource ScreenFrame}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <Border x:Name="PART_Glow" IsHitTestVisible="False" BorderThickness="{TemplateBinding EdgeThickness}" CornerRadius="10"
+                                Opacity="{TemplateBinding EdgeOpacity}" BorderBrush="{DynamicResource AccentBrush}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     <!-- Header band: the strip across the top of a lesson page. -->
     <Style x:Key="HeaderBand" TargetType="Border">

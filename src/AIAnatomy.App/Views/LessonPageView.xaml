@@ -117,7 +117,7 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <ContentControl x:Name="LabContent" Content="{Binding CurrentLab}" Focusable="False" IsTabStop="False" />
+                    <ContentControl x:Name="LabContent" Content="{Binding CurrentLab}" c:Screen.PartBrush="{Binding CurrentPage.Part}" Focusable="False" IsTabStop="False" />
                 </Border>
 
                 <Border c:LessonAnchor.Name="explanation" AutomationProperties.Name="Explanation pane" VerticalAlignment="Top">
