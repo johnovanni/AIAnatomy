@@ -224,4 +224,86 @@ public class SamplingTests : IDisposable
         Assert.IsType<SamplingLabViewModel>(factory.Create(SamplingLabViewModel.Id));
         Assert.IsType<LearningLabViewModel>(factory.Create(LearningLabViewModel.Id));
     }
+
+    // ---- screens (UI rework, Task 15) ----
+
+    private static List<string> Listen(SamplingLabViewModel lab)
+    {
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        return raised;
+    }
+
+    [Fact]
+    public void TheProbabilitiesLightAfterATextChange_NotWhenTheSameTextIsSetAgain()
+    {
+        var lab = new SamplingLabViewModel(_env.NewActiveModels());
+        var raised = Listen(lab);
+        Assert.Empty(raised);   // opening is the baseline
+        lab.Text = "The crow sat on the ";
+        Assert.Contains("probabilities", raised);
+        Assert.Contains("scores", raised);
+        raised.Clear();
+        lab.Text = "The crow sat on the ";
+        Assert.Empty(raised);
+        lab.Temperature = 0.5;
+        Assert.Contains("probabilities", raised);
+    }
+
+    [Fact]
+    public void Samples_LightOnlyWhenTheDrawsDiffer_AndAChangedSeedClearsThem()
+    {
+        var lab = new SamplingLabViewModel(_env.NewActiveModels()) { Temperature = 2 };
+        var raised = Listen(lab);
+        lab.SampleHundredCommand.Execute(null);
+        Assert.Equal(1, raised.Count(s => s == "samples"));
+        raised.Clear();
+        lab.SampleHundredCommand.Execute(null);   // the same seed gives the same draws
+        Assert.DoesNotContain("samples", raised);
+        raised.Clear();
+        lab.Seed = 2;   // the old draws are cleared
+        Assert.Contains("samples", raised);
+        raised.Clear();
+        lab.SampleHundredCommand.Execute(null);
+        Assert.Contains("samples", raised);
+    }
+
+    [Fact]
+    public async Task TheWriting_LightsOnceWhenItArrives_AndNotAfterAReset()
+    {
+        var lab = new SamplingLabViewModel(_env.NewActiveModels());
+        var raised = Listen(lab);
+        await lab.GenerateTextCommand.ExecuteAsync(null);
+        Assert.Equal(1, raised.Count(s => s == "writing"));
+        raised.Clear();
+        await lab.GenerateTextCommand.ExecuteAsync(null);   // same text, seed and settings: the same writing
+        Assert.DoesNotContain("writing", raised);
+
+        var pending = lab.GenerateTextCommand.ExecuteAsync(null);
+        lab.Reset();   // the answer that is still on its way belongs to a lab that was reset
+        raised.Clear();
+        await pending;
+        await lab.WorkCompleted;
+        Assert.DoesNotContain("writing", raised);
+    }
+
+    [Fact]
+    public void ResetAndModelSwitch_LightTheScreensThatChanged()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new SamplingLabViewModel(models);
+        var raised = Listen(lab);
+        lab.Text = "x";
+        lab.Temperature = 0.5;
+        raised.Clear();
+        lab.Reset();
+        Assert.Contains("probabilities", raised);
+        raised.Clear();
+        lab.Reset();   // nothing left to change
+        Assert.Empty(raised);
+
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+        lab.OnActiveModelChanged();
+        Assert.Contains("probabilities", raised);
+    }
 }

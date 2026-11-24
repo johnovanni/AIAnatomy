@@ -221,4 +221,46 @@ public class StepThroughTests : IDisposable
         Assert.All(lab.Stages, s => Assert.False(string.IsNullOrWhiteSpace(s.Description)));
         Assert.All(lab.Stages, s => Assert.True(s.Values != null || s.Items is { Count: > 0 }));
     }
+
+    // ---- screens (UI rework, Task 15) ----
+
+    [Fact]
+    public void TheStepsLightAfterATextOrTokenChange_NotWhenTheSameValueIsSetAgain()
+    {
+        var lab = new StepThroughLabViewModel(_env.NewActiveModels());
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+        Assert.Empty(raised);   // opening is the baseline
+        lab.Text = "The crow sat on the ";
+        Assert.Equal(["steps"], raised);
+        raised.Clear();
+        lab.Text = "The crow sat on the ";
+        Assert.Empty(raised);
+
+        lab.PositionIndex = 2;
+        Assert.Equal(["steps"], raised);
+        raised.Clear();
+        lab.PositionIndex = 2;
+        Assert.Empty(raised);
+        lab.NextCommand.Execute(null);   // moving to another step does not change what any step shows
+        Assert.Empty(raised);
+    }
+
+    [Fact]
+    public void ResetAndModelSwitch_LightTheStepsThatChanged()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new StepThroughLabViewModel(models);
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+        lab.Text = "x";
+        raised.Clear();
+        lab.Reset();
+        Assert.Equal(["steps"], raised);
+
+        raised.Clear();
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+        lab.OnActiveModelChanged();
+        Assert.Contains("steps", raised);
+    }
 }

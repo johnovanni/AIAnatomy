@@ -29,6 +29,9 @@ public sealed partial class GraphPanelViewModel : ObservableObject
 
     public GraphPanelViewModel() => Refresh();
 
+    /// <summary>Raised at the end of each recalculation, once every value the part shows is current, so the lab can report its screen.</summary>
+    public event Action? Recalculated;
+
     [ObservableProperty] private double a = DefaultA;
     [ObservableProperty] private double b = DefaultB;
     [ObservableProperty] private double c = DefaultC;
@@ -127,5 +130,6 @@ public sealed partial class GraphPanelViewModel : ObservableObject
             $"∂L/∂a = ∂L/∂e × b = {Gradient(4)} × {Value(1)} = {Gradient(0)}",
             $"∂L/∂b = ∂L/∂e × a = {Gradient(4)} × {Value(0)} = {Gradient(1)}",
         ];
+        Recalculated?.Invoke();
     }
 }

@@ -120,6 +120,7 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
             Stages = [];
             StageIndex = 0;
             UpdateCaption();
+            ReportSteps();
             return;
         }
         Message = null;
@@ -136,7 +137,16 @@ public sealed partial class StepThroughLabViewModel : LabViewModel
         StageIndex = Math.Clamp(StageIndex, 0, list.Count - 1);
         Stages = list;
         UpdateCaption();
+        ReportSteps();
     }
+
+    // What the steps show, not which step is chosen: moving along them changes no number. The first report is the baseline.
+    private void ReportSteps() =>
+        ReportScreen("steps", new object?[]
+        {
+            Message, Notice,
+            Stages.Select(st => new object?[] { st.Title, st.Values, st.Items?.ToArray(), st.AllItems?.ToArray() }).ToArray(),
+        });
 
     private List<PipelineStage> Build(LanguageModel model, PredictionResult prediction, int p)
     {

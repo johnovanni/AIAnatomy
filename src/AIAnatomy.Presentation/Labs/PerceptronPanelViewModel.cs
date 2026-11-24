@@ -49,6 +49,9 @@ public sealed partial class PerceptronPanelViewModel : ObservableObject
 
     public PerceptronPanelViewModel() => Refresh();
 
+    /// <summary>Raised at the end of each recalculation, once every value the part shows is current, so the lab can report its screen.</summary>
+    public event Action? Recalculated;
+
     [ObservableProperty] private string dataset = AndName;
     [ObservableProperty] private double rate = DefaultRate;
     [ObservableProperty] private int epochLimit = DefaultEpochLimit;
@@ -154,6 +157,7 @@ public sealed partial class PerceptronPanelViewModel : ObservableObject
                 : $"Epoch {Epochs.Count}: {points} in this pass." +
                   (Epochs.Count >= EpochLimit ? $" The epoch limit is {EpochLimit}, so no more epochs will run." : "");
         }
+        Recalculated?.Invoke();
     }
 
     /// <summary>

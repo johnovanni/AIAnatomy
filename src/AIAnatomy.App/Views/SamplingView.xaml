@@ -34,11 +34,15 @@
                    Text="For the text you type, the model gives every character a score for coming next. Softmax turns the scores into probabilities, and sampling picks one character from them. Change the settings and watch the probabilities change." />
         <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
         <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MaxLength="300" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" AutomationProperties.Name="Your text" />
-        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
-        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}" Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
-        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2" Text="What the model reads (␣ is a space, ↵ a new line, � a character it has never seen)"
-                   Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
-        <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Margin="0,0,0,8" Text="{Binding ShownText}" AutomationProperties.Name="What the model reads" />
+        <c:Screen ScreenName="reads" Margin="0,4,0,8" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Notice}" Visibility="{Binding Notice, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2" Text="What the model reads (␣ is a space, ↵ a new line, � a character it has never seen)"
+                           Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding ShownText}" AutomationProperties.Name="What the model reads" />
+            </StackPanel>
+        </c:Screen>
 
         <TextBlock Style="{StaticResource SubheadingText}" Text="Settings" />
         <Grid Margin="0,0,0,4">
@@ -69,37 +73,49 @@
         <TextBlock Style="{StaticResource MutedText}"
                    Text="Top-k keeps only the k most likely characters (0 turns it off). Top-p keeps the fewest most likely characters whose probabilities add up to at least p. What is left is scaled to add up to 100% again." />
 
-        <TextBlock Style="{StaticResource SubheadingText}" Text="Probabilities, and 100 samples" />
-        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding TopChoiceText}" />
-        <TextBlock Style="{StaticResource MutedText}" Text="{Binding BarsCaption}" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="Probabilities, and 100 samples" c:LessonAnchor.Name="draws" />
         <WrapPanel Margin="0,4,0,8">
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Seed" />
             <TextBox MinWidth="110" Margin="0,0,16,4" Text="{Binding Seed, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Seed" />
             <Button Content="Sample 100 times" Command="{Binding SampleHundredCommand}" Margin="0,0,8,4" ToolTip="Draw 100 characters at random from these probabilities, using the seed" />
-            <Button Content="Generate 200 characters" Command="{Binding GenerateTextCommand}" Margin="0,0,8,4" ToolTip="Write 200 new characters after your text, one random draw at a time" />
+            <Button Content="{x:Static labs:SamplingLabViewModel.GenerateButtonText}" Command="{Binding GenerateTextCommand}" Margin="0,0,8,4" ToolTip="Write 200 new characters after your text, one random draw at a time" />
         </WrapPanel>
-        <TextBlock Style="{StaticResource PaneTitle}" Text="Probability of each character" />
-        <c:ProbabilityBars Items="{Binding Bars}" KeepOrder="True" ScaleMaximum="{Binding BarScaleMaximum}" AutomationProperties.Name="Probability of each next character" />
-        <TextBlock Style="{StaticResource PaneTitle}" Text="How often each was drawn" Margin="0,12,0,0" />
-        <c:ProbabilityBars Items="{Binding Frequencies}" KeepOrder="True" ScaleMaximum="{Binding BarScaleMaximum}" AutomationProperties.Name="How often each character was drawn in 100 samples" />
-        <TextBlock Style="{StaticResource MutedText}" Text="{Binding BarScaleCaption}" Visibility="{Binding BarScaleCaption, Converter={StaticResource VisibleIfSet}}" />
-        <TextBlock Style="{StaticResource MutedText}" Text="{Binding SampleCaption}" Visibility="{Binding SampleCaption, Converter={StaticResource VisibleIfSet}}" />
-        <ItemsControl ItemsSource="{Binding SampleCounts}" ItemTemplate="{StaticResource CountChip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
-        <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:SamplingLabViewModel.SamplingNote}" />
+        <c:Screen ScreenName="probabilities" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding TopChoiceText}" />
+                <TextBlock Style="{StaticResource MutedText}" Text="{Binding BarsCaption}" />
+                <TextBlock Style="{StaticResource PaneTitle}" Text="Probability of each character" />
+                <c:ProbabilityBars Items="{Binding Bars}" KeepOrder="True" ScaleMaximum="{Binding BarScaleMaximum}" AutomationProperties.Name="Probability of each next character" />
+            </StackPanel>
+        </c:Screen>
+        <c:Screen ScreenName="samples" Margin="0,12,0,0" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource PaneTitle}" Text="How often each was drawn" />
+                <c:ProbabilityBars Items="{Binding Frequencies}" KeepOrder="True" ScaleMaximum="{Binding BarScaleMaximum}" AutomationProperties.Name="How often each character was drawn in 100 samples" />
+                <TextBlock Style="{StaticResource MutedText}" Text="{Binding BarScaleCaption}" Visibility="{Binding BarScaleCaption, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock Style="{StaticResource MutedText}" Text="{Binding SampleCaption}" Visibility="{Binding SampleCaption, Converter={StaticResource VisibleIfSet}}" />
+                <ItemsControl ItemsSource="{Binding SampleCounts}" ItemTemplate="{StaticResource CountChip}" ItemsPanel="{StaticResource Wrap}" Focusable="False" />
+            </StackPanel>
+        </c:Screen>
+        <TextBlock Style="{StaticResource BodyText}" Margin="0,8,0,8" Text="{x:Static labs:SamplingLabViewModel.SamplingNote}" />
         <Border Style="{StaticResource Pane}" Padding="12" Margin="0,4,0,0">
             <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:SamplingLabViewModel.ConfidenceNote}" />
         </Border>
 
-        <TextBlock Style="{StaticResource SubheadingText}" Text="Writing 200 characters" />
-        <TextBlock Style="{StaticResource MutedText}" Text="{Binding GenerateStatus}" AutomationProperties.LiveSetting="Polite"
-                   Visibility="{Binding GenerateStatus, Converter={StaticResource VisibleIfSet}}" />
-        <Border Style="{StaticResource Pane}" Padding="12" Visibility="{Binding Generated, Converter={StaticResource VisibleIfSet}}">
-            <TextBlock TextWrapping="Wrap" Text="{Binding Generated}" AutomationProperties.Name="The 200 characters the model wrote" />
-        </Border>
+        <TextBlock Style="{StaticResource SubheadingText}" Text="Writing 200 characters" c:LessonAnchor.Name="writing" />
+        <TextBlock Style="{StaticResource MutedText}" Text="{Binding WritingHint}" Visibility="{Binding WritingHint, Converter={StaticResource VisibleIfSet}}" />
+        <c:Screen ScreenName="writing" HorizontalAlignment="Stretch" Visibility="{Binding GenerateStatus, Converter={StaticResource VisibleIfSet}}">
+            <StackPanel>
+                <TextBlock Style="{StaticResource MutedText}" Text="{Binding GenerateStatus}" AutomationProperties.LiveSetting="Polite" />
+                <TextBlock TextWrapping="Wrap" Text="{Binding Generated}" Visibility="{Binding Generated, Converter={StaticResource VisibleIfSet}}" AutomationProperties.Name="The 200 characters the model wrote" />
+            </StackPanel>
+        </c:Screen>
 
-        <TextBlock Style="{StaticResource SubheadingText}" Text="The scores (logits)" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="The scores (logits)" c:LessonAnchor.Name="logits" />
         <TextBlock Style="{StaticResource MutedText}"
                    Text="Each line: the character, its raw score from the model, and its probability after your settings. Higher scores mean more likely; a score on its own is not a probability." />
-        <ItemsControl ItemsSource="{Binding Scores}" ItemTemplate="{StaticResource ScoreLine}" Focusable="False" Grid.IsSharedSizeScope="True" />
+        <c:Screen ScreenName="scores" HorizontalAlignment="Stretch">
+            <ItemsControl ItemsSource="{Binding Scores}" ItemTemplate="{StaticResource ScoreLine}" Focusable="False" Grid.IsSharedSizeScope="True" />
+        </c:Screen>
     </StackPanel>
 </UserControl>

@@ -173,6 +173,9 @@ public sealed partial class TrainSettingsPanelViewModel : ObservableObject
         Refresh();
     }
 
+    /// <summary>Raised at the end of each <see cref="Refresh"/>, once the parameter counts are current, so the lab can report its screen.</summary>
+    public event Action? Refreshed;
+
     /// <summary>Re-reads every box (also called when the active model changes).</summary>
     public void Refresh()
     {
@@ -241,6 +244,7 @@ public sealed partial class TrainSettingsPanelViewModel : ObservableObject
         ParameterTotalText = counts != null ? $"Total: {NumberText.Short(counts.Values.Sum())} learnable numbers (parameters)."
             : text == null ? "The number of parameters appears when your text has been read."
             : "The number of parameters appears when the shape is valid.";
+        Refreshed?.Invoke();
     }
 
     // ---- the text, tokenized ----

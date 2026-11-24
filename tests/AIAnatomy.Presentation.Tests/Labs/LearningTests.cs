@@ -438,4 +438,83 @@ public class LearningTests : IDisposable
         Assert.Equal(2, lab.Graph.A);
         Assert.Equal(LabText.DefaultText, lab.CrossEntropy.Text);
     }
+
+    // ---- screens (UI rework, Task 15) ----
+
+    private static List<string> Listen(LearningLabViewModel lab)
+    {
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        return raised;
+    }
+
+    [Fact]
+    public void TheNeuronLightsAfterADirectChange_NotWhenTheSameValueIsSetAgain()
+    {
+        var lab = NewLab();
+        var raised = Listen(lab);
+        Assert.Empty(raised);   // opening is the baseline
+        lab.Perceptron.Dataset = "OR";
+        Assert.Equal(["neuron"], raised);
+        raised.Clear();
+        lab.Perceptron.Dataset = "OR";
+        Assert.Empty(raised);
+        lab.Perceptron.RunCommand.Execute(null);   // one press of Run: one light-up
+        Assert.Equal(["neuron"], raised);
+        raised.Clear();
+        lab.Perceptron.RunCommand.Execute(null);   // the same epochs again
+        Assert.Empty(raised);
+    }
+
+    [Fact]
+    public void TheSurfaceTheGraphAndTheModelLossLightAfterDirectChanges_NotWhenUnchanged()
+    {
+        var lab = NewLab();
+        var raised = Listen(lab);
+        lab.Loss.Rate = 0.1;
+        Assert.Equal(["surface"], raised);
+        raised.Clear();
+        lab.Loss.Rate = 0.1;
+        Assert.Empty(raised);
+
+        lab.Graph.AText = "3";
+        Assert.Equal(["backprop"], raised);
+        raised.Clear();
+        lab.Graph.AText = "3";
+        Assert.Empty(raised);
+        lab.Graph.AText = "-";   // not a number yet: nothing changes
+        Assert.Empty(raised);
+
+        lab.CrossEntropy.Text = "The crow sat on the ";
+        Assert.Equal(["crossentropy"], raised);
+        raised.Clear();
+        lab.CrossEntropy.Text = "The crow sat on the ";
+        Assert.Empty(raised);
+        lab.CrossEntropy.PositionIndex = 0;
+        Assert.Equal(["crossentropy"], raised);
+    }
+
+    [Fact]
+    public void ResetAndModelSwitch_LightTheScreensThatChanged()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new LearningLabViewModel(models);
+        var raised = Listen(lab);
+        lab.Perceptron.Dataset = "XOR";
+        lab.Loss.Rate = 0.1;
+        lab.Graph.AText = "5";
+        lab.CrossEntropy.Text = "abc";
+        raised.Clear();
+        lab.Reset();
+        Assert.Equal(["backprop", "crossentropy", "neuron", "surface"], raised.Distinct().Order().ToArray());
+        Assert.Equal(raised.Count, raised.Distinct().Count());
+
+        raised.Clear();
+        lab.Reset();
+        Assert.Empty(raised);
+
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+        lab.OnActiveModelChanged();
+        Assert.Equal(["crossentropy"], raised);
+    }
 }

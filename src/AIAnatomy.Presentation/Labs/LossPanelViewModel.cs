@@ -54,6 +54,9 @@ public sealed partial class LossPanelViewModel : ObservableObject
     [ObservableProperty] private string? message;
     [ObservableProperty] private bool isDiverging;
 
+    /// <summary>Raised at the end of each recalculation, once every value the part shows is current, so the lab can report its screen.</summary>
+    public event Action? Recalculated;
+
     partial void OnRateChanged(double value) => Refresh();
 
     public void Reset() => Rate = DefaultRate;
@@ -76,5 +79,6 @@ public sealed partial class LossPanelViewModel : ObservableObject
         var last = steps[^1];
         Summary = $"Start: w1 = {NumberText.Short(first.W1)}, w2 = {NumberText.Short(first.W2)}, loss {NumberText.Short(first.Loss)}. " +
                   $"After {Steps} steps: w1 = {NumberText.Short(last.W1)}, w2 = {NumberText.Short(last.W2)}, loss {NumberText.Short(last.Loss)}.";
+        Recalculated?.Invoke();
     }
 }

@@ -5,6 +5,7 @@ order: 8
 title: Output and sampling
 lab: SamplingLab
 sources: anthropic2025-tracing, textbook
+branches: Probabilities and 100 samples=draws; Writing 200 characters=writing; The scores (logits)=logits
 ---
 At the end of the model, the output layer gives every character in the vocabulary a score, called a **logit**. Higher means more likely, but a score on its own is not a probability. **Softmax** turns the scores into probabilities that add up to 100%, shown as bars. **The scores (logits)** at the bottom lists both side by side.
 

@@ -5,6 +5,7 @@ order: 3
 title: Scale
 lab: ScaleLab
 sources: radford2019, openai-gpt2-release, brown2020, azevedo2009, textbook
+branches: Our model, part by part=by-part; Next to real models=real-models
 ---
 How big is the model you are using next to real ones? Size here means the number of **parameters**: the learnable numbers inside the model, every entry of every table and matrix. **Our model, part by part** lists where they are. In the Fables model there are 113,093, and more than half of them are in the feed-forward layers.
 

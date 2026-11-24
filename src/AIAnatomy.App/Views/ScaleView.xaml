@@ -42,23 +42,31 @@
     <StackPanel>
         <TextBlock Style="{StaticResource BodyText}"
                    Text="How big is our model next to real ones? Size here means the number of learnable numbers (parameters) inside the model." />
-        <TextBlock Style="{StaticResource SubheadingText}" Text="Our model, part by part" />
-        <TextBlock Style="{StaticResource BodyText}" Text="{Binding OurDescription}" />
-        <StackPanel Grid.IsSharedSizeScope="True">
-            <ItemsControl ItemsSource="{Binding Parts}" ItemTemplate="{StaticResource PartLine}" Focusable="False" />
-        </StackPanel>
-        <TextBlock Margin="0,6,0,0" FontWeight="SemiBold" TextWrapping="Wrap">
-            <Run Text="Total: " /><Run FontFamily="{StaticResource NumberFont}" Text="{Binding OurCount, Mode=OneWay, StringFormat={}{0:N0}}" />
-        </TextBlock>
+        <TextBlock Style="{StaticResource SubheadingText}" Text="Our model, part by part" c:LessonAnchor.Name="by-part" />
+        <c:Screen ScreenName="parts" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding OurDescription}" />
+                <StackPanel Grid.IsSharedSizeScope="True">
+                    <ItemsControl ItemsSource="{Binding Parts}" ItemTemplate="{StaticResource PartLine}" Focusable="False" />
+                </StackPanel>
+                <TextBlock Margin="0,6,0,0" FontWeight="SemiBold" TextWrapping="Wrap">
+                    <Run Text="Total: " /><Run FontFamily="{StaticResource NumberFont}" Text="{Binding OurCount, Mode=OneWay, StringFormat={}{0:N0}}" />
+                </TextBlock>
+            </StackPanel>
+        </c:Screen>
 
-        <TextBlock Style="{StaticResource SubheadingText}" Text="Next to real models" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="Next to real models" c:LessonAnchor.Name="real-models" />
         <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:ScaleLabViewModel.ScaleNote}" />
-        <ItemsControl ItemsSource="{Binding Models}" ItemTemplate="{StaticResource ModelRow}" Focusable="False" />
-        <ItemsControl ItemsSource="{Binding ShortDecadeLabels}" Focusable="False" Margin="0,-6,0,4" AutomationProperties.Name="Scale labels">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><c:DecadeLabelPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate><DataTemplate><TextBlock Style="{StaticResource MutedText}" Margin="3,0,0,0" TextWrapping="NoWrap" FontFamily="{StaticResource NumberFont}" Text="{Binding}" /></DataTemplate></ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <TextBlock Style="{StaticResource MutedText}" Text="{Binding AxisText}" />
-        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding RatioSentence}" />
+        <c:Screen ScreenName="compare" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <ItemsControl ItemsSource="{Binding Models}" ItemTemplate="{StaticResource ModelRow}" Focusable="False" />
+                <ItemsControl ItemsSource="{Binding ShortDecadeLabels}" Focusable="False" Margin="0,-6,0,4" AutomationProperties.Name="Scale labels">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><c:DecadeLabelPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate><DataTemplate><TextBlock Style="{StaticResource MutedText}" Margin="3,0,0,0" TextWrapping="NoWrap" FontFamily="{StaticResource NumberFont}" Text="{Binding}" /></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Style="{StaticResource MutedText}" Text="{Binding AxisText}" />
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding RatioSentence}" />
+            </StackPanel>
+        </c:Screen>
     </StackPanel>
 </UserControl>

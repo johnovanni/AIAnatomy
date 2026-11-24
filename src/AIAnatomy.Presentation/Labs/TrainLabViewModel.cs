@@ -66,6 +66,7 @@ public sealed partial class TrainLabViewModel : LabViewModel
     private (double Loss, int Step)? _lastValidation;
     private (Run Run, int Step, string Name, ModelEntry Entry)? _saved;
     private (string Name, bool Activate)? _pendingSave;
+    private IDisposable? _scope;   // the run of the screens: the whole of a training run (Start, or Resume) is one
 
     public TrainLabViewModel(IActiveModelService models, Func<string> fables, Action? libraryChanged = null)
     {
@@ -75,6 +76,12 @@ public sealed partial class TrainLabViewModel : LabViewModel
             _models.Library.List().Where(e => e.IsShipped).Select(e => e.Name).ToHashSet(StringComparer.OrdinalIgnoreCase));
         Settings = new TrainSettingsPanelViewModel(models, fables);
         Settings.PropertyChanged += OnSettingsChanged;
+        Settings.Refreshed += ReportParameters;
+        // The first report of each screen is its baseline: opening the lab lights nothing.
+        ReportParameters();
+        ReportTraining();
+        ReportSamples();
+        ReportSaved();
     }
 
     public override string LabId => Id;
@@ -144,6 +151,43 @@ public sealed partial class TrainLabViewModel : LabViewModel
         OverwriteQuestion = null;
     }
 
+    // The text and the status lines of a run are what the "training" screen shows; the chart is told by its length and last
+    // point, which is cheap enough to do after every chunk of steps (the lists only grow, until ClearRun).
+    /// <summary>A muted line for the writing screen while there is none yet (not part of what the screen reports).</summary>
+    public string SamplePlaceholder => Samples.Count == 0
+        ? $"Nothing yet. Press Start; the first writing appears after {SampleEvery} steps." : "";
+
+    partial void OnSamplesChanged(IReadOnlyList<TrainingSample> value) => OnPropertyChanged(nameof(SamplePlaceholder));
+    partial void OnStatusChanged(string value) => ReportTraining();
+    partial void OnMessageChanged(string? value) => ReportTraining();
+    partial void OnProgressTextChanged(string value) => ReportTraining();
+    partial void OnSaveStatusChanged(string? value) => ReportSaved();
+
+    private void ReportParameters() =>
+        ReportScreen("parameters", new object[] { Settings.ParameterRows.ToArray(), Settings.ParameterTotalText, Settings.FeedForwardNote });
+
+    private void ReportTraining()
+    {
+        object last, lastValidation;
+        int points, validations;
+        lock (_applyGate)
+        {
+            points = _trainPoints.Count;
+            last = points > 0 ? _trainPoints[points - 1] : "none";
+            validations = _validationPoints.Count;
+            lastValidation = validations > 0 ? _validationPoints[validations - 1] : "none";
+        }
+        ReportScreen("training", new object?[] { Status, Message, ProgressText, points, last, validations, lastValidation });
+    }
+
+    private void ReportSamples()
+    {
+        var all = Samples;   // the list is replaced, never edited; its newest entry is first
+        ReportScreen("samples", new object?[] { all.Count, all.Count > 0 ? all[0] : null });
+    }
+
+    private void ReportSaved() => ReportScreen("saved", SaveStatus);
+
     private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(TrainSettingsPanelViewModel.StartProblem)) StartCommand.NotifyCanExecuteChanged();
@@ -153,11 +197,19 @@ public sealed partial class TrainLabViewModel : LabViewModel
 
     public override void Reset()
     {
-        Deactivate();
-        Settings.Reset();
-        Seed = 1;
-        SaveName = DefaultSaveName;
-        ClearRun();
+        // One run: the screens that end up different from how a training run (or this Reset) found them light once, now,
+        // and what the stopped run reports afterwards is not shown.
+        var run = BeginRun();
+        try
+        {
+            Deactivate();
+            Settings.Reset();
+            Seed = 1;
+            SaveName = DefaultSaveName;
+            ClearRun();
+            Interlocked.Exchange(ref _scope, null)?.Dispose();
+        }
+        finally { run.Dispose(); }
     }
 
     /// <summary>Stops any training; what it reports afterwards is not shown. Reset and closing the app call this; leaving
@@ -188,6 +240,15 @@ public sealed partial class TrainLabViewModel : LabViewModel
     private async Task StartAsync()
     {
         if (!CanStart() || Settings.Read() is not { } choice) return;
+        // The whole training run is one run for the screens: nothing lights while it goes, and each screen whose
+        // value differs from its value now lights once at the end. Always closed, whatever happens.
+        var scope = _scope = BeginRun();
+        try { await StartRunAsync(choice); }
+        finally { scope.Dispose(); }
+    }
+
+    private async Task StartRunAsync(TrainingChoice choice)
+    {
         int seed = Seed;
         int generation = Interlocked.Increment(ref _generation);
         _cts?.Cancel();
@@ -220,8 +281,13 @@ public sealed partial class TrainLabViewModel : LabViewModel
 
     /// <summary>Carries on training the same model with the same optimizer, from the step where it paused.</summary>
     [RelayCommand(CanExecute = nameof(CanResume))]
-    private Task ResumeAsync() =>
-        _run is { } run && CanResume() ? RunStepsAsync(run, Volatile.Read(ref _generation)) : Task.CompletedTask;
+    private async Task ResumeAsync()
+    {
+        if (_run is not { } run || !CanResume()) return;
+        var scope = _scope = BeginRun();
+        try { await RunStepsAsync(run, Volatile.Read(ref _generation)); }
+        finally { scope.Dispose(); }
+    }
 
     /// <summary>Ends the run for good. The model as it is now can still be saved.</summary>
     [RelayCommand(CanExecute = nameof(CanStop))]
@@ -371,12 +437,13 @@ public sealed partial class TrainLabViewModel : LabViewModel
         ProgressText = $"Step {NumberText.Short(report.Step)} of {NumberText.Short(run.Target)}: training loss {NumberText.Short(report.TrainLoss)}"
                        + (_lastValidation is var (loss, at) ? $", validation loss {NumberText.Short(loss)} (measured at step {NumberText.Short(at)})" : "") + ".";
         SpeedText = Speed(rate, run.Target - report.Step);
-        if (sample != null) Samples = [new TrainingSample(report.Step, LabText.ShowNewlines(sample)), .. Samples];
+        if (sample != null) { Samples = [new TrainingSample(report.Step, LabText.ShowNewlines(sample)), .. Samples]; ReportSamples(); }
         if (report.StoppedReason != null)
         {
             Message = report.StoppedReason;
             HasDiverged = true;
         }
+        ReportTraining();   // the chart and the progress line, as one value (nothing lights during a run)
     }
 
     /// <summary>"about 15 steps per second; about 40 seconds left".</summary>
@@ -437,6 +504,8 @@ public sealed partial class TrainLabViewModel : LabViewModel
         ProgressText = SpeedText = Status = "";
         Message = SaveStatus = OverwriteQuestion = null;
         HasModel = HasDiverged = IsPaused = false;
+        ReportTraining();
+        ReportSamples();
     }
 
     // ---- saving ----

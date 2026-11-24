@@ -5,6 +5,7 @@ order: 1
 title: Training a model
 lab: TrainLab
 sources: anthropic2024-claude3, textbook
+branches: The model and its learnable numbers=the-model; Training and the loss chart=the-run; What the model writes=what-it-writes; Keep your model=keep
 ---
 Now put all the parts together and train a transformer of your own.
 

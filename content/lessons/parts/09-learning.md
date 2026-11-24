@@ -5,6 +5,7 @@ order: 9
 title: Learning
 lab: LearningLab
 sources: lillicrap2020, textbook
+branches: One neuron learning a rule=neuron; Walking down a loss surface=surface; Backpropagation on a small graph=backprop; The loss of the real model=crossentropy
 ---
 Learning, for a model, means changing its numbers so that a **loss**, a single number that measures how wrong it is, gets smaller. The lab shows four small pieces of that idea.
 

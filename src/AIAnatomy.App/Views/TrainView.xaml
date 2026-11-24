@@ -20,12 +20,10 @@
             </Grid>
         </DataTemplate>
         <DataTemplate x:Key="SampleBox" DataType="{x:Type labs:TrainingSample}">
-            <Border Style="{StaticResource Pane}" Padding="12" Margin="0,0,0,8">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource PaneTitle}" Text="{Binding Title}" />
-                    <TextBlock TextWrapping="Wrap" FontFamily="{StaticResource NumberFont}" Text="{Binding Text}" AutomationProperties.Name="{Binding Title}" />
-                </StackPanel>
-            </Border>
+            <StackPanel Margin="0,0,0,8">
+                <TextBlock Style="{StaticResource PaneTitle}" Text="{Binding Title}" />
+                <TextBlock TextWrapping="Wrap" FontFamily="{StaticResource NumberFont}" Text="{Binding Text}" AutomationProperties.Name="{Binding Title}" />
+            </StackPanel>
         </DataTemplate>
     </UserControl.Resources>
     <StackPanel>
@@ -49,7 +47,7 @@
         <TextBlock Style="{StaticResource MutedText}" Text="{Binding Settings.TextSummary}" Visibility="{Binding Settings.TextSummary, Converter={StaticResource VisibleIfSet}}" />
 
         <!-- 2. The model -->
-        <TextBlock Style="{StaticResource SubheadingText}" Text="2. The model" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="2. The model" c:LessonAnchor.Name="the-model" />
         <StackPanel IsEnabled="{Binding CanEditSettings}" Margin="0,0,0,4">
             <RadioButton Content="A new model, with the shape below" IsChecked="{Binding Settings.FreshModel}" Margin="0,0,0,4" />
             <RadioButton Content="Carry on training a copy of the active model" IsChecked="{Binding Settings.ContinueActive}" IsEnabled="{Binding Settings.CanContinueActive}" />
@@ -66,13 +64,17 @@
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Context" />
             <TextBox MinWidth="80" Margin="0,0,16,4" Text="{Binding Settings.ContextText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Context length, 16 to 128 characters" ToolTip="How many characters the model reads at once: 16 to 128" />
         </WrapPanel>
-        <TextBlock Style="{StaticResource MutedText}" Text="{Binding Settings.FeedForwardNote}" />
-        <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,2" Text="Learnable numbers in each part" />
-        <ItemsControl ItemsSource="{Binding Settings.ParameterRows}" ItemTemplate="{StaticResource PartLine}" Focusable="False" Grid.IsSharedSizeScope="True" HorizontalAlignment="Left" />
-        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Settings.ParameterTotalText}" />
+        <c:Screen ScreenName="parameters" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource MutedText}" Text="{Binding Settings.FeedForwardNote}" />
+                <TextBlock Style="{StaticResource PaneTitle}" Margin="0,8,0,2" Text="Learnable numbers in each part" />
+                <ItemsControl ItemsSource="{Binding Settings.ParameterRows}" ItemTemplate="{StaticResource PartLine}" Focusable="False" Grid.IsSharedSizeScope="True" HorizontalAlignment="Left" />
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Settings.ParameterTotalText}" />
+            </StackPanel>
+        </c:Screen>
 
         <!-- 3. Training -->
-        <TextBlock Style="{StaticResource SubheadingText}" Text="3. Training" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="3. Training" c:LessonAnchor.Name="the-run" />
         <WrapPanel Margin="0,0,0,4" IsEnabled="{Binding CanEditSettings}">
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Learning rate" />
             <TextBox MinWidth="100" Margin="0,0,16,4" Text="{Binding Settings.LearningRateText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Learning rate" ToolTip="How big each step is, such as 0.003" />
@@ -104,27 +106,36 @@
         <Border Style="{StaticResource Pane}" Padding="12" Margin="0,0,0,4" Visibility="{Binding Settings.StartProblem, Converter={StaticResource VisibleIfSet}}">
             <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Settings.StartProblem}" AutomationProperties.LiveSetting="Polite" />
         </Border>
-        <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" AutomationProperties.LiveSetting="Assertive"
-                   Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
-        <TextBlock Style="{StaticResource BodyText}" Text="{Binding Status}" AutomationProperties.LiveSetting="Polite"
-                   Visibility="{Binding Status, Converter={StaticResource VisibleIfSet}}" />
-        <StackPanel Visibility="{Binding ProgressText, Converter={StaticResource VisibleIfSet}}">
-            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress, Mode=OneWay}" Height="16" Margin="0,4,0,4" AutomationProperties.Name="Training progress" />
-            <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding ProgressText}" />
-            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding SpeedText}" />
-        </StackPanel>
-        <c:LineChart Series="{Binding LossSeries}" XAxisTitle="training step" YAxisTitle="loss" Height="{DynamicResource DiagramHeight}" Margin="0,8,0,0"
-                     AutomationProperties.Name="Training and validation loss" />
-        <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:TrainLabViewModel.LossChartNote}" />
+        <c:Screen ScreenName="training" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" AutomationProperties.LiveSetting="Assertive"
+                           Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Status}" AutomationProperties.LiveSetting="Polite"
+                           Visibility="{Binding Status, Converter={StaticResource VisibleIfSet}}" />
+                <StackPanel Visibility="{Binding ProgressText, Converter={StaticResource VisibleIfSet}}">
+                    <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress, Mode=OneWay}" Height="16" Margin="0,4,0,4" AutomationProperties.Name="Training progress" />
+                    <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding ProgressText}" />
+                    <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding SpeedText}" />
+                </StackPanel>
+                <c:LineChart Series="{Binding LossSeries}" XAxisTitle="training step" YAxisTitle="loss" Height="{DynamicResource DiagramHeight}" Margin="0,8,0,0"
+                             AutomationProperties.Name="Training and validation loss" />
+                <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:TrainLabViewModel.LossChartNote}" />
+            </StackPanel>
+        </c:Screen>
 
         <!-- 4. Samples -->
-        <TextBlock Style="{StaticResource SubheadingText}" Text="4. What the model writes" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="4. What the model writes" c:LessonAnchor.Name="what-it-writes" />
         <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:TrainLabViewModel.SampleNote}" />
         <TextBlock Style="{StaticResource MutedText}" Text="↵ is a new line. The newest writing is at the top." />
-        <ItemsControl ItemsSource="{Binding Samples}" ItemTemplate="{StaticResource SampleBox}" Focusable="False" Margin="0,4,0,0" />
+        <c:Screen ScreenName="samples" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource MutedText}" Text="{Binding SamplePlaceholder}" Visibility="{Binding SamplePlaceholder, Converter={StaticResource VisibleIfSet}}" />
+                <ItemsControl ItemsSource="{Binding Samples}" ItemTemplate="{StaticResource SampleBox}" Focusable="False" />
+            </StackPanel>
+        </c:Screen>
 
         <!-- 5. Keeping the model -->
-        <TextBlock Style="{StaticResource SubheadingText}" Text="5. Keep your model" />
+        <TextBlock Style="{StaticResource SubheadingText}" Text="5. Keep your model" c:LessonAnchor.Name="keep" />
         <WrapPanel Margin="0,0,0,4">
             <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Name" />
             <TextBox MinWidth="260" Margin="0,0,16,4" Text="{Binding SaveName, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Model name" />
@@ -139,8 +150,9 @@
                 <Button Content="No" Command="{Binding CancelOverwriteCommand}" Margin="0,0,8,4" />
             </WrapPanel>
         </Border>
-        <TextBlock Style="{StaticResource BodyText}" Text="{Binding SaveStatus}" AutomationProperties.LiveSetting="Polite"
-                   Visibility="{Binding SaveStatus, Converter={StaticResource VisibleIfSet}}" />
+        <c:Screen ScreenName="saved" Margin="0,0,0,4" HorizontalAlignment="Stretch" Visibility="{Binding SaveStatus, Converter={StaticResource VisibleIfSet}}">
+            <TextBlock Style="{StaticResource BodyText}" Text="{Binding SaveStatus}" AutomationProperties.LiveSetting="Polite" />
+        </c:Screen>
         <TextBlock Style="{StaticResource MutedText}" Text="A model whose training ran away (the loss became too large) can't be saved." />
     </StackPanel>
 </UserControl>

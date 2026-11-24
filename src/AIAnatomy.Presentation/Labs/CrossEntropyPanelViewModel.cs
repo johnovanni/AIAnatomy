@@ -56,9 +56,17 @@ public sealed partial class CrossEntropyPanelViewModel : ObservableObject
     [ObservableProperty] private double meanLoss;
     [ObservableProperty] private string meanText = "";
 
+    /// <summary>Raised at the end of each recalculation or choice of place, once every value the part shows is current, so the lab can report its screen.</summary>
+    public event Action? Recalculated;
+
     partial void OnTextChanged(string value) { if (!_syncing) Refresh(moveToEnd: true); }
 
-    partial void OnPositionIndexChanged(int value) { if (!_syncing) Select(); }
+    partial void OnPositionIndexChanged(int value)
+    {
+        if (_syncing) return;
+        Select();
+        Recalculated?.Invoke();
+    }
 
     public void Reset()
     {
@@ -96,6 +104,7 @@ public sealed partial class CrossEntropyPanelViewModel : ObservableObject
         {
             Message = string.IsNullOrEmpty(Text) ? LabText.EmptyPrompt : NeedTwo;
             SetChoices([]);
+            Recalculated?.Invoke();
             return;
         }
         Message = null;
@@ -117,6 +126,7 @@ public sealed partial class CrossEntropyPanelViewModel : ObservableObject
         int position = moveToEnd ? places - 1 : Math.Clamp(PositionIndex, 0, places - 1);
         if (position != PositionIndex) { _syncing = true; PositionIndex = position; _syncing = false; }
         Select();
+        Recalculated?.Invoke();
     }
 
     private void SetChoices(IReadOnlyList<string> choices)

@@ -28,7 +28,7 @@
 
         <!-- (a) Perceptron -->
         <StackPanel DataContext="{Binding Perceptron}">
-            <TextBlock Style="{StaticResource SubheadingText}" Text="1. One neuron learning a rule (perceptron)" />
+            <TextBlock Style="{StaticResource SubheadingText}" Text="1. One neuron learning a rule (perceptron)" c:LessonAnchor.Name="neuron" />
             <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:PerceptronPanelViewModel.RuleNote}" />
             <WrapPanel Margin="0,4,0,4">
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Rule to learn" />
@@ -58,26 +58,30 @@
                 <Button Content="Run" Command="{Binding RunCommand}" Margin="0,0,8,4" ToolTip="Train until no point is wrong or the epoch limit is reached" />
                 <Button Content="Reset" Command="{Binding ResetPerceptronCommand}" Margin="0,0,8,4" ToolTip="Zero weights, AND, rate 0.1, limit 20" />
             </WrapPanel>
-            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Status}" AutomationProperties.LiveSetting="Polite" />
-            <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding LineText}" />
-            <TextBlock Style="{StaticResource BodyText}" Text="{Binding WrongPoints}" />
             <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:PerceptronPanelViewModel.RateNote}" />
-            <c:ScatterPlot Points="{Binding Points}" Lines="{Binding Lines}" XAxisTitle="x1" YAxisTitle="x2" Height="{DynamicResource DiagramHeight}"
-                           AutomationProperties.Name="The four input points and the decision line" />
-            <TextBlock Style="{StaticResource MutedText}"
-                       Text="{x:Static labs:PerceptronPanelViewModel.LineCaption}" />
-            <Border Style="{StaticResource Pane}" Padding="12" Margin="0,4,0,0" Visibility="{Binding IsXor, Converter={StaticResource VisibleIfTrue}}">
-                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{x:Static labs:PerceptronPanelViewModel.XorNote}" />
-            </Border>
-            <TextBlock Style="{StaticResource PaneTitle}" Text="Epochs" />
-            <TextBlock Style="{StaticResource MutedText}" Text="An epoch is one pass over the four points. Each line shows the weights at the end of the pass and how many points were wrong during it." />
-            <ItemsControl ItemsSource="{Binding TableRows}" ItemTemplate="{StaticResource EpochLine}" Focusable="False" />
-            <TextBlock Style="{StaticResource MutedText}" Text="{Binding TableNote}" Visibility="{Binding TableNote, Converter={StaticResource VisibleIfSet}}" />
+            <c:Screen ScreenName="neuron" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Status}" AutomationProperties.LiveSetting="Polite" />
+                    <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding LineText}" />
+                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding WrongPoints}" />
+                    <c:ScatterPlot Points="{Binding Points}" Lines="{Binding Lines}" XAxisTitle="x1" YAxisTitle="x2" Height="{DynamicResource DiagramHeight}"
+                                   AutomationProperties.Name="The four input points and the decision line" />
+                    <TextBlock Style="{StaticResource MutedText}"
+                               Text="{x:Static labs:PerceptronPanelViewModel.LineCaption}" />
+                    <Border Style="{StaticResource Pane}" Padding="12" Margin="0,4,0,0" Visibility="{Binding IsXor, Converter={StaticResource VisibleIfTrue}}">
+                        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{x:Static labs:PerceptronPanelViewModel.XorNote}" />
+                    </Border>
+                    <TextBlock Style="{StaticResource PaneTitle}" Text="Epochs" />
+                    <TextBlock Style="{StaticResource MutedText}" Text="An epoch is one pass over the four points. Each line shows the weights at the end of the pass and how many points were wrong during it." />
+                    <ItemsControl ItemsSource="{Binding TableRows}" ItemTemplate="{StaticResource EpochLine}" Focusable="False" />
+                    <TextBlock Style="{StaticResource MutedText}" Text="{Binding TableNote}" Visibility="{Binding TableNote, Converter={StaticResource VisibleIfSet}}" />
+                </StackPanel>
+            </c:Screen>
         </StackPanel>
 
         <!-- (b) Loss surface -->
         <StackPanel DataContext="{Binding Loss}">
-            <TextBlock Style="{StaticResource SubheadingText}" Text="2. Walking down a loss surface" />
+            <TextBlock Style="{StaticResource SubheadingText}" Text="2. Walking down a loss surface" c:LessonAnchor.Name="surface" />
             <TextBlock Style="{StaticResource BodyText}"
                        Text="Here the loss is w1² + 10·w2², a bowl that is steep in the w2 direction and shallow in the w1 direction. Gradient descent starts at (−4, 1.5) and takes 30 steps downhill. Try different learning rates." />
             <Grid>
@@ -91,22 +95,26 @@
                         Value="{Binding Rate, Mode=TwoWay}" AutomationProperties.Name="Learning rate" />
                 <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0" MinWidth="80" FontWeight="SemiBold" Text="{Binding RateText}" />
             </Grid>
-            <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" AutomationProperties.LiveSetting="Assertive"
-                       Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
-            <c:ContourPlot Values="{Binding Grid}" XMin="-5" XMax="5" YMin="-2" YMax="2" Levels="{x:Static labs:LossPanelViewModel.Levels}" Path="{Binding Path}"
-                           XAxisTitle="w1" YAxisTitle="w2" Height="{DynamicResource DiagramHeight}" Margin="0,8,0,0" AutomationProperties.Name="Loss surface with the path of gradient descent" />
-            <TextBlock Style="{StaticResource MutedText}"
-                       Text="Darker is higher loss. Each line joins points with the same loss, written on the line. The dashed path starts at the square and ends at the diamond, with a dot at each step. The path is cut off where it leaves the plot." />
-            <TextBlock Style="{StaticResource BodyText}" Text="{Binding Summary}" />
-            <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding FactorText}" />
-            <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:LossPanelViewModel.ThresholdNote}" />
-            <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource PathLine}" Focusable="False" />
-            <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:LossPanelViewModel.TableNote}" />
+            <c:Screen ScreenName="surface" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" AutomationProperties.LiveSetting="Assertive"
+                               Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+                    <c:ContourPlot Values="{Binding Grid}" XMin="-5" XMax="5" YMin="-2" YMax="2" Levels="{x:Static labs:LossPanelViewModel.Levels}" Path="{Binding Path}"
+                                   XAxisTitle="w1" YAxisTitle="w2" Height="{DynamicResource DiagramHeight}" Margin="0,8,0,0" AutomationProperties.Name="Loss surface with the path of gradient descent" />
+                    <TextBlock Style="{StaticResource MutedText}"
+                               Text="Darker is higher loss. Each line joins points with the same loss, written on the line. The dashed path starts at the square and ends at the diamond, with a dot at each step. The path is cut off where it leaves the plot." />
+                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding Summary}" />
+                    <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding FactorText}" />
+                    <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:LossPanelViewModel.ThresholdNote}" />
+                    <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource PathLine}" Focusable="False" />
+                    <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:LossPanelViewModel.TableNote}" />
+                </StackPanel>
+            </c:Screen>
         </StackPanel>
 
         <!-- (c) Expression graph -->
         <StackPanel DataContext="{Binding Graph}">
-            <TextBlock Style="{StaticResource SubheadingText}" Text="3. Backpropagation on a small graph" />
+            <TextBlock Style="{StaticResource SubheadingText}" Text="3. Backpropagation on a small graph" c:LessonAnchor.Name="backprop" />
             <TextBlock Style="{StaticResource BodyText}"
                        Text="The graph computes L = (a·b + c)·f from four numbers. Change them: every value and every gradient is recomputed." />
             <WrapPanel Margin="0,4,0,4">
@@ -120,17 +128,21 @@
                 <TextBox MinWidth="90" Margin="0,0,16,4" Text="{Binding FText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="f" />
             </WrapPanel>
             <TextBlock Style="{StaticResource MutedText}" Text="Numbers from −100 to 100." />
-            <c:NetworkDiagram Nodes="{Binding Nodes}" Edges="{Binding Edges}" Height="{DynamicResource GraphDiagramHeight}" Margin="0,8,0,0" AutomationProperties.Name="Expression graph with the value and gradient of every node" />
-            <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:GraphPanelViewModel.BackpropNote}" />
-            <TextBlock Style="{StaticResource PaneTitle}" Text="The working, from L back to the inputs" />
-            <ItemsControl ItemsSource="{Binding Working}" ItemTemplate="{StaticResource WorkingLine}" Focusable="False" />
-            <TextBlock Style="{StaticResource PaneTitle}" Text="Every node" />
-            <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource NodeLine}" Focusable="False" />
+            <c:Screen ScreenName="backprop" Margin="0,8,0,0" HorizontalAlignment="Stretch">
+                <StackPanel>
+                    <c:NetworkDiagram Nodes="{Binding Nodes}" Edges="{Binding Edges}" Height="{DynamicResource GraphDiagramHeight}" AutomationProperties.Name="Expression graph with the value and gradient of every node" />
+                    <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:GraphPanelViewModel.BackpropNote}" />
+                    <TextBlock Style="{StaticResource PaneTitle}" Text="The working, from L back to the inputs" />
+                    <ItemsControl ItemsSource="{Binding Working}" ItemTemplate="{StaticResource WorkingLine}" Focusable="False" />
+                    <TextBlock Style="{StaticResource PaneTitle}" Text="Every node" />
+                    <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource NodeLine}" Focusable="False" />
+                </StackPanel>
+            </c:Screen>
         </StackPanel>
 
         <!-- (d) Cross-entropy -->
         <StackPanel DataContext="{Binding CrossEntropy}">
-            <TextBlock Style="{StaticResource SubheadingText}" Text="4. The loss of the real model" />
+            <TextBlock Style="{StaticResource SubheadingText}" Text="4. The loss of the real model" c:LessonAnchor.Name="crossentropy" />
             <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:CrossEntropyPanelViewModel.LossNote}" />
             <TextBlock Style="{StaticResource MutedText}" Text="Your text" Margin="0,0,0,2" />
             <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MaxLength="300" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" AutomationProperties.Name="Your text" />
@@ -142,19 +154,23 @@
                 <TextBlock VerticalAlignment="Center" Margin="0,0,8,4" Text="Place in the text" />
                 <ComboBox MinWidth="120" Margin="0,0,16,4" ItemsSource="{Binding PositionChoices}" SelectedIndex="{Binding PositionIndex}" AutomationProperties.Name="Place in the text" />
             </WrapPanel>
-            <TextBlock Style="{StaticResource BodyText}" Text="{Binding ContextText}" TextWrapping="Wrap" />
-            <TextBlock Style="{StaticResource BodyText}" Text="{Binding ActualText, StringFormat=The character that really came next: {0}}"
-                       Visibility="{Binding ActualText, Converter={StaticResource VisibleIfSet}}" FontWeight="SemiBold" />
-            <TextBlock Style="{StaticResource BodyText}" Text="{Binding ProbabilityText, StringFormat=The model gave it a probability of {0}.}"
-                       Visibility="{Binding ProbabilityText, Converter={StaticResource VisibleIfSet}}" />
-            <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding FormulaText}" />
-            <TextBlock Style="{StaticResource MutedText}" Text="{Binding BarsCaption}" />
-            <c:ProbabilityBars Items="{Binding Bars}" HighlightedLabel="{Binding HighlightedBar}" AutomationProperties.Name="The model's probabilities for the next character" />
-            <TextBlock Style="{StaticResource PaneTitle}" Text="The loss at every place in your text" />
-            <TextBlock Style="{StaticResource MutedText}" Text="Each bar is −ln p at one place. The numbers under the bars are the places, in order:" Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
-            <c:VectorStrip Values="{Binding Losses}" IndexBase="1" AutomationProperties.Name="The loss at each place in the text" />
-            <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding LossKey}" Margin="0,4,0,0" />
-            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding MeanText}" />
+            <c:Screen ScreenName="crossentropy" HorizontalAlignment="Stretch">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding ContextText}" TextWrapping="Wrap" />
+                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding ActualText, StringFormat=The character that really came next: {0}}"
+                               Visibility="{Binding ActualText, Converter={StaticResource VisibleIfSet}}" FontWeight="SemiBold" />
+                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding ProbabilityText, StringFormat=The model gave it a probability of {0}.}"
+                               Visibility="{Binding ProbabilityText, Converter={StaticResource VisibleIfSet}}" />
+                    <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding FormulaText}" />
+                    <TextBlock Style="{StaticResource MutedText}" Text="{Binding BarsCaption}" />
+                    <c:ProbabilityBars Items="{Binding Bars}" HighlightedLabel="{Binding HighlightedBar}" AutomationProperties.Name="The model's probabilities for the next character" />
+                    <TextBlock Style="{StaticResource PaneTitle}" Text="The loss at every place in your text" />
+                    <TextBlock Style="{StaticResource MutedText}" Text="Each bar is −ln p at one place. The numbers under the bars are the places, in order:" Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
+                    <c:VectorStrip Values="{Binding Losses}" IndexBase="1" AutomationProperties.Name="The loss at each place in the text" />
+                    <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding LossKey}" Margin="0,4,0,0" />
+                    <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding MeanText}" />
+                </StackPanel>
+            </c:Screen>
         </StackPanel>
     </StackPanel>
 </UserControl>

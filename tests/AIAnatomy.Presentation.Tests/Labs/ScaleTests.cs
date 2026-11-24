@@ -74,4 +74,26 @@ public class ScaleTests : IDisposable
         Assert.Contains("10 thousand", lab.AxisText);
         Assert.Equal(["1", "10", "100", "1K", "1M", "1B", "1T"], new[] { 0, 1, 2, 3, 6, 9, 12 }.Select(ScaleLabViewModel.ShortPower));
     }
+
+    // ---- screens (UI rework, Task 15) ----
+
+    [Fact]
+    public void ASwitchOfModelLightsTheSizeScreens_AndResetWithNothingChangedDoesNot()
+    {
+        var models = _env.NewActiveModels();
+        var lab = new ScaleLabViewModel(models);
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+        Assert.Empty(raised);   // opening is the baseline
+        lab.Reset();
+        Assert.Empty(raised);   // the same numbers again
+
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+        lab.OnActiveModelChanged();
+        Assert.Contains("parts", raised);
+        Assert.Contains("compare", raised);
+        raised.Clear();
+        lab.OnActiveModelChanged();
+        Assert.Empty(raised);
+    }
 }

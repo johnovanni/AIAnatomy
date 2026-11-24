@@ -652,4 +652,95 @@ public class TrainTests : IDisposable
         main.NavigateToLesson("train");
         Assert.IsType<TrainLabViewModel>(main.CurrentLab);
     }
+
+    // ---- screens (UI rework, Task 15) ----
+
+    private static List<string> Listen(TrainLabViewModel lab, List<bool>? whileTraining = null)
+    {
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) =>
+        {
+            lock (raised) { raised.Add(e.Screen); whileTraining?.Add(lab.IsTraining); }
+        };
+        return raised;
+    }
+
+    [Fact]
+    public void TheParameterCountsLightAfterAnEditedShape_NotWhenTheSameValueIsSetAgain()
+    {
+        var lab = NewLab();
+        var raised = Listen(lab);
+        Assert.Empty(raised);   // opening is the baseline
+        lab.Settings.Width = 48;
+        Assert.Equal(["parameters"], raised);
+        raised.Clear();
+        lab.Settings.Width = 48;
+        Assert.Empty(raised);
+        lab.Settings.LayersText = "3";
+        Assert.Equal(["parameters"], raised);
+    }
+
+    [Fact]
+    public async Task ARun_LightsNothingWhileItGoes_AndEachChangedScreenOnceAtItsEnd()
+    {
+        var lab = TinyLab(steps: 60);
+        var during = new List<bool>();
+        var raised = Listen(lab, during);
+        await lab.StartCommand.ExecuteAsync(null);
+        await lab.WorkCompleted;
+        lock (raised)
+        {
+            Assert.All(during, d => Assert.False(d));   // every light-up came after the run had ended
+            Assert.Equal(1, raised.Count(s => s == "training"));
+            Assert.Equal(1, raised.Count(s => s == "samples"));   // the writing at step 50
+            Assert.Equal(raised.Count, raised.Distinct().Count());
+        }
+    }
+
+    [Fact]
+    public async Task Reset_DuringARun_LightsNothingLater_AndTheNextRunStillWorks()
+    {
+        var lab = TinyLab(steps: 100_000);
+        var raised = Listen(lab);
+        var run = lab.StartCommand.ExecuteAsync(null);
+        await WaitUntil(() => lab.StepsDone > 0);
+        lab.Reset();
+        await run.WaitAsync(Patience);
+        await lab.WorkCompleted;
+        lock (raised) Assert.DoesNotContain("training", raised);   // the screens are back where the run found them
+
+        lab.Settings.StepsText = "5";
+        lab.Settings.Width = 16;
+        lab.Settings.LayersText = "1";
+        lab.Settings.HeadsText = "2";
+        lab.Settings.ContextText = "16";
+        lab.Settings.BatchText = "2";
+        lock (raised) raised.Clear();
+        await lab.StartCommand.ExecuteAsync(null);
+        await lab.WorkCompleted;
+        lock (raised) Assert.Equal(1, raised.Count(s => s == "training"));
+    }
+
+    [Fact]
+    public async Task ResetAfterARun_LightsTheClearedScreens_AndAModelSwitchTheParameters()
+    {
+        var models = _env.NewActiveModels();
+        var lab = TinyLab(models, steps: 60);
+        await lab.StartCommand.ExecuteAsync(null);
+        await lab.WorkCompleted;
+        var raised = Listen(lab);
+        lab.Reset();
+        lock (raised)
+        {
+            Assert.Contains("training", raised);
+            Assert.Contains("samples", raised);
+            Assert.Contains("parameters", raised);
+        }
+
+        lab.Settings.ContinueActive = true;   // the parameters now come from the active model
+        lock (raised) raised.Clear();
+        models.SetActive(models.Library.List().Single(e => e.Name == "Induction demo"));
+        lab.OnActiveModelChanged();
+        lock (raised) Assert.Contains("parameters", raised);
+    }
 }

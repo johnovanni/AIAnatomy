@@ -58,7 +58,7 @@ public sealed partial class SamplingLabViewModel : LabViewModel
     {
         _models = models ?? throw new ArgumentNullException(nameof(models));
         _lastDefault = text = LabText.StartingText(models.Current);
-        Refresh();
+        Refresh();   // also the baseline of every screen
     }
 
     public override string LabId => Id;
@@ -93,12 +93,18 @@ public sealed partial class SamplingLabViewModel : LabViewModel
     [ObservableProperty] private string generated = "";
     [ObservableProperty] private string generateStatus = "";
 
+    public const string GenerateButtonText = "Generate 200 characters";
+
+    /// <summary>A muted hint while there is no writing yet (not part of what the screen reports).</summary>
+    public string WritingHint => string.IsNullOrEmpty(GenerateStatus) ? $"Nothing yet. Press “{GenerateButtonText}” above to write {GenerateLength} characters after your text." : "";
+
+    partial void OnGenerateStatusChanged(string value) => OnPropertyChanged(nameof(WritingHint));
     partial void OnTextChanged(string value) { if (_syncing) return; Refresh(); }
     partial void OnTemperatureChanged(double value) { if (_syncing) return; Refresh(); }
     partial void OnTopKChanged(int value) { if (_syncing) return; Refresh(); }
     partial void OnTopPChanged(double value) { if (_syncing) return; Refresh(); }
 
-    protected override void OnSeedEdited() { if (!_syncing) ClearResults(); }
+    protected override void OnSeedEdited() { if (!_syncing) { ClearResults(); ReportScreens(); } }
 
     public SamplingSettings Settings => new(Math.Clamp(double.IsNaN(Temperature) ? DefaultTemperature : Temperature, 0, MaxTemperature),
         Math.Clamp(TopK, 0, MaxTopK), Math.Clamp(double.IsNaN(TopP) ? 1 : TopP, MinTopP, 1));
@@ -154,6 +160,7 @@ public sealed partial class SamplingLabViewModel : LabViewModel
         UpdateScale();
         SampleCaption = $"{SampleTotal} draws with seed {Seed}. Each bar is the share of the draws that gave that character, so 31% means 31 of the 100. " +
             $"The rows are the same characters as in the probability chart; “{OthersLabel}” adds up all the rest.";
+        ReportScreens();   // the same seed gives the same draws, so a repeat press changes nothing and lights nothing
     }
 
     /// <summary>Writes 200 characters after the typed text, one random draw at a time, using the seed.</summary>
@@ -181,11 +188,16 @@ public sealed partial class SamplingLabViewModel : LabViewModel
             if (generation != _generation) return;
             Generated = result;
             GenerateStatus = $"{GenerateLength} new characters, written with seed {seed}. The same text, seed and settings always give the same writing.";
+            ReportWriting();   // one report, when the text arrives; an answer that is no longer wanted (above) reports nothing
         }
         catch (OperationCanceledException) { /* a newer request, or leaving the lab */ }
         catch (Exception)
         {
-            if (generation == _generation) GenerateStatus = "The writing could not be done. Please try again.";
+            if (generation == _generation)
+            {
+                GenerateStatus = "The writing could not be done. Please try again.";
+                ReportWriting();
+            }
         }
         finally
         {
@@ -226,6 +238,7 @@ public sealed partial class SamplingLabViewModel : LabViewModel
             Bars = [];
             _shownIds = [];
             UpdateScale();
+            ReportScreens();
             return;
         }
         Message = null;
@@ -248,7 +261,20 @@ public sealed partial class SamplingLabViewModel : LabViewModel
         BarsCaption = $"The {order.Count} highest-scoring characters of {last.Length}, and “{OthersLabel}” for all the rest. {nonZero} {(nonZero == 1 ? "character has" : "characters have")} a probability above 0 after your settings.";
         int top = Array.IndexOf(p, p.Max());
         TopChoiceText = $"Most likely next character: {Name(model, top)} at {NumberText.Percent(p[top])}.";
+        ReportScreens();
     }
+
+    // Screens (snapshots of the lists, which are replaced and never edited). The first report of each is its baseline.
+    private void ReportScreens()
+    {
+        ReportScreen("reads", new object?[] { Message, Notice, ShownText });
+        ReportScreen("probabilities", new object?[] { TopChoiceText, BarsCaption, Bars.ToArray(), BarScaleMaximum });
+        ReportScreen("samples", new object?[] { SampleCaption, BarScaleCaption, SampleCounts.ToArray(), Frequencies.ToArray() });
+        ReportScreen("scores", Scores.ToArray());
+        ReportWriting();
+    }
+
+    private void ReportWriting() => ReportScreen("writing", new object[] { GenerateStatus, Generated });
 
     private IReadOnlyList<int> _shownIds = [];
 

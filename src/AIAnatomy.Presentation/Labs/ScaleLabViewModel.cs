@@ -82,6 +82,9 @@ public sealed partial class ScaleLabViewModel : LabViewModel
         ShortDecadeLabels = Enumerable.Range(low, high - low).Select(ShortPower).ToList();
         AxisText = $"Each faint line is a power of ten. From the left they are {string.Join(", ", DecadeLabels)}; the right edge is {Power(high)}. (K = thousand, M = million, B = billion, T = trillion.)";
         RatioSentence = $"GPT-3 has about {Times(Gpt3Count / (double)OurCount)} times as many parameters as this model.";
+        // The first report of each screen is its baseline; after that only a switch of model (or Reset, which finds the same numbers) can change them.
+        ReportScreen("parts", new object[] { OurDescription, OurCount, Parts.ToArray() });
+        ReportScreen("compare", new object[] { Models.ToArray(), AxisText, RatioSentence, ShortDecadeLabels.ToArray() });
     }
 
     /// <summary>1, 10, 100, 1K, 10K, 100K, 1M ... 1B ... 1T.</summary>
