@@ -69,22 +69,22 @@ public class MainViewModelTests : IDisposable
     }
 
     [Fact]
-    public void UseStackedLayout_SwitchesAtTwentySixPoints()
+    public void UseStackedLayout_SwitchesAtEighteenPoints()
     {
         var vm = _env.NewMain();
         var raised = new List<string?>();
         vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
-        Assert.False(vm.UseStackedLayout);          // the default is 20 pt
-        vm.SettingsPage.BodyFontSize = 25;
+        Assert.False(vm.UseStackedLayout);          // the default is 13 pt
+        vm.SettingsPage.BodyFontSize = 17;
         Assert.False(vm.UseStackedLayout);
-        vm.SettingsPage.BodyFontSize = 26;
+        vm.SettingsPage.BodyFontSize = 18;
         Assert.True(vm.UseStackedLayout);
         Assert.Contains(nameof(MainViewModel.UseStackedLayout), raised);
-        vm.SettingsPage.BodyFontSize = 32;
+        vm.SettingsPage.BodyFontSize = 24;
         Assert.True(vm.UseStackedLayout);
-        vm.SettingsPage.BodyFontSize = 16;
+        vm.SettingsPage.BodyFontSize = 10;
         Assert.False(vm.UseStackedLayout);
-        Assert.Equal(26, MainViewModel.StackedLayoutFromSize);
+        Assert.Equal(18, MainViewModel.StackedLayoutFromSize);
     }
 
     [Fact]

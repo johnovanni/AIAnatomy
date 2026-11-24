@@ -10,43 +10,86 @@ public class SettingsServiceTests : IDisposable
     [Fact]
     public void Settings_MissingFile_GivesDefaults()
     {
-        var s = new SettingsService(_env.SettingsFile).Current;
-        Assert.Equal(new AppSettings(20, 28, "Light", null), s);
+        var s = _env.NewSettings().Current;
+        Assert.Equal(13, s.BodyFontSize);
+        Assert.Equal("Dark", s.Theme);
+        Assert.Equal("Radial", s.IdeaMapLayout);
+        Assert.Equal(SettingsService.CurrentScaleVersion, s.ScaleVersion);
     }
 
     [Fact]
     public void Settings_CorruptFile_GivesDefaults()
     {
         File.WriteAllText(_env.SettingsFile, "{ this is not json");
-        Assert.Equal(new AppSettings(20, 28, "Light", null), new SettingsService(_env.SettingsFile).Current);
+        Assert.Equal(new AppSettings(13, "Dark", null, "Radial", 2), new SettingsService(_env.SettingsFile).Current);
     }
 
     [Theory]
-    [InlineData(40, 32, 45)]
-    [InlineData(10, 16, 22)]
-    [InlineData(20, 20, 28)]
-    public void Settings_ClampsFontSize(double asked, double body, double heading)
+    [InlineData(20, 13)]
+    [InlineData(16, 13)]
+    [InlineData(32, 13)]
+    [InlineData(14, 14)]
+    public void Settings_OldFile_MovesToNewScaleOnce(double savedBody, double expected)
     {
-        var service = new SettingsService(_env.SettingsFile);
-        service.Save(new AppSettings(asked, 1));
-        Assert.Equal(body, service.Current.BodyFontSize);
-        Assert.Equal(heading, service.Current.HeadingFontSize);
+        File.WriteAllText(_env.SettingsFile, $$"""{ "BodyFontSize": {{savedBody}}, "HeadingFontSize": 28, "Theme": "Light" }""");
+        var s = _env.NewSettings().Current;
+        Assert.Equal(expected, s.BodyFontSize);
+        Assert.Equal("Light", s.Theme);
+        Assert.Equal(2, s.ScaleVersion);
     }
 
     [Fact]
-    public void Settings_UnknownTheme_BecomesLight()
+    public void Settings_NewScaleFile_KeepsSixteen()
+    {
+        File.WriteAllText(_env.SettingsFile, """{ "BodyFontSize": 16, "ScaleVersion": 2 }""");
+        Assert.Equal(16, _env.NewSettings().Current.BodyFontSize);
+    }
+
+    [Fact]
+    public void Settings_MigrationDoesNotRepeat_AfterASaveAtSixteen()
+    {
+        File.WriteAllText(_env.SettingsFile, """{ "BodyFontSize": 20 }""");
+        var service = _env.NewSettings();
+        Assert.Equal(13, service.Current.BodyFontSize);
+        service.Save(service.Current with { BodyFontSize = 16 });
+        Assert.Equal(16, _env.NewSettings().Current.BodyFontSize);
+    }
+
+    [Theory]
+    [InlineData(4, 10)]
+    [InlineData(30, 24)]
+    [InlineData(13, 13)]
+    public void Settings_ClampsFontSize(double asked, double body)
+    {
+        var service = new SettingsService(_env.SettingsFile);
+        service.Save(new AppSettings(asked, ScaleVersion: 2));
+        Assert.Equal(body, service.Current.BodyFontSize);
+    }
+
+    [Fact]
+    public void Settings_UnknownTheme_BecomesDark()
     {
         var service = new SettingsService(_env.SettingsFile);
         service.Save(new AppSettings(Theme: "Purple"));
-        Assert.Equal("Light", service.Current.Theme);
+        Assert.Equal("Dark", service.Current.Theme);
+    }
+
+    [Fact]
+    public void Settings_UnknownMapLayout_BecomesRadial()
+    {
+        var service = new SettingsService(_env.SettingsFile);
+        service.Save(new AppSettings(IdeaMapLayout: "Spiral"));
+        Assert.Equal("Radial", service.Current.IdeaMapLayout);
+        service.Save(new AppSettings(IdeaMapLayout: "Loop"));
+        Assert.Equal("Loop", service.Current.IdeaMapLayout);
     }
 
     [Fact]
     public void Settings_RoundTrip()
     {
-        new SettingsService(_env.SettingsFile).Save(new AppSettings(24, 0, "Dark", "Induction demo"));
+        new SettingsService(_env.SettingsFile).Save(new AppSettings(24, "Light", "Induction demo", "Loop"));
         var loaded = new SettingsService(_env.SettingsFile).Current;
-        Assert.Equal(new AppSettings(24, 34, "Dark", "Induction demo"), loaded);
+        Assert.Equal(new AppSettings(24, "Light", "Induction demo", "Loop", 2), loaded);
     }
 
     [Fact]

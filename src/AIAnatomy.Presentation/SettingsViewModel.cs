@@ -4,7 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace AIAnatomy.Presentation;
 
 /// <summary>
-/// The Settings page: text size (whole points, 16 to 32) and Light or Dark. Every change is saved at once and
+/// The Settings page: text size (whole points, 10 to 24) and Light or Dark. Every change is saved at once and
 /// <see cref="Applied"/> is raised so the window can show it; the saved values are in <see cref="ISettingsService.Current"/>.
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject

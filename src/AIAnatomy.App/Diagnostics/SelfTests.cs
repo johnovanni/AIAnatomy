@@ -29,7 +29,7 @@ public static class SelfTests
     /// </summary>
     private static async Task<int> AllLabsAsync()
     {
-        ThemeManager.Apply("Light", 20, 28);
+        ThemeManager.Apply("Light", 13);
         using var folder = new TemporaryFolder();
         var services = AppServices.Create(new InMemorySettings(new AppSettings()), folder.Path);
         var viewModel = services.NewMainViewModel();

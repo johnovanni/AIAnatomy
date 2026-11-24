@@ -47,7 +47,7 @@ public sealed partial class MainViewModel : ObservableObject
     public ISettingsService Settings { get; }
 
     /// <summary>The body text size (in points) from which the explanation goes under the lab instead of beside it.</summary>
-    public const double StackedLayoutFromSize = 26;
+    public const double StackedLayoutFromSize = 18;
 
     /// <summary>True at large text sizes: three side-by-side columns would leave the lab too narrow, so the Explanation pane goes below the lab pane.</summary>
     public bool UseStackedLayout => Settings.Current.BodyFontSize >= StackedLayoutFromSize;

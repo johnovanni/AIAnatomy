@@ -16,8 +16,8 @@ public class SettingsViewModelTests : IDisposable
         Assert.Equal(24, vm.BodyFontSize);
         Assert.True(vm.IsDarkTheme);
         Assert.False(vm.IsLightTheme);
-        Assert.Equal(16, vm.MinimumFontSize);
-        Assert.Equal(32, vm.MaximumFontSize);
+        Assert.Equal(10, vm.MinimumFontSize);
+        Assert.Equal(24, vm.MaximumFontSize);
     }
 
     [Fact]
@@ -28,12 +28,11 @@ public class SettingsViewModelTests : IDisposable
         int applied = 0;
         vm.Applied += (_, _) => applied++;
 
-        vm.BodyFontSize = 27.6;   // a slider drag: kept to whole points
+        vm.BodyFontSize = 17.6;   // a slider drag: kept to whole points
 
-        Assert.Equal(28, vm.BodyFontSize);
-        Assert.Equal(28, settings.Current.BodyFontSize);
-        Assert.Equal(39, settings.Current.HeadingFontSize);
-        Assert.Equal(28, _env.NewSettings().Current.BodyFontSize);   // written to disk
+        Assert.Equal(18, vm.BodyFontSize);
+        Assert.Equal(18, settings.Current.BodyFontSize);
+        Assert.Equal(18, _env.NewSettings().Current.BodyFontSize);   // written to disk
         Assert.Equal(1, applied);
     }
 
@@ -45,14 +44,14 @@ public class SettingsViewModelTests : IDisposable
         int applied = 0;
         vm.Applied += (_, _) => applied++;
 
-        vm.IsDarkTheme = true;
+        vm.IsLightTheme = true;
 
-        Assert.Equal("Dark", settings.Current.Theme);
-        Assert.False(vm.IsLightTheme);
+        Assert.Equal("Light", settings.Current.Theme);
+        Assert.False(vm.IsDarkTheme);
         Assert.Equal(1, applied);
 
-        vm.IsLightTheme = true;
-        Assert.Equal("Light", settings.Current.Theme);
+        vm.IsDarkTheme = true;
+        Assert.Equal("Dark", settings.Current.Theme);
         Assert.Equal(2, applied);
     }
 
@@ -63,7 +62,7 @@ public class SettingsViewModelTests : IDisposable
         settings.Save(settings.Current with { ActiveModelName = "Induction demo" });
         var vm = new SettingsViewModel(settings);
 
-        vm.IsDarkTheme = true;
+        vm.IsLightTheme = true;
 
         Assert.Equal("Induction demo", settings.Current.ActiveModelName);
     }
@@ -73,6 +72,6 @@ public class SettingsViewModelTests : IDisposable
     {
         var vm = _env.NewMain();
         Assert.NotNull(vm.SettingsPage);
-        Assert.Equal(20, vm.SettingsPage.BodyFontSize);
+        Assert.Equal(13, vm.SettingsPage.BodyFontSize);
     }
 }

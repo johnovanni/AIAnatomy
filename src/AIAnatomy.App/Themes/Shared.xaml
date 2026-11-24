@@ -1,19 +1,20 @@
 <!-- Styles shared by both themes. Every colour is a DynamicResource from Light.xaml or Dark.xaml, and every text size
-     comes from BodyFontSize, SmallFontSize or HeadingFontSize (set by ThemeManager), so changes apply at once. -->
+     comes from BodyFontSize, SmallFontSize, HeadingFontSize or TitleFontSize (set by ThemeManager), so changes apply at once. -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
-    <!-- Fallback sizes (20 pt body); ThemeManager.Apply replaces them. -->
-    <sys:Double x:Key="BodyFontSize">26.67</sys:Double>
-    <sys:Double x:Key="SubheadingFontSize">30.67</sys:Double>
-    <sys:Double x:Key="HeadingFontSize">37.33</sys:Double>
-    <sys:Double x:Key="SmallFontSize">22.67</sys:Double>
-    <sys:Double x:Key="FormulaScale">29.33</sys:Double>
-    <sys:Double x:Key="LessonsColumnWidth">293</sys:Double>
-    <sys:Double x:Key="DiagramHeight">560</sys:Double>
-    <sys:Double x:Key="GraphDiagramHeight">800</sys:Double>
-    <sys:Double x:Key="ScrollBarSize">24</sys:Double>
+    <!-- Fallback sizes (13 pt body); ThemeManager.Apply replaces them. -->
+    <sys:Double x:Key="BodyFontSize">17.33</sys:Double>
+    <sys:Double x:Key="TitleFontSize">34.67</sys:Double>
+    <sys:Double x:Key="SubheadingFontSize">19.93</sys:Double>
+    <sys:Double x:Key="HeadingFontSize">19.93</sys:Double>
+    <sys:Double x:Key="SmallFontSize">14.73</sys:Double>
+    <sys:Double x:Key="FormulaScale">19.07</sys:Double>
+    <sys:Double x:Key="LessonsColumnWidth">190.7</sys:Double>
+    <sys:Double x:Key="DiagramHeight">364</sys:Double>
+    <sys:Double x:Key="GraphDiagramHeight">520</sys:Double>
+    <sys:Double x:Key="ScrollBarSize">15.6</sys:Double>
 
     <FontFamily x:Key="BodyFont">Segoe UI</FontFamily>
     <FontFamily x:Key="NumberFont">Cascadia Mono, Consolas</FontFamily>

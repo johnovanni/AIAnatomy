@@ -7,7 +7,7 @@ public enum DiagnosticMode { Normal, RenderPng, SelfTest }
 /// <summary>
 /// The app's command line, for checks and diagnostics only:
 /// <c>--render-png &lt;lessonId|gallery|sources|settings&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
-/// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 20 pt unless
+/// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 13 pt unless
 /// told otherwise, so pictures do not depend on the user's own settings. Several views may be given as
 /// <c>gallery,sources,settings</c>; each then goes to "file-view.png". <c>--full-lab</c> (lesson ids only) draws the lab
 /// pane by itself at its full height and at the width it has in the window, so the bottom of a long lab can be checked.
@@ -43,7 +43,7 @@ public sealed record DiagnosticOptions(
         return Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(OutputFile)}-{view}{Path.GetExtension(OutputFile)}");
     }
 
-    private const double MinTextSize = 16, MaxTextSize = 32;
+    private const double MinTextSize = 10, MaxTextSize = 24;
     private const int MinPixels = 400, MaxPixels = 8000;
 
     public static DiagnosticOptions Parse(string[] args)
@@ -51,7 +51,7 @@ public sealed record DiagnosticOptions(
         ArgumentNullException.ThrowIfNull(args);
         string? view = null, file = null, selfTest = null, error = null;
         string theme = "Light";
-        double textSize = 20;
+        double textSize = 13;
         int width = 1600, height = 1000;
         bool render = false, renderOnlyOption = false, fullLab = false;
 

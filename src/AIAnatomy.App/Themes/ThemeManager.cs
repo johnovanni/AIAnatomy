@@ -11,13 +11,13 @@ public static class ThemeManager
     private static ResourceDictionary? _current;
 
     /// <summary>The theme now showing ("Light" or "Dark").</summary>
-    public static string Theme { get; private set; } = "Light";
+    public static string Theme { get; private set; } = "Dark";
 
     /// <summary>
-    /// Applies a theme and sizes: BodyFontSize, HeadingFontSize (as given, normally body x 1.4), SubheadingFontSize
-    /// (body x 1.15), SmallFontSize (body x 0.85, never under 16 pt), FormulaScale and ScrollBarSize.
+    /// Applies a theme and sizes, all from the body size in points: BodyFontSize, TitleFontSize (body x 2), HeadingFontSize
+    /// and SubheadingFontSize (body x 1.15), SmallFontSize (body x 0.85, never under 9 pt), FormulaScale and ScrollBarSize.
     /// </summary>
-    public static void Apply(string theme, double bodyPt, double headingPt)
+    public static void Apply(string theme, double bodyPt)
     {
         var resources = Application.Current.Resources;
         Theme = theme == "Dark" ? "Dark" : "Light";
@@ -27,13 +27,14 @@ public static class ThemeManager
         _current = next;
 
         resources["BodyFontSize"] = bodyPt * PxPerPt;
-        resources["HeadingFontSize"] = headingPt * PxPerPt;
+        resources["TitleFontSize"] = bodyPt * 2 * PxPerPt;
+        resources["HeadingFontSize"] = bodyPt * 1.15 * PxPerPt;
         resources["SubheadingFontSize"] = bodyPt * 1.15 * PxPerPt;
-        resources["SmallFontSize"] = Math.Max(16, bodyPt * 0.85) * PxPerPt;
+        resources["SmallFontSize"] = Math.Max(9, bodyPt * 0.85) * PxPerPt;
         resources["FormulaScale"] = bodyPt * 1.1 * PxPerPt;
         resources["LessonsColumnWidth"] = bodyPt * 11 * PxPerPt;   // whole words of lesson titles fit at every text size
         resources["GraphDiagramHeight"] = bodyPt * 30 * PxPerPt;    // the expression graph has six boxes with two lines of numbers each
         resources["DiagramHeight"] = bodyPt * 21 * PxPerPt;        // the map keeps its text legible at large sizes
-        resources["ScrollBarSize"] = 24 * bodyPt / 20;
+        resources["ScrollBarSize"] = Math.Max(14, 24 * bodyPt / 20);
     }
 }

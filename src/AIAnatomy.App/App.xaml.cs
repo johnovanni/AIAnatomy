@@ -44,7 +44,7 @@ public partial class App : Application
     private void RunNormally()
     {
         var settings = new SettingsService(AppPaths.SettingsFile);
-        ThemeManager.Apply(settings.Current.Theme, settings.Current.BodyFontSize, settings.Current.HeadingFontSize);
+        ThemeManager.Apply(settings.Current.Theme, settings.Current.BodyFontSize);
 
         AppServices services;
         try
@@ -60,7 +60,7 @@ public partial class App : Application
 
         var viewModel = services.NewMainViewModel();
         viewModel.SettingsPage.Applied += (_, _) =>
-            ThemeManager.Apply(settings.Current.Theme, settings.Current.BodyFontSize, settings.Current.HeadingFontSize);
+            ThemeManager.Apply(settings.Current.Theme, settings.Current.BodyFontSize);
         var window = new MainWindow(viewModel) { WindowState = WindowState.Maximized };
         MainWindow = window;
         ShutdownMode = ShutdownMode.OnMainWindowClose;

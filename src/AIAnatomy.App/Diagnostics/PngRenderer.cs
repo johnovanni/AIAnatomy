@@ -22,14 +22,13 @@ public static class PngRenderer
     /// <summary>Renders every view named in the options (one or several) with the same theme, text size and window size.</summary>
     public static async Task RenderAsync(DiagnosticOptions options)
     {
-        double heading = Math.Round(options.TextSize * 1.4, MidpointRounding.AwayFromZero);
-        ThemeManager.Apply(options.Theme, options.TextSize, heading);
+        ThemeManager.Apply(options.Theme, options.TextSize);
         // Fresh services (in-memory settings, an empty temporary model folder) for each view, so one picture cannot change
         // the next and none depends on the user's own models.
         foreach (string view in options.Views)
         {
             using var folder = new TemporaryFolder();
-            var services = AppServices.Create(new InMemorySettings(new AppSettings(options.TextSize, heading, options.Theme)), folder.Path);
+            var services = AppServices.Create(new InMemorySettings(new AppSettings(options.TextSize, options.Theme, ScaleVersion: SettingsService.CurrentScaleVersion)), folder.Path);
             await RenderViewAsync(options, services, view, options.OutputFileFor(view));
         }
     }

@@ -12,7 +12,7 @@ public class CommandLineTests
         Assert.Equal("gallery", o.View);
         Assert.Equal(@"C:\temp\g.png", o.OutputFile);
         Assert.Equal("Light", o.Theme);
-        Assert.Equal(20, o.TextSize);
+        Assert.Equal(13, o.TextSize);
         Assert.Equal(1600, o.Width);
         Assert.Equal(1000, o.Height);
     }
@@ -20,12 +20,12 @@ public class CommandLineTests
     [Fact]
     public void ParsesThemeAndTextSize()
     {
-        var o = DiagnosticOptions.Parse(["--render-png", "attention", "a.png", "--theme", "dark", "--text-size", "32", "--width", "1280", "--height", "800"]);
+        var o = DiagnosticOptions.Parse(["--render-png", "attention", "a.png", "--theme", "dark", "--text-size", "24", "--width", "1280", "--height", "800"]);
 
         Assert.Null(o.Error);
         Assert.Equal("attention", o.View);
         Assert.Equal("Dark", o.Theme);
-        Assert.Equal(32, o.TextSize);
+        Assert.Equal(24, o.TextSize);
         Assert.Equal(1280, o.Width);
         Assert.Equal(800, o.Height);
     }
@@ -49,7 +49,8 @@ public class CommandLineTests
     [InlineData(new[] { "--render-png", "gallery" }, "--render-png needs a view and a .png file.")]
     [InlineData(new[] { "--render-png", "gallery", "g.bmp" }, "--render-png needs a view and a .png file.")]
     [InlineData(new[] { "--render-png", "gallery", "g.png", "--theme", "Blue" }, "--theme must be Light or Dark.")]
-    [InlineData(new[] { "--render-png", "gallery", "g.png", "--text-size", "40" }, "--text-size must be a number from 16 to 32.")]
+    [InlineData(new[] { "--render-png", "gallery", "g.png", "--text-size", "25" }, "--text-size must be a number from 10 to 24.")]
+    [InlineData(new[] { "--render-png", "gallery", "g.png", "--text-size", "9" }, "--text-size must be a number from 10 to 24.")]
     [InlineData(new[] { "--render-png", "gallery", "g.png", "--text-size" }, "--text-size needs a value.")]
     [InlineData(new[] { "--render-png", "gallery", "g.png", "--width", "wide" }, "--width must be a whole number from 400 to 8000.")]
     [InlineData(new[] { "--theme", "Dark" }, "--theme, --text-size, --width and --height only go with --render-png.")]
@@ -77,8 +78,8 @@ public class CommandLineTests
         try
         {
             System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
-            var o = DiagnosticOptions.Parse(["--render-png", "gallery", "g.png", "--text-size", "24.5"]);
-            Assert.Equal(24.5, o.TextSize);
+            var o = DiagnosticOptions.Parse(["--render-png", "gallery", "g.png", "--text-size", "23.5"]);
+            Assert.Equal(23.5, o.TextSize);
         }
         finally { System.Globalization.CultureInfo.CurrentCulture = culture; }
     }
@@ -105,12 +106,12 @@ public class CommandLineTests
     [Fact]
     public void ParsesFullLab()
     {
-        // Final review I8: the lab pane by itself at its full height, so the bottom of a long lab can be checked at 32 pt.
-        var o = DiagnosticOptions.Parse(["--render-png", "output-sampling,learning", "lab.png", "--full-lab", "--theme", "Dark", "--text-size", "32"]);
+        // Final review I8: the lab pane by itself at its full height, so the bottom of a long lab can be checked at 24 pt.
+        var o = DiagnosticOptions.Parse(["--render-png", "output-sampling,learning", "lab.png", "--full-lab", "--theme", "Dark", "--text-size", "24"]);
         Assert.Null(o.Error);
         Assert.True(o.FullLab);
         Assert.Equal(new[] { "output-sampling", "learning" }, o.Views);
-        Assert.Equal(32, o.TextSize);
+        Assert.Equal(24, o.TextSize);
         Assert.False(DiagnosticOptions.Parse(["--render-png", "learning", "lab.png"]).FullLab);
     }
 
