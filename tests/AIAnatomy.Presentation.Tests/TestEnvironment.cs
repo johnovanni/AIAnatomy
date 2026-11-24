@@ -17,10 +17,12 @@ public sealed class TestEnvironment : IDisposable
 
     public string Root { get; }
     public string SettingsFile => Path.Combine(Root, "settings.json");
+    public string ProgressFile => Path.Combine(Root, "progress.json");
     public string UserModels => Path.Combine(Root, "models");
 
     public ModelLibrary NewLibrary() => new(Path.Combine(Content, "models"), UserModels);
     public SettingsService NewSettings() => new(SettingsFile);
+    public ProgressService NewProgress() => new(ProgressFile);
     public ActiveModelService NewActiveModels(ISettingsService? settings = null) => new(NewLibrary(), settings ?? NewSettings());
 
     public MainViewModel NewMain(ActiveModelService? models = null, ISettingsService? settings = null)
