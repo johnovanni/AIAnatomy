@@ -11,7 +11,7 @@ public class SettingsViewModelTests : IDisposable
         var settings = _env.NewSettings();
         settings.Save(settings.Current with { BodyFontSize = 24, Theme = "Dark" });
 
-        var vm = new SettingsViewModel(_env.NewSettings());
+        var vm = new SettingsViewModel(_env.NewSettings(), _env.NewProgress());
 
         Assert.Equal(24, vm.BodyFontSize);
         Assert.True(vm.IsDarkTheme);
@@ -24,7 +24,7 @@ public class SettingsViewModelTests : IDisposable
     public void ChangingTextSize_SavesAndRaisesApplied()
     {
         var settings = _env.NewSettings();
-        var vm = new SettingsViewModel(settings);
+        var vm = new SettingsViewModel(settings, _env.NewProgress());
         int applied = 0;
         vm.Applied += (_, _) => applied++;
 
@@ -40,7 +40,7 @@ public class SettingsViewModelTests : IDisposable
     public void ChoosingDark_SavesTheme()
     {
         var settings = _env.NewSettings();
-        var vm = new SettingsViewModel(settings);
+        var vm = new SettingsViewModel(settings, _env.NewProgress());
         int applied = 0;
         vm.Applied += (_, _) => applied++;
 
@@ -60,7 +60,7 @@ public class SettingsViewModelTests : IDisposable
     {
         var settings = _env.NewSettings();
         settings.Save(settings.Current with { ActiveModelName = "Induction demo" });
-        var vm = new SettingsViewModel(settings);
+        var vm = new SettingsViewModel(settings, _env.NewProgress());
 
         vm.IsLightTheme = true;
 

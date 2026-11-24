@@ -1,5 +1,6 @@
 using AIAnatomy.Presentation.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace AIAnatomy.Presentation;
 
@@ -10,10 +11,12 @@ namespace AIAnatomy.Presentation;
 public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsService _settings;
+    private readonly IProgressService _progress;
 
-    public SettingsViewModel(ISettingsService settings)
+    public SettingsViewModel(ISettingsService settings, IProgressService progress)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _progress = progress ?? throw new ArgumentNullException(nameof(progress));
         bodyFontSize = settings.Current.BodyFontSize;
         isDarkTheme = settings.Current.Theme == "Dark";
     }
@@ -32,6 +35,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         get => !IsDarkTheme;
         set { if (value) IsDarkTheme = false; }
     }
+
+    /// <summary>Forgets which lessons have been opened or checked.</summary>
+    [RelayCommand]
+    private void ResetProgress() => _progress.Reset();
 
     /// <summary>Raised after a change has been saved.</summary>
     public event EventHandler? Applied;

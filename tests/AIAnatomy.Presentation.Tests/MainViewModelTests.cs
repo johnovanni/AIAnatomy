@@ -1,4 +1,5 @@
 using AIAnatomy.Lessons;
+using AIAnatomy.Presentation.IdeaMap;
 using AIAnatomy.Presentation.Labs;
 
 namespace AIAnatomy.Presentation.Tests;
@@ -20,19 +21,18 @@ public class MainViewModelTests : IDisposable
     public void Main_StartsOnFirstLessonOfMap()
     {
         var vm = _env.NewMain();
-        Assert.Equal(Section.Map, vm.SelectedSection);
         Assert.Equal("rules-vs-learning", vm.SelectedLesson!.Id);
+        Assert.Equal("rules-vs-learning", vm.CurrentPage!.Lesson.Id);
         Assert.NotNull(vm.Explanation);
-        Assert.Equal(new[] { Section.Map, Section.Parts, Section.Whole, Section.Family, Section.Beyond }, vm.Sections);
+        Assert.Equal(new[] { Section.Map, Section.Parts, Section.Whole, Section.Family, Section.Beyond }, vm.Contents.Sections.Select(s => s.Section));
     }
 
     [Fact]
-    public void Main_SelectingSection_ShowsItsLessons()
+    public void Main_ShowingASection_ShowsItsFirstLesson()
     {
         var vm = _env.NewMain();
-        vm.SelectedSection = Section.Parts;
-        Assert.Equal(9, vm.Lessons.Count);
-        Assert.All(vm.Lessons, l => Assert.Equal(Section.Parts, l.Section));
+        vm.ShowSectionCommand.Execute(Section.Parts);
+        Assert.Equal(9, vm.Contents.Sections.Single(s => s.Section == Section.Parts).Lessons.Count);
         Assert.Equal("tokens", vm.SelectedLesson!.Id);
     }
 
@@ -41,7 +41,6 @@ public class MainViewModelTests : IDisposable
     {
         var vm = _env.NewMain();
         vm.Labs.Register("AttentionLab", () => new FakeLab());
-        vm.SelectedSection = Section.Parts;
         vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "attention");
 
         Assert.IsType<FakeLab>(vm.CurrentLab);
@@ -59,8 +58,9 @@ public class MainViewModelTests : IDisposable
         File.WriteAllText(Path.Combine(content, "lessons", "parts", "99-never.md"),
             "---\nid: never-built\nsection: parts\norder: 99\ntitle: Never built\nlab: NeverRegisteredLab\nsources: textbook\n---\nA lesson for a test.\n");
         var settings = _env.NewSettings();
-        var vm = new MainViewModel(LessonCatalog.Load(content), SourceList.Load(Path.Combine(content, "sources.json")), _env.NewActiveModels(settings), settings, content);
-        vm.SelectedSection = Section.Parts;
+        var vm = new MainViewModel(LessonCatalog.Load(content), SourceList.Load(Path.Combine(content, "sources.json")), _env.NewActiveModels(settings), settings,
+            _env.NewProgress(), ConnectionList.Load(Path.Combine(content, "connections.json")),
+            WithBox(IdeaMapData.Load(Path.Combine(content, "idea-map.json")), "never-built"), new MsaglGraphLayout(), content);
         vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "never-built");
 
         var lab = Assert.IsType<ComingLaterLabViewModel>(vm.CurrentLab);
@@ -108,6 +108,10 @@ public class MainViewModelTests : IDisposable
         Assert.Contains("<RowDefinition Height=\"2*\" />", xaml);
     }
 
+    // The idea map needs a box for every lesson, so the extra lesson gets one.
+    private static IdeaMapData WithBox(IdeaMapData map, string lessonId) =>
+        IdeaMapData.Create(map.Nodes.Append(new IdeaNode(lessonId, "Never built", "A lesson for a test.", IdeaMapData.Flow)), map.FlowEdges, map.GroupMembers);
+
     private static void CopyFolder(string from, string to)
     {
         Directory.CreateDirectory(to);
@@ -116,13 +120,13 @@ public class MainViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Main_NavigateToLesson_SwitchesSection()
+    public void Main_NavigateToLesson_ShowsThatLesson()
     {
         var vm = _env.NewMain();
         vm.NavigateToLessonCommand.Execute("scale");
-        Assert.Equal(Section.Whole, vm.SelectedSection);
         Assert.Equal("scale", vm.SelectedLesson!.Id);
-        Assert.Equal(3, vm.Lessons.Count);
+        Assert.Equal("scale", vm.CurrentPage!.Lesson.Id);
+        Assert.Equal("3.3", vm.CurrentPage.Number);
     }
 
     [Fact]
@@ -298,11 +302,10 @@ public class MainViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Main_ShowSection_OtherSection_SwitchesSection()
+    public void Main_ShowSection_OtherSection_ShowsItsFirstLesson()
     {
         var vm = _env.NewMain();
         vm.ShowSectionCommand.Execute(Section.Whole);
-        Assert.Equal(Section.Whole, vm.SelectedSection);
         Assert.Equal("train", vm.SelectedLesson!.Id);
     }
 

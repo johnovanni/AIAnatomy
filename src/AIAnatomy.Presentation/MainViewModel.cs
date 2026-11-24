@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using AIAnatomy.Lessons;
 using AIAnatomy.Lessons.Markdown;
 using AIAnatomy.Models.Language;
+using AIAnatomy.Presentation.Contents;
+using AIAnatomy.Presentation.IdeaMap;
 using AIAnatomy.Presentation.Labs;
 using AIAnatomy.Presentation.Services;
 using AIAnatomy.Presentation.Visuals;
@@ -10,27 +12,41 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AIAnatomy.Presentation;
 
+/// <summary>A request to scroll the lesson page to a named place (a lesson branch's anchor). A new <see cref="Serial"/> on
+/// every request, so asking for the same anchor twice still scrolls.</summary>
+public sealed record AnchorRequest(string Anchor, int Serial);
+
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly LessonCatalog _lessons;
     private readonly IActiveModelService _models;
+    private readonly IProgressService _progress;
+    private readonly ConnectionList _connections;
+    private readonly IdeaMapData _map;
+    private int _anchorSerial;
     private bool _navigating;
     private bool _revertingModel;
     private TrainLabViewModel? _trainLab;
     private bool _trainEndedAway;
 
     public MainViewModel(LessonCatalog lessons, SourceList sources, IActiveModelService models, ISettingsService settings,
-        string? contentFolder = null)
+        IProgressService progress, ConnectionList connections, IdeaMapData map, IGraphLayout layout, string? contentFolder = null)
     {
         _lessons = lessons ?? throw new ArgumentNullException(nameof(lessons));
         Sources = sources ?? throw new ArgumentNullException(nameof(sources));
         _models = models ?? throw new ArgumentNullException(nameof(models));
         Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _progress = progress ?? throw new ArgumentNullException(nameof(progress));
+        _connections = connections ?? throw new ArgumentNullException(nameof(connections));
+        _map = map ?? throw new ArgumentNullException(nameof(map));
         Labs = new LabFactory(models, contentFolder ?? AppPaths.Content, RefreshModelEntries);
         TrainLessonTitle = lessons.All.FirstOrDefault(l => l.LabId == TrainLabViewModel.Id)?.Title ?? "Training a model";
 
-        Sections = Enum.GetValues<Section>();
-        SettingsPage = new SettingsViewModel(settings);
+        Contents = new ContentsTreeViewModel(lessons, progress);
+        IdeaMap = new IdeaMapViewModel(lessons, connections, map, progress, settings, models, layout);
+        IdeaMap.OpenLessonRequested += (_, id) => OpenLessonById(id);
+        foreach (var l in lessons.InContentsOrder) Lessons.Add(l);
+        SettingsPage = new SettingsViewModel(settings, progress);
         RefreshModelEntries();
         _models.Changed += (_, _) => OnActiveModelChanged();
         SettingsPage.Applied += (_, _) => OnPropertyChanged(nameof(UseStackedLayout));
@@ -38,10 +54,16 @@ public sealed partial class MainViewModel : ObservableObject
             StatusMessage = $"Your settings couldn't be saved: {settings.LastSaveProblem}. They'll apply until you close the app.";
 
         var first = lessons.InSection(Section.Map).FirstOrDefault();
-        if (first != null) Show(first.Section, first);
+        if (first != null) Show(first);
     }
 
-    public IReadOnlyList<Section> Sections { get; }
+    /// <summary>The numbered contents (sections, lessons, branches and their marks).</summary>
+    public ContentsTreeViewModel Contents { get; }
+
+    /// <summary>The idea map page.</summary>
+    public IdeaMapViewModel IdeaMap { get; }
+
+    /// <summary>Every lesson in contents order. Temporary: the old window's lesson list reads it until the new shell (Task 9).</summary>
     public ObservableCollection<Lesson> Lessons { get; } = new();
     public ObservableCollection<ModelEntry> ModelEntries { get; } = new();
     public ISettingsService Settings { get; }
@@ -59,8 +81,13 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>The lab registry; labs not registered here show as "coming later".</summary>
     public LabFactory Labs { get; }
 
-    [ObservableProperty] private Section selectedSection;
     [ObservableProperty] private Lesson? selectedLesson;
+
+    /// <summary>The page of the lesson that is open (also while the idea map, Sources or Settings cover it).</summary>
+    [ObservableProperty] private LessonPageViewModel? currentPage;
+
+    /// <summary>The place on the lesson page to scroll to, after <see cref="OpenBranch"/>. Null until one is asked for.</summary>
+    [ObservableProperty] private AnchorRequest? anchorRequest;
     [ObservableProperty] private LabViewModel? currentLab;
     [ObservableProperty] private ModelEntry? selectedModelEntry;
     [ObservableProperty] private MarkdownDocument? explanation;
@@ -74,8 +101,12 @@ public sealed partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsShowingLesson))]
     private bool isShowingSettings;
 
-    /// <summary>True when the lesson (lab and explanation) is showing, not the Sources or Settings page.</summary>
-    public bool IsShowingLesson => !IsShowingSources && !IsShowingSettings;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShowingLesson))]
+    private bool isShowingIdeaMap;
+
+    /// <summary>True when the lesson (lab and explanation) is showing, not the idea map, Sources or Settings page.</summary>
+    public bool IsShowingLesson => !IsShowingSources && !IsShowingSettings && !IsShowingIdeaMap;
     [ObservableProperty] private string? statusMessage;
 
     /// <summary>
@@ -89,6 +120,7 @@ public sealed partial class MainViewModel : ObservableObject
     // the old Train lab looks uncovered, which would wrongly count as having seen how its run ended.
     partial void OnIsShowingSourcesChanged(bool value) { if (!_navigating) UpdateBackgroundStatus(); }
     partial void OnIsShowingSettingsChanged(bool value) { if (!_navigating) UpdateBackgroundStatus(); }
+    partial void OnIsShowingIdeaMapChanged(bool value) { if (!_navigating) UpdateBackgroundStatus(); }
 
     /// <summary>True when the kept Train lab is the lab on screen (not covered by Sources or Settings).</summary>
     private bool TrainLabInView => _trainLab != null && ReferenceEquals(_trainLab, CurrentLab) && IsShowingLesson;
@@ -122,63 +154,123 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     public Task NavigateToLesson(string id)
     {
-        var lesson = _lessons.Get(id);
-        Show(lesson.Section, lesson);
+        Show(_lessons.Get(id));
         return Task.CompletedTask;
     }
 
     [RelayCommand]
     private void ShowSources()
     {
+        IsShowingSources = true;   // the new page's flag first, so IsShowingLesson never flickers true between two pages
         IsShowingSettings = false;
-        IsShowingSources = true;
+        IsShowingIdeaMap = false;
     }
 
     [RelayCommand]
     private void ShowSettings()
     {
-        IsShowingSources = false;
         IsShowingSettings = true;
+        IsShowingSources = false;
+        IsShowingIdeaMap = false;
     }
 
-    /// <summary>Leaves the Sources or Settings page and shows the current lesson again.</summary>
+    [RelayCommand]
+    private void ShowIdeaMap()
+    {
+        IsShowingIdeaMap = true;
+        IsShowingSources = false;
+        IsShowingSettings = false;
+    }
+
+    /// <summary>Leaves the idea map, Sources or Settings page and shows the open lesson (next to the contents) again.</summary>
+    [RelayCommand]
+    private void ShowContents() => BackToLesson();
+
+    /// <summary>Leaves the idea map, Sources or Settings page and shows the current lesson again.</summary>
     [RelayCommand]
     private void BackToLesson()
     {
         IsShowingSources = false;
         IsShowingSettings = false;
+        IsShowingIdeaMap = false;
     }
 
-    /// <summary>What a click on a lesson in the list does: shows it, or (if it is already selected) just goes back to it.</summary>
+    /// <summary>What a click on a lesson does: shows it, or (if it is already open) just goes back to it.</summary>
     [RelayCommand]
     private void OpenLesson(Lesson? lesson)
     {
-        if (lesson == null) return;
-        if (lesson == SelectedLesson) BackToLesson();
-        else Show(lesson.Section, lesson);
+        if (lesson != null) OpenLessonById(lesson.Id);
     }
 
-    /// <summary>What a click on a section tab (or Ctrl+1 to Ctrl+5) does: shows it, or goes back to its current lesson.</summary>
+    /// <summary>What Ctrl+1 to Ctrl+5 do: open the section's first lesson.</summary>
     [RelayCommand]
     private void ShowSection(Section section)
     {
-        if (section == SelectedSection) BackToLesson();
-        else SelectedSection = section;
+        var first = _lessons.InSection(section).FirstOrDefault();
+        if (first != null) OpenLessonById(first.Id);
+    }
+
+    /// <summary>Opens the lesson a branch belongs to (the open lesson if it has the branch) and asks the page to scroll to
+    /// the branch's anchor.</summary>
+    [RelayCommand]
+    private void OpenBranch(LessonBranch? branch)
+    {
+        if (branch == null) return;
+        var lesson = CurrentPage?.Lesson.Branches.Contains(branch) == true
+            ? CurrentPage.Lesson
+            : _lessons.All.FirstOrDefault(l => l.Branches.Contains(branch));
+        if (lesson == null) return;
+        OpenLessonById(lesson.Id);
+        AnchorRequest = new AnchorRequest(branch.Anchor, ++_anchorSerial);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoNext))]
+    private void GoNext() => OpenLessonById(CurrentPage!.Next!.Id);
+
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
+    private void GoBack() => OpenLessonById(CurrentPage!.Previous!.Id);
+
+    private bool CanGoNext() => CurrentPage?.Next != null;
+    private bool CanGoBack() => CurrentPage?.Previous != null;
+
+    /// <summary>What a click on a connection chip does: another lesson opens; the whole loop opens the idea map in Loop mode
+    /// with nothing chosen; an idea that is only on the map opens the map with that idea chosen.</summary>
+    [RelayCommand]
+    private void OpenConnection(ConnectionChip? chip)
+    {
+        if (chip == null) return;
+        if (chip.IsWholeLoop)
+        {
+            IdeaMap.Mode = MapMode.Loop;
+            IdeaMap.ClearChoice();
+        }
+        else if (_lessons.All.Any(l => l.Id == chip.OtherId))
+        {
+            OpenLessonById(chip.OtherId);
+            return;
+        }
+        else
+        {
+            if (!IdeaMap.Bubbles.Any(b => b.Id == chip.OtherId)) IdeaMap.Mode = MapMode.Loop;
+            if (IdeaMap.Bubbles.Any(b => b.Id == chip.OtherId)) IdeaMap.Choose(chip.OtherId);
+        }
+        ShowIdeaMap();
+    }
+
+    /// <summary>Shows the lesson; if it is the one already open, only brings it back (its lab is not recreated).</summary>
+    private void OpenLessonById(string id)
+    {
+        if (CurrentPage?.Lesson.Id == id) BackToLesson();
+        else Show(_lessons.Get(id));
     }
 
     [RelayCommand]
     private void ResetLab() => CurrentLab?.Reset();
 
-    partial void OnSelectedSectionChanged(Section value)
-    {
-        if (_navigating) return;
-        Show(value, _lessons.InSection(value).FirstOrDefault());
-    }
-
     partial void OnSelectedLessonChanged(Lesson? value)
     {
         if (_navigating || value == null) return;
-        Show(value.Section, value);
+        Show(value);
     }
 
     partial void OnSelectedModelEntryChanged(ModelEntry? value)
@@ -212,28 +304,29 @@ public sealed partial class MainViewModel : ObservableObject
 
     private ModelEntry? ActiveEntry() => ModelEntries.FirstOrDefault(e => e.IsReadable && IsActive(e));
 
-    /// <summary>Shows a section and one of its lessons, creating that lesson's lab once.</summary>
-    private void Show(Section section, Lesson? lesson)
+    /// <summary>Shows a lesson, creating its lab once, and marks it opened.</summary>
+    private void Show(Lesson lesson)
     {
         _navigating = true;
         try
         {
-            SelectedSection = section;
-            if (Lessons.Count == 0 || Lessons[0].Section != section)
-            {
-                Lessons.Clear();
-                foreach (var l in _lessons.InSection(section)) Lessons.Add(l);
-            }
-            SelectedLesson = lesson;
+            AnchorRequest = null;   // a view bound later must not scroll to an old anchor
             IsShowingSources = false;
             IsShowingSettings = false;
+            IsShowingIdeaMap = false;
             // A lab that keeps running (the Train lab, R35) is not stopped when the user leaves it.
             if (CurrentLab is { KeepsRunningWhenLeft: false } leaving) leaving.Deactivate();
-            Explanation = lesson?.Explanation;
-            Formula = lesson?.Formula;
-            BrainsAndModels = lesson?.BrainsAndModels;
-            CurrentLab = lesson == null ? null : Labs.IsRegistered(lesson.LabId) ? Labs.Create(lesson.LabId) : new ComingLaterLabViewModel();
+            Explanation = lesson.Explanation;
+            Formula = lesson.Formula;
+            BrainsAndModels = lesson.BrainsAndModels;
+            CurrentLab = Labs.IsRegistered(lesson.LabId) ? Labs.Create(lesson.LabId) : new ComingLaterLabViewModel();
             if (CurrentLab is TrainLabViewModel train && !ReferenceEquals(train, _trainLab)) WatchTrainLab(train);
+            CurrentPage = new LessonPageViewModel(lesson, _lessons, CurrentLab, _connections, _map);
+            SelectedLesson = lesson;
+            GoNextCommand.NotifyCanExecuteChanged();
+            GoBackCommand.NotifyCanExecuteChanged();
+            Contents.Select(lesson.Id);
+            _progress.MarkOpened(lesson.Id);
             UpdateBackgroundStatus();
         }
         finally { _navigating = false; }

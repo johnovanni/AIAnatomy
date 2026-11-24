@@ -52,7 +52,13 @@ public sealed class LessonCatalog
         }
         var duplicate = lessons.GroupBy(l => l.Id).FirstOrDefault(g => g.Count() > 1);
         if (duplicate != null) throw new InvalidDataException($"Lesson id '{duplicate.Key}' is used by more than one file.");
-        return new LessonCatalog(lessons.OrderBy(l => l.Section).ThenBy(l => l.Order).ToList());
+        var ordered = lessons.OrderBy(l => l.Section).ThenBy(l => l.Order).ToList();
+        var owners = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var l in ordered)
+            foreach (var b in l.Branches)
+                if (!owners.TryAdd(b.Anchor, l.Id))
+                    throw new InvalidDataException($"Branch anchor '{b.Anchor}' is used by both '{owners[b.Anchor]}' and '{l.Id}'; branch anchors must be unique across all lessons.");
+        return new LessonCatalog(ordered);
     }
 
     private static Lesson ParseFile(string text)

@@ -73,23 +73,10 @@
 
     <DockPanel x:Name="Shell" Background="{DynamicResource WindowBrush}">
 
-        <!-- Header: section tabs, then the model picker and the Reset, Sources and Settings buttons (they wrap when the text is large). -->
+        <!-- Header: the model picker and the Reset, Sources and Settings buttons (they wrap when the text is large). -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="0,0,0,1" Padding="12,8,12,0">
             <WrapPanel>
-                <ListBox x:Name="SectionTabs" Style="{StaticResource PlainList}" ItemsSource="{Binding Sections}"
-                         SelectedItem="{Binding SelectedSection}" AutomationProperties.Name="Sections" Margin="0,0,24,0"
-                         VerticalAlignment="Bottom">
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource SectionTab}">
-                            <EventSetter Event="PreviewMouseLeftButtonUp" Handler="OnSectionClicked" />
-                            <EventSetter Event="KeyDown" Handler="OnSectionKey" />
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                </ListBox>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
                     <TextBlock Text="Model" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="{DynamicResource SmallFontSize}"
                                Foreground="{DynamicResource MutedTextBrush}" />

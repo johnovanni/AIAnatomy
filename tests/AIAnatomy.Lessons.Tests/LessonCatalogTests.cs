@@ -29,6 +29,18 @@ public class LessonCatalogTests
     }
 
     [Fact]
+    public void Parse_BranchAnchorUsedByTwoLessons_Throws()
+    {
+        using var dir = new TempContent();
+        dir.Write("lessons/x/01-a.md", Header + "branches: One=toy\n---\nBody");
+        dir.Write("lessons/x/02-b.md", Header.Replace("id: a", "id: b").Replace("order: 1", "order: 2") + "branches: Two=toy\n---\nBody");
+        var e = Assert.Throws<InvalidDataException>(() => LessonCatalog.Load(dir.Path));
+        Assert.Contains("'toy'", e.Message);
+        Assert.Contains("'a'", e.Message);
+        Assert.Contains("'b'", e.Message);
+    }
+
+    [Fact]
     public void Parse_NoNewFields_GivesEmptyDefaults()
     {
         using var dir = new TempContent();

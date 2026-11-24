@@ -125,7 +125,8 @@ public sealed partial class IdeaMapViewModel : ObservableObject
 
     private bool CanOpenChosenLesson() => Card?.LessonId != null;
 
-    private void ClearChoice()
+    /// <summary>Un-chooses the bubble: no card, no lit connections.</summary>
+    public void ClearChoice()
     {
         ChosenId = null;
         ChosenConnections = [];

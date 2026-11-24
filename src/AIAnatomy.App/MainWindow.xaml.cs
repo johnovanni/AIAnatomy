@@ -72,18 +72,4 @@ public partial class MainWindow : Window
             e.Handled = true;
         }
     }
-
-    private void OnSectionClicked(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is ListBoxItem { DataContext: Section section }) ViewModel.ShowSectionCommand.Execute(section);
-    }
-
-    private void OnSectionKey(object sender, KeyEventArgs e)
-    {
-        if (e.Key is Key.Enter or Key.Space && sender is ListBoxItem { DataContext: Section section })
-        {
-            ViewModel.ShowSectionCommand.Execute(section);
-            e.Handled = true;
-        }
-    }
 }
