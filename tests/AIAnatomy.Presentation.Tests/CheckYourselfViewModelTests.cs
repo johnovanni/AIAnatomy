@@ -102,8 +102,9 @@ public class CheckYourselfViewModelTests : IDisposable
     public void NoScoreIsKept()
     {
         var vm = _env.NewMain();
-        vm.NavigateToLesson("attention");
+        vm.NavigateToLesson("family-coming");
         Assert.Null(vm.CurrentPage!.Check);   // no questions, no section
+        vm.NavigateToLesson("attention");
 
         var progress = _env.NewProgress();
         var lesson = vm.CurrentPage.Lesson with { Questions = Two };
@@ -119,7 +120,9 @@ public class CheckYourselfViewModelTests : IDisposable
     {
         string content = Path.Combine(_env.Root, "content-questions");
         CopyFolder(TestEnvironment.Content, content);
-        File.AppendAllText(Path.Combine(content, "lessons", "parts", "04-attention.md"),
+        string file = Path.Combine(content, "lessons", "parts", "04-attention.md");
+        File.WriteAllText(file, TestEnvironment.WithoutCheckYourself(File.ReadAllText(file)));   // only the one question below
+        File.AppendAllText(file,
             """
 
 

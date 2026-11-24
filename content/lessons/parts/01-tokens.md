@@ -6,6 +6,8 @@ title: Tokens
 lab: TokensLab
 sources: sennrich2016, radford2019, gemma2024, textbook
 branches: Byte-pair encoding=bpe; Count the letters=count-letters
+idea: A model reads text as a list of numbered pieces called tokens; in this app's models each token is one character.
+part: tokens
 ---
 A model never sees letters on a page. It sees a list of whole numbers. The first step is to cut the text into pieces called **tokens** and give each piece its number, its **id**. Type in **Your text** and the lab cuts it up two ways.
 
@@ -18,6 +20,37 @@ A model never sees letters on a page. It sees a list of whole numbers. The first
 Large language models, including those behind assistants, use sub-word tokenizers with vocabularies from tens of thousands to a few hundred thousand tokens. GPT-2's has 50,257 (Radford et al., 2019); Gemma's has about 256,000 (Gemma Team, 2024). Anthropic has not published Claude's current tokenizer, so its exact pieces and vocabulary size are not known.
 
 *Sources: Sennrich et al. (2016); Radford et al. (2019); Gemma Team (2024); the rest is standard textbook material.*
+
+## Try this
+1. Count the chips under One token per character: "The fox and the crow" is 20 tokens, one per character, spaces (␣) included.
+2. Drag the Merges slider down to 0, then up to about 50: common words with their leading space, such as "␣the", become single chips.
+3. Type an emoji in Your text and find its chip: �, with a thicker outline, for a character the tokenizer has never seen.
+4. Under Count the letters, see how many pieces "strawberry" becomes, and how many r's are hidden inside them.
+
+## Check yourself
+? With one token per character, how many tokens is "The fox and the crow"?
+- 5, one per word
+- 16, one per letter
+* 20, one per character
+why: Every character is a token, and a space is a character too: 16 letters and 4 spaces. Count the chips under One token per character.
+see: lab
+checked-by-code: Tokens_FoxAndCrowIsTwentyCharacterTokens
+
+? With the Merges slider at its default 200, the BPE tokenizer cuts "strawberry" into 7 pieces. What does a model that uses this tokenizer receive?
+- 10 ids, one for each letter of the word, so it can count them
+* 7 ids, one per piece, with no letters inside
+- The whole word as one id, with its 3 r's marked on it
+why: The model receives the pieces' ids. Whatever it knows about the letters inside a piece had to be learned from its training text. With Merges at 200, the chips under Count the letters show the 7 pieces.
+see: count-letters
+checked-by-code: Tokens_StrawberryIsSevenPiecesAtDefaultMerges
+
+? What does the character tokenizer do with an emoji, which never occurs in the fables?
+* Gives it the unknown token, shown as �
+- Splits it into the letters of its name, such as s, m, i, l, e
+- Leaves it out of the list of tokens altogether
+why: The Fables model knows only the characters that occur in the fables, plus one unknown token for everything else: 69 tokens in all. Type an emoji in Your text and look for the chip with the thicker outline.
+see: explanation
+checked-by-code: Tokens_EmojiIsTheUnknownToken
 
 ## Formula
 

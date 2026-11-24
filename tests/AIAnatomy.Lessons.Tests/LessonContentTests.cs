@@ -92,6 +92,91 @@ public class LessonContentTests
         Assert.True(leaks.Count == 0, string.Join("; ", leaks));
     }
 
+    /// <summary>Lessons whose big idea, Try this and Check yourself are still to be written (Task 17 empties this set
+    /// and deletes it).</summary>
+    private static readonly HashSet<string> NotYetWritten =
+        ["feed-forward", "residual-stream", "output-sampling", "learning", "train", "step-through", "scale"];
+
+    /// <summary>Every lesson that is not a "coming later" placeholder and is not still waiting for its content.</summary>
+    private static IEnumerable<Lesson> BuiltLessons =>
+        Catalog.All.Where(l => !l.IsPlaceholder && !NotYetWritten.Contains(l.Id));
+
+    [Fact]
+    public void NotYetWritten_NamesOnlyRealLessonsWithNoContentYet()
+    {
+        foreach (var id in NotYetWritten)
+        {
+            var lesson = Catalog.Get(id);
+            Assert.True(lesson.Idea == null && lesson.TryThis.Count == 0 && lesson.Questions.Count == 0,
+                $"{id} has content now: take it out of NotYetWritten");
+        }
+    }
+
+    [Fact]
+    public void EveryBuiltLesson_HasIdeaPartTryThisAndTwoToThreeQuestions()
+    {
+        var problems = new List<string>();
+        foreach (var lesson in BuiltLessons)
+        {
+            if (string.IsNullOrWhiteSpace(lesson.Idea)) problems.Add($"{lesson.Id} has no idea");
+            if (!Parts.IsKnown(lesson.Part)) problems.Add($"{lesson.Id} has no known part");
+            if (lesson.TryThis.Count == 0) problems.Add($"{lesson.Id} has no Try this");
+            if (lesson.Questions.Count is < 2 or > 3) problems.Add($"{lesson.Id} has {lesson.Questions.Count} questions");
+        }
+        Assert.True(problems.Count == 0, string.Join("; ", problems));
+    }
+
+    [Fact]
+    public void BigIdea_IsOneSentence_UnderTwentyFiveWords()
+    {
+        var problems = new List<string>();
+        foreach (var lesson in BuiltLessons)
+        {
+            string idea = lesson.Idea ?? "";
+            int words = idea.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+            if (words >= 25) problems.Add($"{lesson.Id} idea has {words} words");
+            if (!idea.EndsWith('.')) problems.Add($"{lesson.Id} idea does not end with a full stop");
+            // A second sentence shows as an end mark followed by a space inside the text.
+            if (System.Text.RegularExpressions.Regex.IsMatch(idea.TrimEnd('.'), @"[.!?]\s")) problems.Add($"{lesson.Id} idea is more than one sentence");
+        }
+        Assert.True(problems.Count == 0, string.Join("; ", problems));
+    }
+
+    [Fact]
+    public void TryThis_HasTwoToFourSteps()
+    {
+        var problems = BuiltLessons.Where(l => l.TryThis.Count is < 2 or > 4).Select(l => $"{l.Id} has {l.TryThis.Count} steps").ToList();
+        Assert.True(problems.Count == 0, string.Join("; ", problems));
+    }
+
+    [Fact]
+    public void PlaceholderLessons_HaveNoIdeaTryThisOrQuestions()
+    {
+        foreach (var lesson in Catalog.All.Where(l => l.IsPlaceholder))
+        {
+            Assert.Null(lesson.Idea);
+            Assert.Empty(lesson.TryThis);
+            Assert.Empty(lesson.Questions);
+        }
+    }
+
+    /// <summary>The big idea, Try this steps and questions are shown as plain text, so Markdown markers would show as typed.</summary>
+    [Fact]
+    public void IdeasStepsAndQuestions_HaveNoMarkdownMarkers()
+    {
+        var leaks = new List<string>();
+        foreach (var lesson in Catalog.All)
+        {
+            var texts = new List<string?> { lesson.Idea };
+            texts.AddRange(lesson.TryThis);
+            foreach (var q in lesson.Questions) { texts.Add(q.Prompt); texts.AddRange(q.Answers); texts.Add(q.Why); }
+            foreach (var text in texts.Where(t => t != null))
+                foreach (var marker in new[] { "**", "*", "[", "](", "$$", "##", "`" })
+                    if (text!.Contains(marker, StringComparison.Ordinal)) leaks.Add($"{lesson.Id}: \"{marker}\" in \"{text}\"");
+        }
+        Assert.True(leaks.Count == 0, string.Join("; ", leaks));
+    }
+
     [Fact]
     public void ComingLaterLessons_HaveNoFormulaOrNote()
     {

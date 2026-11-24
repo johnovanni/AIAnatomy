@@ -6,6 +6,8 @@ title: Multi-head attention
 lab: MultiHeadLab
 sources: vaswani2017, textbook
 branches: Switch a head off and compare the guesses=compare-guesses; Joining the heads at one token=joining
+idea: Several attention heads run side by side, each with its own learned numbers, and their outputs are joined and mixed.
+part: attention
 ---
 One attention head makes one weighted average per token, so it tends to follow one kind of pattern. A transformer runs several heads side by side in each layer, so one head can, for example, look at the token just before while another looks further back. The Fables model has 4 heads in each of its 2 layers.
 
@@ -20,6 +22,35 @@ Under **Joining the heads at one token**, pick a **Token**. Each head's output i
 The original transformer used 8 heads of 64 numbers each, on vectors of 512 numbers (Vaswani et al., 2017).
 
 *Sources: Vaswani et al. (2017); the rest is standard textbook material.*
+
+## Try this
+1. With Layer 1 chosen, compare the head panels (four in the Fables model): each head spreads its attention in its own way.
+2. Clear the check box of Head 2 to switch it off, and compare With your choices and With every head working.
+3. Tick Head 2 again. Under Joining the heads at one token, pick a Token and watch the heads' short outputs join into one long vector.
+
+## Check yourself
+? In the shipped Fables model, how many numbers does each head use for its own query, key and value?
+- 4
+* 16
+- 64
+why: Each head reads the whole 64-number vector and makes its own query, key and value of 64 ÷ 4 = 16 numbers. The four outputs, joined, give 64 numbers again.
+see: joining
+checked-by-code: MultiHead_FablesHeadsUse16NumbersEach
+
+? In the shipped Fables model, with the lab's starting text "the fox and the ", where does head 2 of layer 1 look most?
+* At the token just before
+- At the first token of the text, whatever the text is
+- Evenly at every token it is allowed to see
+why: In every row of its heat map after the first, the darkest square is the token just before. Nobody assigned it that job; it came out of training. Choose Layer 1 and look at the Head 2 panel: the dark squares run just left of the diagonal.
+see: lab
+checked-by-code: MultiHead_FablesLayer1Head2LooksAtThePreviousToken
+
+? You switch a head off and the guesses hardly change. What does that show?
+- That the head does nothing at all and could be removed
+- That the head is broken and needs to be trained again
+* Not much: other parts may make up for it
+why: As with lesion studies in neuroscience, "no change" does not prove that the part did nothing.
+see: brains
 
 ## Formula
 

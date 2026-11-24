@@ -35,6 +35,11 @@ public sealed class TestEnvironment : IDisposable
             IdeaMapData.Load(Path.Combine(Content, "idea-map.json")), new MsaglGraphLayout(), Content);
     }
 
+    /// <summary>A lesson file's text without its "## Check yourself" section, for tests that bring their own questions or
+    /// branches (the shipped questions' see: anchors name the shipped branches).</summary>
+    public static string WithoutCheckYourself(string lesson) =>
+        System.Text.RegularExpressions.Regex.Replace(lesson, @"(?ms)^## Check yourself\s*$.*?(?=^## |\z)", "");
+
     public void Dispose()
     {
         try { Directory.Delete(Root, recursive: true); }

@@ -6,6 +6,8 @@ title: Attention
 lab: AttentionLab
 sources: vaswani2017, olsson2022, textbook
 branches: Attention by hand=toy; Attention in the model you are using=heads; Can attention learn to copy?=induction
+idea: Each token gathers information from itself and the tokens before it, weighted by how well its query matches their keys.
+part: attention
 ---
 Attention is how a token gathers information from itself and the tokens before it. Each token makes three vectors: a **query** (what am I looking for?), a **key** (what do I offer?) and a **value** (what I hand over if chosen).
 
@@ -18,6 +20,35 @@ Attention is how a token gathers information from itself and the tokens before i
 Our first version used repeats at a fixed distance, and the model found a shortcut: it looked back a fixed number of places, and no induction head formed. The sequences now vary, so only matching by content works.
 
 *Sources: Vaswani et al. (2017); Olsson et al. (2022); the rest is standard textbook material.*
+
+## Try this
+1. In part 1 (Attention by hand), drag Q towards K2, or type its numbers, and watch K2's weight grow in Step 3.
+2. Check that the weights in Step 3 add up to 1, wherever you put the points.
+3. In part 2, pick a Layer and a Head. Each row of the heat map is one token looking back; hatched squares are later tokens it may not look at.
+4. In part 3, press Show trained demo and find the head with the highest induction score.
+
+## Check yourself
+? Why are some squares of the heat map in part 2 hatched?
+- Those tokens are spaces, which attention always skips
+* A token may not look at later tokens
+- Those weights were too small to show on the colour scale
+why: This is the causal mask. Blocking every later token means a token can never peek at the token it must predict; those weights are exactly 0. Pick another Layer and Head: the hatched squares stay in the same places.
+see: heads
+
+? In the toy at its starting numbers, which key gets the most weight?
+- K2, because it is the highest point on the plot
+- All three keys get the same weight, a third each
+* K1: Q · K1 is the largest dot product
+why: Q · K1 = 1, Q · K2 = 0.5 and Q · K3 = −0.75. Softmax gives the largest score the largest weight, about 50%. Reset the lab to get the starting numbers back, then read Step 1 and Step 3.
+see: toy
+checked-by-code: Attention_ToyStartGivesK1TheMostWeight
+
+? An induction head finds an earlier copy and looks at the letter after it. What does it need from an earlier layer?
+* A previous-token head
+- A head that always looks only at the first letter of the text
+- Nothing: an induction head does all of the work on its own
+why: Olsson et al. (2022) found the two working together: the previous-token head copies "what came before me" into each token, and the induction head uses that to find the earlier copy.
+see: induction
 
 ## Formula
 

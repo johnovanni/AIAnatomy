@@ -70,6 +70,41 @@ public class LessonCatalogTests
     }
 
     [Fact]
+    public void Parse_TryThisLineThatIsNotAStep_FailsNamingTheLesson()
+    {
+        using var dir = new TempContent();
+        dir.Write("lessons/x/05-odd.md", Header + "---\nBody\n\n## Try this\n1. Drag Q.\n\nWatch weight 2 grow.\n");
+        var ex = Assert.Throws<InvalidDataException>(() => LessonCatalog.Load(dir.Path));
+        Assert.Equal("05-odd.md: lesson 'a': the Try this line 'Watch weight 2 grow.' is not a numbered step like '1. Do this.'.", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_TryThisFollowedByFormula_EndsAtTheFormulaHeading()
+    {
+        using var dir = new TempContent();
+        dir.Write("lessons/x/01-a.md", Header + "---\nBody\n\n## Try this\n1. Drag Q.\n2. Watch weight 2 grow.\n\n## Formula\n\n$$\nx = 1\n$$\n\n- x: a number.\n");
+        var a = LessonCatalog.Load(dir.Path).Get("a");
+        Assert.Equal(["Drag Q.", "Watch weight 2 grow."], a.TryThis);
+        Assert.NotNull(a.Formula);
+        Assert.Single(a.Formula!.Blocks.OfType<FormulaBlock>());
+        Assert.Single(a.Formula.Blocks.OfType<BulletList>());
+    }
+
+    [Fact]
+    public void Parse_CheckYourselfFollowedByFormula_EndsAtTheFormulaHeading()
+    {
+        using var dir = new TempContent();
+        dir.Write("lessons/x/01-a.md", Header + "---\nBody\n\n## Check yourself\n? Which?\n- one\n* two\nwhy: Because.\nsee: formula\n\n" +
+            "## Formula\n\n$$\nx = 1\n$$\n\n- x: a number.\n");
+        var a = LessonCatalog.Load(dir.Path).Get("a");
+        var q = Assert.Single(a.Questions);
+        Assert.Equal(["one", "two"], q.Answers);
+        Assert.NotNull(a.Formula);
+        Assert.Single(a.Formula!.Blocks.OfType<FormulaBlock>());
+        Assert.Single(a.Formula.Blocks.OfType<BulletList>());
+    }
+
+    [Fact]
     public void Parse_UnknownPart_FailsNamingTheFile()
     {
         using var dir = new TempContent();

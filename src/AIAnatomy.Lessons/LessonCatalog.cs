@@ -94,7 +94,7 @@ public sealed class LessonCatalog
             throw new InvalidDataException($"unknown part '{part}' (use one of {string.Join(", ", Parts.All)}).");
         var branches = ParseBranches(Optional("branches"));
 
-        var (explanation, formula, brains, tryThis, check) = SplitBody(lines[(end + 1)..]);
+        var (explanation, formula, brains, tryThis, check) = SplitBody(lines[(end + 1)..], Required("id"));
         var anchors = FixedAnchors.Concat(branches.Select(b => b.Anchor)).ToHashSet(StringComparer.Ordinal);
         return new Lesson(Required("id"), section, order, Required("title"), Required("lab"),
             explanation, formula, brains, sourceIds, sources.Contains(TextbookSource))
@@ -124,7 +124,7 @@ public sealed class LessonCatalog
         return branches;
     }
 
-    private static (MarkdownDocument, MarkdownDocument?, MarkdownDocument?, List<string>, List<string>) SplitBody(string[] body)
+    private static (MarkdownDocument, MarkdownDocument?, MarkdownDocument?, List<string>, List<string>) SplitBody(string[] body, string id)
     {
         var parts = new Dictionary<string, List<string>> { ["main"] = new() };
         var current = "main";
@@ -142,8 +142,12 @@ public sealed class LessonCatalog
         var steps = new List<string>();
         foreach (var line in parts.GetValueOrDefault("try") ?? new())
         {
-            var m = System.Text.RegularExpressions.Regex.Match(line.Trim(), @"^\d+\.\s+(.*)$");
-            if (m.Success) steps.Add(m.Groups[1].Value.Trim());
+            var t = line.Trim();
+            if (t.Length == 0) continue;
+            var m = System.Text.RegularExpressions.Regex.Match(t, @"^\d+\.\s+(.*)$");
+            if (!m.Success)
+                throw new InvalidDataException($"lesson '{id}': the Try this line '{t}' is not a numbered step like '1. Do this.'.");
+            steps.Add(m.Groups[1].Value.Trim());
         }
         return (Doc("main")!, Doc("formula"), Doc("brains"), steps, parts.GetValueOrDefault("check") ?? new());
     }

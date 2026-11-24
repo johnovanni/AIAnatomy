@@ -25,14 +25,14 @@ public class QuestionParserTests
     public void Questions_TwoCorrectAnswers_Fail()
     {
         var ex = Assert.Throws<InvalidDataException>(() => Parse(Good.Replace("- Every", "* Every")));
-        Assert.Contains("question 1", ex.Message);
+        Assert.Equal("question 1: more than one answer is marked correct with '*'.", ex.Message);
     }
 
     [Fact]
     public void Questions_NoCorrectAnswer_Fail()
     {
         var ex = Assert.Throws<InvalidDataException>(() => Parse(Good.Replace("* Positions", "- Positions")));
-        Assert.Contains("question 1", ex.Message);
+        Assert.Equal("question 1: no answer is marked correct with '*'.", ex.Message);
     }
 
     [Theory]
@@ -58,6 +58,23 @@ public class QuestionParserTests
     {
         var q = Assert.Single(Parse(Good + "\nchecked-by-code: Attention_MaskBlocksLaterPositions"));
         Assert.Equal("Attention_MaskBlocksLaterPositions", q.CheckedBy);
+    }
+
+    /// <summary>An answer marker is '-' or '*' followed by a space, so "-1 is negative" is not read as an answer.</summary>
+    [Theory]
+    [InlineData("-1 is negative")]
+    [InlineData("*not an answer*")]
+    public void AnswerMarker_NeedsAFollowingSpace(string line)
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => Parse(Good.Replace("- Every position", line)));
+        Assert.Equal($"question 1: cannot read the line '{line}'.", ex.Message);
+    }
+
+    [Fact]
+    public void AnswerMarker_AloneIsAnEmptyAnswer()
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => Parse(Good.Replace("- Every position", "-")));
+        Assert.Equal("question 1: an answer is empty.", ex.Message);
     }
 
     [Fact]

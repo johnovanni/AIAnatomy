@@ -18,17 +18,18 @@ public class LessonPageViewModelTests : IDisposable
         string content = Path.Combine(_env.Root, "content-branches");
         CopyFolder(TestEnvironment.Content, content);
         string file = Path.Combine(content, "lessons", "parts", "04-attention.md");
-        File.WriteAllText(file, WithoutBranches(File.ReadAllText(file)).Replace("sources: vaswani2017, olsson2022, textbook",
+        File.WriteAllText(file, WithoutBranches(TestEnvironment.WithoutCheckYourself(File.ReadAllText(file))).Replace("sources: vaswani2017, olsson2022, textbook",
             "sources: vaswani2017, olsson2022, textbook\nbranches: The mask=mask; More heads=heads"));
         string other = Path.Combine(content, "lessons", "parts", "05-multi-head.md");
-        File.WriteAllText(other, WithoutBranches(File.ReadAllText(other)).Replace("sources: ", "branches: Per head=per-head" + "\nsources: ", StringComparison.Ordinal));
+        File.WriteAllText(other, WithoutBranches(TestEnvironment.WithoutCheckYourself(File.ReadAllText(other))).Replace("sources: ", "branches: Per head=per-head" + "\nsources: ", StringComparison.Ordinal));
         var settings = _env.NewSettings();
         return new MainViewModel(LessonCatalog.Load(content), SourceList.Load(Path.Combine(content, "sources.json")),
             _env.NewActiveModels(settings), settings, _env.NewProgress(), Connections,
             IdeaMapData.Load(Path.Combine(content, "idea-map.json")), new MsaglGraphLayout(), content);
     }
 
-    // The shipped lessons declare branches of their own; these tests use their own, so the real ones are taken out first.
+    // The shipped lessons declare branches of their own; these tests use their own, so the real ones (and the questions that
+    // point at them) are taken out first.
     private static string WithoutBranches(string lesson) =>
         System.Text.RegularExpressions.Regex.Replace(lesson, "(?m)^branches:.*$", "");
 

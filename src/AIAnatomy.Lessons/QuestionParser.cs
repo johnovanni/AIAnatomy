@@ -38,7 +38,7 @@ public static class QuestionParser
             if (line.StartsWith("why:", StringComparison.OrdinalIgnoreCase)) why = line[4..].Trim();
             else if (line.StartsWith("see:", StringComparison.OrdinalIgnoreCase)) see = line[4..].Trim();
             else if (line.StartsWith("checked-by-code:", StringComparison.OrdinalIgnoreCase)) checkedBy = line[16..].Trim();
-            else if (line.StartsWith('-') || line.StartsWith('*'))
+            else if (IsAnswer(line))
             {
                 if (line[0] == '*')
                 {
@@ -59,4 +59,9 @@ public static class QuestionParser
             throw new InvalidDataException(Fail($"'see: {see}' is not a known anchor (use {string.Join(", ", anchors.Order())})."));
         return new Question(prompt, answers, correct, why, see, string.IsNullOrEmpty(checkedBy) ? null : checkedBy);
     }
+
+    /// <summary>An answer line is '-' or '*' then a space (or the marker alone, an empty answer), so a line such as
+    /// "-1 is negative" is not taken for an answer.</summary>
+    private static bool IsAnswer(string line) =>
+        line is "-" or "*" || line.StartsWith("- ", StringComparison.Ordinal) || line.StartsWith("* ", StringComparison.Ordinal);
 }
