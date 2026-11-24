@@ -30,6 +30,16 @@ public sealed partial class ContentsLesson : ObservableObject
     public IReadOnlyList<LessonBranch> Branches { get; }
     public bool IsLater { get; }
 
-    [ObservableProperty] private LessonMark _mark;
+    /// <summary>What a screen reader says for the row, for example "2.4 Attention, opened" ("coming later" rows have no mark).</summary>
+    public string AutomationName => IsLater ? Label : Mark switch
+    {
+        LessonMark.Opened => $"{Label}, opened",
+        LessonMark.Checked => $"{Label}, checked",
+        _ => Label,
+    };
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AutomationName))]
+    private LessonMark _mark;
     [ObservableProperty] private bool _isSelected;
 }

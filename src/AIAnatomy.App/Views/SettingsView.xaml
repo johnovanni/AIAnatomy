@@ -20,7 +20,7 @@
                                 Value="{Binding BodyFontSize}" SmallChange="1" LargeChange="2" TickFrequency="1"
                                 IsSnapToTickEnabled="True" AutomationProperties.Name="Text size" VerticalAlignment="Center" />
                     </DockPanel>
-                    <TextBlock Style="{StaticResource MutedText}" Text="From 16 pt to 32 pt. Headings are 1.4 times larger." />
+                    <TextBlock Style="{StaticResource MutedText}" Text="From 10 pt to 24 pt. Titles and headings grow with it." />
                     <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,4,0,0">
                         <StackPanel>
                             <TextBlock Style="{StaticResource HeadingText}" Margin="0,0,0,4" Text="A heading looks like this" />
@@ -36,6 +36,11 @@
                         <RadioButton Content="Light" IsChecked="{Binding IsLightTheme}" />
                         <RadioButton Content="Dark" IsChecked="{Binding IsDarkTheme}" />
                     </StackPanel>
+
+                    <TextBlock Style="{StaticResource SubheadingText}" Text="Progress" />
+                    <TextBlock Style="{StaticResource MutedText}" Text="The contents marks which lessons you have opened and checked yourself on. Reset forgets all of them." />
+                    <Button Content="Reset progress" Command="{Binding ResetProgressCommand}" HorizontalAlignment="Left" Margin="0,4,0,0"
+                            AutomationProperties.Name="Reset progress" />
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>

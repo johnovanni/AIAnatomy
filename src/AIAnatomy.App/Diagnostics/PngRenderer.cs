@@ -29,15 +29,15 @@ public static class PngRenderer
         {
             using var folder = new TemporaryFolder();
             var services = AppServices.Create(new InMemorySettings(new AppSettings(options.TextSize, options.Theme, ScaleVersion: SettingsService.CurrentScaleVersion)), folder.Path);
-            await RenderViewAsync(options, services, view, options.OutputFileFor(view), folder.Path);
+            await RenderViewAsync(options, services, view, options.OutputFileFor(view));
         }
     }
 
-    private static async Task RenderViewAsync(DiagnosticOptions options, AppServices services, string view, string file, string scratchFolder)
+    private static async Task RenderViewAsync(DiagnosticOptions options, AppServices services, string view, string file)
     {
         var viewModel = services.NewMainViewModel();
         var window = new MainWindow(viewModel);
-        var map = Show(window, viewModel, services, view, scratchFolder);
+        var map = Show(window, viewModel, services, view);
 
         if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
 
@@ -45,6 +45,11 @@ public static class PngRenderer
         var content = window.Shell;
         double width = options.Width, height = options.Height;
         await SettleAsync(content, options.Width, height);
+        if (view == DiagnosticOptions.ContentsView)
+        {
+            window.ExpandContents();
+            await SettleAsync(content, options.Width, height);
+        }
         if (options.FullLab)
         {
             // The lab pane's width is read from the window as laid out above (stacked or side by side), then the lab is
@@ -85,13 +90,13 @@ public static class PngRenderer
             ? $"; map layout {Math.Ceiling(l.Width)} x {Math.Ceiling(l.Height)} px" : "";
 
     /// <summary>Shows the view; returns the idea map view when that is what was asked for.</summary>
-    private static IdeaMapView? Show(MainWindow window, MainViewModel viewModel, AppServices services, string view, string scratchFolder)
+    private static IdeaMapView? Show(MainWindow window, MainViewModel viewModel, AppServices services, string view)
     {
         switch (view)
         {
             case var v when DiagnosticOptions.IsIdeaMapView(v):
-                // Progress is kept in the scratch folder, like the models, so the picture never shows the user's own marks.
-                var ideaMap = services.NewIdeaMap(new ProgressService(Path.Combine(scratchFolder, "progress.json")));
+                // The window's own idea map page (its progress is in the scratch folder, like the models, so the picture never shows the user's own marks).
+                var ideaMap = viewModel.IdeaMap;
                 ideaMap.Mode = view.StartsWith("ideamap-loop", StringComparison.Ordinal) ? AIAnatomy.Presentation.IdeaMap.MapMode.Loop : AIAnatomy.Presentation.IdeaMap.MapMode.Radial;
                 string? chosen = view switch
                 {
@@ -101,15 +106,15 @@ public static class PngRenderer
                     _ => null,
                 };
                 if (chosen != null) ideaMap.Choose(chosen);
-                var mapView = new IdeaMapView { DataContext = ideaMap };
-                window.ShowDiagnosticPage(mapView);
-                return mapView;
+                viewModel.ShowIdeaMapCommand.Execute(null);
+                return window.IdeaMap;
+            case DiagnosticOptions.ContentsView: break;   // the first lesson, with the tree opened in RenderViewAsync
             case DiagnosticOptions.Gallery: window.ShowDiagnosticPage(new ControlGallery()); break;
             case DiagnosticOptions.SourcesView: viewModel.ShowSourcesCommand.Execute(null); break;
             case DiagnosticOptions.SettingsView: viewModel.ShowSettingsCommand.Execute(null); break;
             default:
                 if (services.Lessons.All.All(l => l.Id != view))
-                    throw new ArgumentException($"There is no lesson or view called '{view}'. Use a lesson id, gallery, sources, settings, ideamap-radial or ideamap-loop.");
+                    throw new ArgumentException($"There is no lesson or view called '{view}'. Use a lesson id, contents, gallery, sources, settings, ideamap-radial or ideamap-loop.");
                 viewModel.NavigateToLesson(view);
                 break;
         }

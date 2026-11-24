@@ -35,17 +35,6 @@
         <DataTemplate DataType="{x:Type labs:StepThroughLabViewModel}"><v:StepThroughView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:ScaleLabViewModel}"><v:ScaleView /></DataTemplate>
 
-        <!-- Final review M2: the explanation's column keeps its minimum width only beside the lab; when the explanation is
-             stacked under the lab, the column may shrink, so the window does not need extra width at 32 pt. -->
-        <Style x:Key="ExplanationColumn" TargetType="ColumnDefinition">
-            <Setter Property="MinWidth" Value="260" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding UseStackedLayout}" Value="True">
-                    <Setter Property="MinWidth" Value="0" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
         <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">
             <TextBlock TextTrimming="CharacterEllipsis">
                 <Run Text="{Binding Name, Mode=OneWay}" /><Run x:Name="Note" Text="" />
@@ -73,11 +62,13 @@
 
     <DockPanel x:Name="Shell" Background="{DynamicResource WindowBrush}">
 
-        <!-- Header: the model picker and the Reset, Sources and Settings buttons (they wrap when the text is large). -->
+        <!-- Slim top bar: the app name, the model picker and the Reset, Sources and Settings buttons (they wrap when the text is large). -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="0,0,0,1" Padding="12,8,12,0">
+                BorderThickness="0,0,0,1" Padding="12,6,12,2">
             <WrapPanel>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
+                <TextBlock Text="AIAnatomy" FontWeight="Bold" FontSize="{DynamicResource HeadingFontSize}" VerticalAlignment="Center"
+                           Margin="0,0,24,4" AutomationProperties.HeadingLevel="Level1" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
                     <TextBlock Text="Model" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="{DynamicResource SmallFontSize}"
                                Foreground="{DynamicResource MutedTextBrush}" />
                     <ComboBox x:Name="ModelPicker" Width="340" ItemsSource="{Binding ModelEntries}" SelectedItem="{Binding SelectedModelEntry}"
@@ -90,9 +81,11 @@
                             </Style>
                         </ComboBox.ItemContainerStyle>
                     </ComboBox>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
                     <Button Content="Reset" Command="{Binding ResetLabCommand}" ToolTip="Put this lab back to how it started" Margin="16,4,4,4" />
                     <Button Content="Sources" Command="{Binding ShowSourcesCommand}" ToolTip="The papers and books behind the lessons" />
-                    <Button Content="Settings" Command="{Binding ShowSettingsCommand}" ToolTip="Text size and colours" />
+                    <Button Content="Settings" Command="{Binding ShowSettingsCommand}" ToolTip="Text size, colours and progress" />
                 </StackPanel>
             </WrapPanel>
         </Border>
@@ -112,120 +105,27 @@
             <TextBlock Text="{Binding BackgroundStatus}" TextWrapping="Wrap" AutomationProperties.Name="Background training" />
         </Border>
 
-        <!-- Spec 5.1: the lessons list always stays on the left; the lab and explanation (columns 2 to 4) are swapped
-             for the Sources or Settings page, so clicking a lesson there goes straight back to it. -->
+        <!-- Left: the Contents | Idea map switch and the contents tree, always there. Right: the lesson page, the idea map, or the
+             Sources or Settings page. -->
         <Grid x:Name="Body" Margin="12">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="0.75*" MinWidth="{DynamicResource LessonsColumnWidth}" />
+                <ColumnDefinition Width="0.18*" MinWidth="{DynamicResource TreeColumnWidth}" />
                 <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="2*" MinWidth="360" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="1.25*" Style="{StaticResource ExplanationColumn}" />
+                <ColumnDefinition Width="*" MinWidth="360" />
             </Grid.ColumnDefinitions>
 
-            <Border x:Name="LessonsPane" Grid.Column="0" Style="{StaticResource Pane}" Padding="8,12">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource PaneTitle}" Text="Lessons" />
-                    <ListBox x:Name="LessonList" Style="{StaticResource PlainList}" ItemsSource="{Binding Lessons}"
-                             SelectedItem="{Binding SelectedLesson}" AutomationProperties.Name="Lessons">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource LessonItem}">
-                                <EventSetter Event="PreviewMouseLeftButtonUp" Handler="OnLessonClicked" />
-                                <EventSetter Event="KeyDown" Handler="OnLessonKey" />
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="{x:Type lessons:Lesson}">
-                                <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DockPanel>
+            <Border x:Name="ContentsPane" Grid.Column="0" Style="{StaticResource Pane}" Padding="8,12">
+                <v:ContentsTreeView x:Name="ContentsTree" />
             </Border>
 
-            <Grid x:Name="LessonPage" Grid.Column="2" Grid.ColumnSpan="3"
-                  Visibility="{Binding IsShowingLesson, Converter={StaticResource Visible}}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*" MinWidth="360" />
-                    <ColumnDefinition Width="12" />
-                    <ColumnDefinition Width="1.25*" Style="{StaticResource ExplanationColumn}" />
-                </Grid.ColumnDefinitions>
-                <!-- R32: at large text the explanation goes under the lab (same column span) instead of beside it. -->
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="3*" />
-                    <RowDefinition Height="12" />
-                    <RowDefinition Height="2*" />
-                </Grid.RowDefinitions>
-                <Border AutomationProperties.Name="Lab pane">
-                    <!-- Grid position comes only from this style (a local Grid.* value would beat the trigger). -->
-                    <Border.Style>
-                        <Style TargetType="Border" BasedOn="{StaticResource Pane}">
-                            <Setter Property="Grid.Row" Value="0" />
-                            <Setter Property="Grid.RowSpan" Value="3" />
-                            <Setter Property="Grid.Column" Value="0" />
-                            <Setter Property="Grid.ColumnSpan" Value="1" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding UseStackedLayout}" Value="True">
-                                    <Setter Property="Grid.ColumnSpan" Value="3" />
-                                    <Setter Property="Grid.RowSpan" Value="1" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource HeadingText}" Text="{Binding SelectedLesson.Title}" />
-                        <ScrollViewer Style="{StaticResource PaneScroller}" AutomationProperties.Name="Lab">
-                            <ContentControl x:Name="LabContent" Content="{Binding CurrentLab}" Focusable="False" IsTabStop="False" />
-                        </ScrollViewer>
-                    </DockPanel>
-                </Border>
+            <v:LessonPageView x:Name="LessonPage" Grid.Column="2" Visibility="{Binding IsShowingLesson, Converter={StaticResource Visible}}" />
+            <v:IdeaMapView x:Name="IdeaMapPage" Grid.Column="2" DataContext="{Binding IdeaMap}"
+                           Visibility="{Binding DataContext.IsShowingIdeaMap, ElementName=Root, Converter={StaticResource Visible}}" />
+            <v:SourcesView Grid.Column="2" Visibility="{Binding IsShowingSources, Converter={StaticResource Visible}}" />
+            <v:SettingsView Grid.Column="2" Visibility="{Binding IsShowingSettings, Converter={StaticResource Visible}}" />
 
-                <Border AutomationProperties.Name="Explanation pane">
-                    <Border.Style>
-                        <Style TargetType="Border" BasedOn="{StaticResource Pane}">
-                            <Setter Property="Grid.Row" Value="0" />
-                            <Setter Property="Grid.RowSpan" Value="3" />
-                            <Setter Property="Grid.Column" Value="2" />
-                            <Setter Property="Grid.ColumnSpan" Value="1" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding UseStackedLayout}" Value="True">
-                                    <Setter Property="Grid.Column" Value="0" />
-                                    <Setter Property="Grid.ColumnSpan" Value="3" />
-                                    <Setter Property="Grid.Row" Value="2" />
-                                    <Setter Property="Grid.RowSpan" Value="1" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource PaneTitle}" Text="Explanation" />
-                        <ScrollViewer x:Name="ExplanationScroller" Style="{StaticResource PaneScroller}"
-                                      AutomationProperties.Name="Explanation">
-                            <StackPanel>
-                                <c:MarkdownView Document="{Binding Explanation}" />
-                                <Expander Header="Show formula" Margin="0,12,0,0" AutomationProperties.Name="Show formula"
-                                          Visibility="{Binding Formula, Converter={StaticResource VisibleIfSet}}">
-                                    <c:MarkdownView Document="{Binding Formula}" />
-                                </Expander>
-                                <Border Margin="0,20,0,0" Padding="14,10" CornerRadius="8" BorderThickness="6,1,1,1"
-                                        BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource WindowBrush}"
-                                        Visibility="{Binding BrainsAndModels, Converter={StaticResource VisibleIfSet}}">
-                                    <StackPanel>
-                                        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="Brains and models" />
-                                        <c:MarkdownView Document="{Binding BrainsAndModels}" />
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </DockPanel>
-                </Border>
-            </Grid>
-
-            <v:SourcesView Grid.Column="2" Grid.ColumnSpan="3" Visibility="{Binding IsShowingSources, Converter={StaticResource Visible}}" />
-            <v:SettingsView Grid.Column="2" Grid.ColumnSpan="3" Visibility="{Binding IsShowingSettings, Converter={StaticResource Visible}}" />
-
-            <!-- Used only by the render-png gallery diagnostic; it covers the whole width. -->
-            <ContentControl x:Name="DiagnosticPage" Grid.ColumnSpan="5" Visibility="Collapsed" Focusable="False" />
+            <!-- Used only by the render-png gallery and full-lab diagnostics; it covers the whole width. -->
+            <ContentControl x:Name="DiagnosticPage" Grid.ColumnSpan="3" Visibility="Collapsed" Focusable="False" />
         </Grid>
     </DockPanel>
 </Window>

@@ -54,6 +54,19 @@ public class LessonPageViewModelTests : IDisposable
     }
 
     [Fact]
+    public void BackAndNextLabels_ShowNumberAndTitle_AndAreNullAtTheEnds()
+    {
+        var vm = _env.NewMain();
+        vm.NavigateToLesson("attention");
+        var page = vm.CurrentPage!;
+        Assert.Equal($"← 2.3 {page.Previous!.Title}", page.PreviousLabel);
+        Assert.Equal($"Next: 2.5 {page.Next!.Title} →", page.NextLabel);
+
+        vm.NavigateToLesson("rules-vs-learning");
+        Assert.Null(vm.CurrentPage!.PreviousLabel);
+    }
+
+    [Fact]
     public void Next_FollowsContentsOrder_AcrossSections()
     {
         var vm = _env.NewMain();
@@ -289,13 +302,13 @@ public class LessonPageViewModelTests : IDisposable
         var vm = _env.NewMain();
         vm.ShowIdeaMapCommand.Execute(null);
         var lab = vm.CurrentLab;
-        vm.OpenLessonCommand.Execute(vm.Lessons.Single(l => l.Id == "tokens"));
+        vm.NavigateToLesson("tokens");
         Assert.False(vm.IsShowingIdeaMap);
         Assert.Equal("tokens", vm.CurrentPage!.Lesson.Id);
 
         lab = vm.CurrentLab;
         vm.ShowIdeaMapCommand.Execute(null);
-        vm.OpenLessonCommand.Execute(vm.Lessons.Single(l => l.Id == "tokens"));
+        vm.NavigateToLesson("tokens");
         Assert.True(vm.IsShowingLesson);
         Assert.Same(lab, vm.CurrentLab);
     }

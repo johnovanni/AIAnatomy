@@ -67,4 +67,19 @@ public sealed class ContentsTreeViewModelTests : IDisposable
         tree.Select(all[0].Lesson.Id);
         Assert.Equal([all[0]], all.Where(l => l.IsSelected).ToArray());
     }
+
+    [Fact]
+    public void Row_AutomationName_IncludesTheMark_ExceptOnLaterRows()
+    {
+        var progress = _env.NewProgress();
+        var tree = new ContentsTreeViewModel(_catalog, progress);
+        var all = tree.Sections.SelectMany(s => s.Lessons).ToList();
+        var row = all.First(l => !l.IsLater);
+        Assert.Equal(row.Label, row.AutomationName);
+
+        progress.MarkOpened(row.Lesson.Id);
+        Assert.Equal($"{row.Label}, opened", row.AutomationName);
+
+        Assert.All(all.Where(l => l.IsLater), l => Assert.Equal(l.Label, l.AutomationName));
+    }
 }

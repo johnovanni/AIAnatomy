@@ -23,6 +23,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IProgressService _progress;
     private readonly ConnectionList _connections;
     private readonly IdeaMapData _map;
+    private Lesson? _selectedLesson;
     private int _anchorSerial;
     private bool _navigating;
     private bool _revertingModel;
@@ -45,7 +46,6 @@ public sealed partial class MainViewModel : ObservableObject
         Contents = new ContentsTreeViewModel(lessons, progress);
         IdeaMap = new IdeaMapViewModel(lessons, connections, map, progress, settings, models, layout);
         IdeaMap.OpenLessonRequested += (_, id) => OpenLessonById(id);
-        foreach (var l in lessons.InContentsOrder) Lessons.Add(l);
         SettingsPage = new SettingsViewModel(settings, progress);
         RefreshModelEntries();
         _models.Changed += (_, _) => OnActiveModelChanged();
@@ -63,8 +63,6 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>The idea map page.</summary>
     public IdeaMapViewModel IdeaMap { get; }
 
-    /// <summary>Every lesson in contents order. Temporary: the old window's lesson list reads it until the new shell (Task 9).</summary>
-    public ObservableCollection<Lesson> Lessons { get; } = new();
     public ObservableCollection<ModelEntry> ModelEntries { get; } = new();
     public ISettingsService Settings { get; }
 
@@ -81,7 +79,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>The lab registry; labs not registered here show as "coming later".</summary>
     public LabFactory Labs { get; }
 
-    [ObservableProperty] private Lesson? selectedLesson;
+    /// <summary>The lesson that is open (also while the idea map, Sources or Settings cover it). Change it with <see cref="NavigateToLesson"/>.</summary>
+    public Lesson? SelectedLesson
+    {
+        get => _selectedLesson;
+        private set => SetProperty(ref _selectedLesson, value);
+    }
 
     /// <summary>The page of the lesson that is open (also while the idea map, Sources or Settings cover it).</summary>
     [ObservableProperty] private LessonPageViewModel? currentPage;
@@ -154,7 +157,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     public Task NavigateToLesson(string id)
     {
-        Show(_lessons.Get(id));
+        OpenLessonById(id);
         return Task.CompletedTask;
     }
 
@@ -193,13 +196,6 @@ public sealed partial class MainViewModel : ObservableObject
         IsShowingSources = false;
         IsShowingSettings = false;
         IsShowingIdeaMap = false;
-    }
-
-    /// <summary>What a click on a lesson does: shows it, or (if it is already open) just goes back to it.</summary>
-    [RelayCommand]
-    private void OpenLesson(Lesson? lesson)
-    {
-        if (lesson != null) OpenLessonById(lesson.Id);
     }
 
     /// <summary>What Ctrl+1 to Ctrl+5 do: open the section's first lesson.</summary>
@@ -266,12 +262,6 @@ public sealed partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void ResetLab() => CurrentLab?.Reset();
-
-    partial void OnSelectedLessonChanged(Lesson? value)
-    {
-        if (_navigating || value == null) return;
-        Show(value);
-    }
 
     partial void OnSelectedModelEntryChanged(ModelEntry? value)
     {

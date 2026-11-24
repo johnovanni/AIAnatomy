@@ -34,8 +34,4 @@ public sealed record AppServices(LessonCatalog Lessons, SourceList Sources, Conn
 
     public MainViewModel NewMainViewModel() =>
         new(Lessons, Sources, Models, Settings, Progress, Connections, IdeaMap, new MsaglGraphLayout());
-
-    /// <summary>A new idea map over this content, laid out by MSAGL.</summary>
-    public IdeaMapViewModel NewIdeaMap(IProgressService progress) =>
-        new(Lessons, Connections, IdeaMap, progress, Settings, Models, new MsaglGraphLayout());
 }

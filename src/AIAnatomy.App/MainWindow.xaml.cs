@@ -1,8 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using AIAnatomy.App.Controls;
-using AIAnatomy.Lessons;
+using AIAnatomy.App.Views;
 using AIAnatomy.Presentation;
 
 namespace AIAnatomy.App;
@@ -37,7 +36,7 @@ public partial class MainWindow : Window
     /// </summary>
     public void ShowFullLabPage()
     {
-        double width = Math.Max(200, LabContent.ActualWidth);
+        double width = Math.Max(200, LessonPage.LabWidth);
         var title = new TextBlock { Text = ViewModel.SelectedLesson?.Title ?? "" };
         title.SetResourceReference(StyleProperty, "HeadingText");
         var lab = new ContentControl { Content = ViewModel.CurrentLab, Width = width, HorizontalAlignment = HorizontalAlignment.Left, Focusable = false };
@@ -55,21 +54,12 @@ public partial class MainWindow : Window
         DiagnosticPage.Content = page;
         DiagnosticPage.Visibility = Visibility.Visible;
         LessonPage.Visibility = Visibility.Collapsed;
-        LessonsPane.Visibility = Visibility.Collapsed;
+        ContentsPane.Visibility = Visibility.Collapsed;
     }
 
-    // A click on a lesson, even the one already selected, opens it (and leaves Sources or Settings).
-    private void OnLessonClicked(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is ListBoxItem { DataContext: Lesson lesson }) ViewModel.OpenLessonCommand.Execute(lesson);
-    }
+    /// <summary>The idea map page, which the window shows when the view-model says so (for <c>--render-png</c>).</summary>
+    public IdeaMapView IdeaMap => IdeaMapPage;
 
-    private void OnLessonKey(object sender, KeyEventArgs e)
-    {
-        if (e.Key is Key.Enter or Key.Space && sender is ListBoxItem { DataContext: Lesson lesson })
-        {
-            ViewModel.OpenLessonCommand.Execute(lesson);
-            e.Handled = true;
-        }
-    }
+    /// <summary>Opens every group of the contents tree, branches included (for the <c>contents</c> picture).</summary>
+    public void ExpandContents() => ContentsTree.ExpandAll();
 }

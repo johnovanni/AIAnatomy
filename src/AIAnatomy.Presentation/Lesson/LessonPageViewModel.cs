@@ -28,6 +28,8 @@ public sealed class LessonPageViewModel
         int at = order.ToList().FindIndex(l => l.Id == lesson.Id);
         Previous = order.Take(at).LastOrDefault(l => !l.IsPlaceholder);
         Next = order.Skip(at + 1).FirstOrDefault(l => !l.IsPlaceholder);
+        PreviousLabel = Previous == null ? null : $"← {catalog.NumberOf(Previous)} {Previous.Title}";
+        NextLabel = Next == null ? null : $"Next: {catalog.NumberOf(Next)} {Next.Title} →";
     }
 
     public Lesson Lesson { get; }
@@ -50,6 +52,12 @@ public sealed class LessonPageViewModel
 
     /// <summary>The built lesson after this one in the contents (null at the end); "coming later" pages are skipped.</summary>
     public Lesson? Next { get; }
+
+    /// <summary>The Back button's text, for example "← 2.3 Position"; null when there is no lesson before this one.</summary>
+    public string? PreviousLabel { get; }
+
+    /// <summary>The Next button's text, for example "Next: 2.5 Multi-head attention →"; null when there is no lesson after this one.</summary>
+    public string? NextLabel { get; }
 
     private static ConnectionChip Chip(Connection c, string ownId, LessonCatalog catalog, IdeaMapData map)
     {

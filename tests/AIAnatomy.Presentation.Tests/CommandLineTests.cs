@@ -145,4 +145,13 @@ public class CommandLineTests
         Assert.Equal("Idea map views are ideamap-radial, ideamap-loop, ideamap-radial-chosen, ideamap-loop-chosen and ideamap-loop-learning.", bad.Error);
         Assert.NotNull(DiagnosticOptions.Parse(["--render-png", "ideamap-radial", "m.png", "--full-lab"]).Error);
     }
+
+    [Fact]
+    public void ContentsView_IsAKnownView_ButNotForFullLab()
+    {
+        var ok = DiagnosticOptions.Parse(["--render-png", "contents,tokens", "c.png"]);
+        Assert.Null(ok.Error);
+        Assert.Equal(new[] { "contents", "tokens" }, ok.Views);
+        Assert.NotNull(DiagnosticOptions.Parse(["--render-png", "contents", "c.png", "--full-lab"]).Error);
+    }
 }

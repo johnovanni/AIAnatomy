@@ -1,0 +1,184 @@
+<UserControl x:Class="AIAnatomy.App.Views.ContentsTreeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:lessons="clr-namespace:AIAnatomy.Lessons;assembly=AIAnatomy.Lessons"
+             xmlns:contents="clr-namespace:AIAnatomy.Presentation.Contents;assembly=AIAnatomy.Presentation"
+             xmlns:services="clr-namespace:AIAnatomy.Presentation.Services;assembly=AIAnatomy.Presentation">
+    <!-- DataContext: MainViewModel. The switch above the tree, then the numbered contents: sections, lessons, and a lesson's branches. -->
+    <UserControl.Resources>
+        <!-- The arrow that opens and closes a group. -->
+        <Style x:Key="TreeArrow" TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="ClickMode" Value="Press" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" Width="{DynamicResource ScrollBarSize}" MinHeight="24">
+                            <TextBlock x:Name="Glyph" Text="▸" FontFamily="Segoe UI Symbol" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource MutedTextBrush}" FontSize="{DynamicResource SmallFontSize}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True"><Setter TargetName="Glyph" Property="Text" Value="▾" /></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource TextBrush}" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The chosen half of the Contents | Idea map switch: accent fill and bold text. -->
+        <Style x:Key="ContentsSwitch" TargetType="Button" BasedOn="{StaticResource SwitchSegment}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsShowingIdeaMap}" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="IdeaMapSwitch" TargetType="Button" BasedOn="{StaticResource SwitchSegment}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsShowingIdeaMap}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A row: the arrow, then the row itself (outlined in the focus colour while it has the keyboard), then its children. -->
+        <Style x:Key="ContentsItem" TargetType="TreeViewItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TreeViewItem">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ToggleButton x:Name="Expander" Style="{StaticResource TreeArrow}"
+                                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" />
+                            <Border x:Name="Row" Grid.Column="1" BorderBrush="Transparent" BorderThickness="2" CornerRadius="4" Margin="0,1">
+                                <ContentPresenter x:Name="PART_Header" ContentSource="Header" />
+                            </Border>
+                            <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Grid.Column="1" Margin="4,0,0,0" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="False"><Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed" /></Trigger>
+                            <Trigger Property="HasItems" Value="False"><Setter TargetName="Expander" Property="Visibility" Value="Hidden" /></Trigger>
+                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource FocusBrush}" /></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource FocusBrush}" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sections start open (the ones not built yet start closed); a lesson with parts opens when it is the open lesson. -->
+        <Style x:Key="SectionItem" TargetType="TreeViewItem" BasedOn="{StaticResource ContentsItem}">
+            <Setter Property="IsExpanded" Value="True" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsLater}" Value="True"><Setter Property="IsExpanded" Value="False" /></DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="LessonItem" TargetType="TreeViewItem" BasedOn="{StaticResource ContentsItem}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True"><Setter Property="IsExpanded" Value="True" /></DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <HierarchicalDataTemplate DataType="{x:Type contents:ContentsSection}" ItemsSource="{Binding Lessons}"
+                                  ItemContainerStyle="{StaticResource LessonItem}">
+            <TextBlock x:Name="Heading" TextWrapping="Wrap" FontWeight="SemiBold" Margin="2,4,4,4">
+                <Run Text="{Binding Heading, Mode=OneWay}" /><Run x:Name="Later" Text="" />
+            </TextBlock>
+            <HierarchicalDataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsLater}" Value="True">
+                    <Setter TargetName="Later" Property="Text" Value=" (coming later)" />
+                    <Setter TargetName="Heading" Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                </DataTrigger>
+            </HierarchicalDataTemplate.Triggers>
+        </HierarchicalDataTemplate>
+
+        <HierarchicalDataTemplate DataType="{x:Type contents:ContentsLesson}" ItemsSource="{Binding Branches}"
+                                  ItemContainerStyle="{StaticResource ContentsItem}">
+            <Border x:Name="Frame" CornerRadius="3" Padding="0,2,4,2" Background="Transparent" AutomationProperties.Name="{Binding AutomationName}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <!-- The part's colour bar (neutral until the lesson has a part). -->
+                    <Border Width="4" CornerRadius="2" Margin="2,0,5,0" Background="{DynamicResource BorderBrush}"
+                            c:PartResource.Background="{Binding Lesson.Part}" />
+                    <!-- Marks: a dot is not opened, a tick is opened, a heavy tick is checked. -->
+                    <TextBlock x:Name="Mark" Grid.Column="1" Text="·" Width="{DynamicResource ScrollBarSize}" TextAlignment="Center"
+                               FontFamily="Segoe UI Symbol" Foreground="{DynamicResource MutedTextBrush}" />
+                    <TextBlock x:Name="Label" Grid.Column="2" Text="{Binding Label}" TextWrapping="Wrap" />
+                </Grid>
+            </Border>
+            <HierarchicalDataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Mark}" Value="{x:Static services:LessonMark.Opened}">
+                    <Setter TargetName="Mark" Property="Text" Value="✓" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Mark}" Value="{x:Static services:LessonMark.Checked}">
+                    <Setter TargetName="Mark" Property="Text" Value="✔" />
+                    <Setter TargetName="Mark" Property="FontWeight" Value="Bold" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLater}" Value="True">
+                    <Setter TargetName="Mark" Property="Text" Value="" />
+                    <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter TargetName="Frame" Property="Background" Value="{DynamicResource AccentBrush}" />
+                    <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+                    <Setter TargetName="Label" Property="FontWeight" Value="Bold" />
+                    <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+                </DataTrigger>
+            </HierarchicalDataTemplate.Triggers>
+        </HierarchicalDataTemplate>
+
+        <DataTemplate DataType="{x:Type lessons:LessonBranch}">
+            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" Margin="26,2,4,2" FontSize="{DynamicResource SmallFontSize}" />
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <!-- Contents | Idea map. The chosen half is filled and bold. -->
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="ContentsButton" Content="Contents" Command="{Binding ShowContentsCommand}" Style="{StaticResource ContentsSwitch}"
+                    Margin="0,0,4,0" AutomationProperties.Name="Contents: the numbered lessons" ToolTip="The numbered list of lessons" />
+            <Button x:Name="IdeaMapButton" Grid.Column="1" Content="Idea map" Command="{Binding ShowIdeaMapCommand}" Style="{StaticResource IdeaMapSwitch}"
+                    AutomationProperties.Name="Idea map: how the ideas connect" ToolTip="How the ideas connect" />
+        </Grid>
+
+        <TreeView x:Name="Tree" ItemsSource="{Binding Contents.Sections}" ItemContainerStyle="{StaticResource SectionItem}"
+                  Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}"
+                  KeyboardNavigation.TabNavigation="Once" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  AutomationProperties.Name="Contents" MouseLeftButtonUp="OnTreeMouseUp" KeyDown="OnTreeKeyDown">
+            <TreeView.Template>
+                <ControlTemplate TargetType="TreeView">
+                    <ScrollViewer Style="{StaticResource PaneScroller}" Margin="0" Padding="0,2,6,6" CanContentScroll="False"
+                                  HorizontalScrollBarVisibility="Disabled" Focusable="False" IsTabStop="False">
+                        <ItemsPresenter />
+                    </ScrollViewer>
+                </ControlTemplate>
+            </TreeView.Template>
+        </TreeView>
+    </DockPanel>
+</UserControl>

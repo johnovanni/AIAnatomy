@@ -41,12 +41,12 @@ public class MainViewModelTests : IDisposable
     {
         var vm = _env.NewMain();
         vm.Labs.Register("AttentionLab", () => new FakeLab());
-        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "attention");
+        vm.NavigateToLesson("attention");
 
         Assert.IsType<FakeLab>(vm.CurrentLab);
-        Assert.Same(vm.SelectedLesson.Explanation, vm.Explanation);
-        Assert.Same(vm.SelectedLesson.Formula, vm.Formula);
-        Assert.Same(vm.SelectedLesson.BrainsAndModels, vm.BrainsAndModels);
+        Assert.Same(vm.SelectedLesson!.Explanation, vm.Explanation);
+        Assert.Same(vm.SelectedLesson!.Formula, vm.Formula);
+        Assert.Same(vm.SelectedLesson!.BrainsAndModels, vm.BrainsAndModels);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class MainViewModelTests : IDisposable
         var vm = new MainViewModel(LessonCatalog.Load(content), SourceList.Load(Path.Combine(content, "sources.json")), _env.NewActiveModels(settings), settings,
             _env.NewProgress(), ConnectionList.Load(Path.Combine(content, "connections.json")),
             WithBox(IdeaMapData.Load(Path.Combine(content, "idea-map.json")), "never-built"), new MsaglGraphLayout(), content);
-        vm.SelectedLesson = vm.Lessons.Single(l => l.Id == "never-built");
+        vm.NavigateToLesson("never-built");
 
         var lab = Assert.IsType<ComingLaterLabViewModel>(vm.CurrentLab);
         Assert.Equal("ComingLaterLab", lab.LabId);
@@ -93,7 +93,7 @@ public class MainViewModelTests : IDisposable
         // A local Grid.Row/Column/Span on a pane would beat the style trigger that moves it (the explanation once drew over the lab).
         string? dir = AppContext.BaseDirectory;
         while (dir != null && !File.Exists(Path.Combine(dir, "AIAnatomy.slnx"))) dir = Path.GetDirectoryName(dir);
-        string xaml = File.ReadAllText(Path.Combine(dir!, "src", "AIAnatomy.App", "MainWindow.xaml"));
+        string xaml = File.ReadAllText(Path.Combine(dir!, "src", "AIAnatomy.App", "Views", "LessonPageView.xaml"));
         foreach (string name in new[] { "Lab pane", "Explanation pane" })
         {
             int at = xaml.IndexOf($"AutomationProperties.Name=\"{name}\"", StringComparison.Ordinal);
@@ -101,11 +101,12 @@ public class MainViewModelTests : IDisposable
             string tag = xaml[xaml.LastIndexOf("<Border", at, StringComparison.Ordinal)..at];
             Assert.DoesNotContain("Grid.", tag);
             string style = xaml[at..xaml.IndexOf("</Border.Style>", at, StringComparison.Ordinal)];
-            foreach (string property in new[] { "Grid.Row", "Grid.RowSpan", "Grid.Column", "Grid.ColumnSpan" })
+            foreach (string property in new[] { "Grid.Row", "Grid.Column", "Grid.ColumnSpan" })
                 Assert.Contains($"Property=\"{property}\"", style);
         }
-        Assert.Contains("<RowDefinition Height=\"3*\" />", xaml);
-        Assert.Contains("<RowDefinition Height=\"2*\" />", xaml);
+        // Two rows that size to their content: the explanation's row is empty beside the lab and holds it under the lab.
+        string grid = xaml[xaml.LastIndexOf("<Grid ", xaml.IndexOf("<Grid.RowDefinitions>", StringComparison.Ordinal), StringComparison.Ordinal)..xaml.IndexOf("</Grid.RowDefinitions>", StringComparison.Ordinal)];
+        Assert.Equal(2, grid.Split("<RowDefinition Height=\"Auto\" />").Length - 1);
     }
 
     // The idea map needs a box for every lesson, so the extra lesson gets one.
@@ -189,7 +190,7 @@ public class MainViewModelTests : IDisposable
         Assert.True(vm.IsShowingSources);
         Assert.NotEmpty(vm.Sources.All);
 
-        vm.SelectedLesson = vm.Lessons[1];
+        vm.NavigateToLesson("architecture-map");
 
         Assert.False(vm.IsShowingSources);
     }
@@ -256,7 +257,7 @@ public class MainViewModelTests : IDisposable
         var lab = vm.CurrentLab;
         vm.ShowSourcesCommand.Execute(null);
 
-        vm.OpenLessonCommand.Execute(vm.SelectedLesson);
+        vm.NavigateToLesson(vm.SelectedLesson!.Id);
 
         Assert.False(vm.IsShowingSources);
         Assert.Same(lab, vm.CurrentLab);
@@ -268,9 +269,9 @@ public class MainViewModelTests : IDisposable
         var vm = _env.NewMain();
         vm.ShowSettingsCommand.Execute(null);
 
-        vm.OpenLessonCommand.Execute(vm.Lessons[1]);
+        vm.NavigateToLesson("architecture-map");
 
-        Assert.Same(vm.Lessons[1], vm.SelectedLesson);
+        Assert.Equal("architecture-map", vm.SelectedLesson!.Id);
         Assert.False(vm.IsShowingSettings);
         Assert.True(vm.IsShowingLesson);
     }

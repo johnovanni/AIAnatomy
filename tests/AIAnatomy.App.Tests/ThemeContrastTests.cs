@@ -61,6 +61,34 @@ public class ThemeContrastTests
         return (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
     }
 
+    // The lesson header band: HeaderBrush with the part colour over it at BandTintOpacity (read from Shared.xaml).
+    private static double TintOpacity()
+    {
+        var doc = XDocument.Load(Path.Combine(AppContext.BaseDirectory, "Themes", "Shared.xaml"));
+        var e = doc.Descendants().Single(x => (string?)x.Attribute(X + "Key") == "BandTintOpacity");
+        return double.Parse(e.Value, CultureInfo.InvariantCulture);
+    }
+
+    private static double Channel(string hex, int i) => int.Parse(hex.AsSpan(1 + i * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+
+    [Theory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public void HeaderBandTint_KeepsTitleAndIdeaTextAtFourPointFive(string theme)
+    {
+        var map = Brushes(theme);
+        double a = TintOpacity();
+        foreach (var part in Parts.All)
+        {
+            string tint = map[PartBrush(part)], band = map["HeaderBrush"];
+            string blended = "#" + string.Concat(Enumerable.Range(0, 3).Select(i =>
+                ((int)Math.Round(Channel(band, i) * (1 - a) + Channel(tint, i) * a)).ToString("X2", CultureInfo.InvariantCulture)));
+            double text = Luminance(map["TextBrush"]), bg = Luminance(blended);
+            double ratio = (Math.Max(text, bg) + 0.05) / (Math.Min(text, bg) + 0.05);
+            Assert.True(ratio >= 4.5, $"{theme} {part}: text on the tinted band {ratio:F2}");
+        }
+    }
+
     private static string PartBrush(string key) => "Part" + char.ToUpperInvariant(key[0]) + key[1..] + "Brush";
 
     [Theory]

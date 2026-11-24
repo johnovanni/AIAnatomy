@@ -12,6 +12,9 @@
     <sys:Double x:Key="SmallFontSize">14.73</sys:Double>
     <sys:Double x:Key="FormulaScale">19.07</sys:Double>
     <sys:Double x:Key="LessonsColumnWidth">190.7</sys:Double>
+    <sys:Double x:Key="TreeColumnWidth">190.7</sys:Double>
+    <!-- How much of the part colour tints the lesson header band (the contrast tests use this number). -->
+    <sys:Double x:Key="BandTintOpacity">0.2</sys:Double>
     <sys:Double x:Key="DiagramHeight">364</sys:Double>
     <sys:Double x:Key="GraphDiagramHeight">520</sys:Double>
     <sys:Double x:Key="ScrollBarSize">15.6</sys:Double>
@@ -278,73 +281,35 @@
         </Setter>
     </Style>
 
-    <!-- A list item that is chosen shows it three ways: accent background, bold text and a thick bar on the left. -->
-    <Style x:Key="LessonItem" TargetType="ListBoxItem">
-        <Setter Property="FocusVisualStyle" Value="{StaticResource InnerFocusRing}" />
-        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-        <Setter Property="Padding" Value="12,8" />
-        <Setter Property="Margin" Value="0,2" />
-        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <!-- A two-part switch (Contents | Idea map): each half is a button; the chosen half gets the accent background and bold
+         text (the window sets them), so the choice shows in more than colour. -->
+    <Style x:Key="SwitchSegment" TargetType="Button">
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="Padding" Value="14,4" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="FontSize" Value="{DynamicResource SmallFontSize}" />
+        <Setter Property="Foreground" Value="{DynamicResource ButtonTextBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ButtonBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Frame" Background="Transparent" BorderBrush="Transparent" BorderThickness="8,0,0,0"
-                            CornerRadius="4" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Frame" Property="Background" Value="{DynamicResource HeaderBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Frame" Property="Background" Value="{DynamicResource AccentBrush}" />
-                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource HighlightBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
-                            <Setter Property="FontWeight" Value="Bold" />
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-    </Style>
-
-    <!-- Section tabs: the chosen one has the accent background, bold text and a thick bar underneath. -->
-    <Style x:Key="SectionTab" TargetType="ListBoxItem">
-        <Setter Property="FocusVisualStyle" Value="{StaticResource InnerFocusRing}" />
-        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-        <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}" />
-        <Setter Property="Padding" Value="18,6,18,4" />
-        <Setter Property="Margin" Value="0,0,4,0" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Frame" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,6"
-                            CornerRadius="6,6,0,0" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Frame" Property="Background" Value="{DynamicResource SurfaceBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Frame" Property="Background" Value="{DynamicResource AccentBrush}" />
-                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource HighlightBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
-                            <Setter Property="FontWeight" Value="Bold" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <Style x:Key="PlainList" TargetType="ListBox">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
-        <Setter Property="KeyboardNavigation.TabNavigation" Value="Once" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
     </Style>
 
     <!-- The model picker. Entries that cannot be read are shown greyed out with "(cannot be used)" and their problem as a tooltip. -->
