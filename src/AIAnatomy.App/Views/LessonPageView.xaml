@@ -155,8 +155,12 @@
                 </Border>
             </Grid>
 
-            <!-- 5. Check yourself: the slot Task 10 fills (empty, so it takes no room until then). -->
-            <ContentControl x:Name="CheckYourselfSlot" Focusable="False" IsTabStop="False" Margin="0,0,0,12" />
+            <!-- 5. Check yourself: shown only for a lesson that has questions (Check is null otherwise, so the slot takes no room). -->
+            <ContentControl x:Name="CheckYourselfSlot" Focusable="False" IsTabStop="False" Margin="0,0,0,12" Content="{Binding CurrentPage.Check}">
+                <ContentControl.ContentTemplate>
+                    <DataTemplate><v:CheckYourselfView /></DataTemplate>
+                </ContentControl.ContentTemplate>
+            </ContentControl>
 
             <!-- 6. How this connects: a chip for each connection, outlined in the other idea's part colour. Hover or focus shows its sentence. -->
             <StackPanel>

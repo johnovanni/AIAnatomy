@@ -1,0 +1,81 @@
+<UserControl x:Class="AIAnatomy.App.Views.CheckYourselfView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views">
+    <!-- DataContext: CheckYourselfViewModel. Answers are buttons (keyboard: Tab and Enter or Space). Right or wrong is said in
+         words ("Right." / "Not quite."), never by colour alone, and the feedback is a polite live region. No sound, no score. -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisible" />
+    </UserControl.Resources>
+
+    <Border Style="{StaticResource TryThisBox}" Margin="0" AutomationProperties.Name="Check yourself">
+        <StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,6" Text="Check yourself"
+                           AutomationProperties.HeadingLevel="Level2" />
+                <Button Grid.Column="1" VerticalAlignment="Top" Content="Skip" Command="{Binding SkipCommand}"
+                        AutomationProperties.Name="Skip the questions" Click="OnSkipClicked">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSkipped}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
+
+            <!-- Skipped: one line and a way back. -->
+            <StackPanel Visibility="{Binding IsSkipped, Converter={StaticResource BoolToVisible}}">
+                <TextBlock Style="{StaticResource MutedText}" Text="You skipped the questions." />
+                <Button x:Name="ShowAgainButton" HorizontalAlignment="Left" Content="Show the questions again" Command="{Binding ShowAgainCommand}"
+                        Click="OnShowAgainClicked" />
+            </StackPanel>
+
+            <ItemsControl x:Name="QuestionList" ItemsSource="{Binding Questions}" Focusable="False">
+                <ItemsControl.Style>
+                    <Style TargetType="ItemsControl">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSkipped}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ItemsControl.Style>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="0,0,0,16">
+                            <TextBlock FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,6" Text="{Binding Prompt}" />
+                            <ItemsControl ItemsSource="{Binding Options}" Focusable="False" AlternationCount="100">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button HorizontalContentAlignment="Left" MinHeight="44" Margin="0,0,0,6" FontSize="{DynamicResource BodyFontSize}"
+                                                Command="{Binding DataContext.ChooseCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                CommandParameter="{Binding (ItemsControl.AlternationIndex), RelativeSource={RelativeSource TemplatedParent}}"
+                                                AutomationProperties.Name="{Binding Label}">
+                                            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- "Right." or "Not quite." and why, as words on the page. The text block is the live region (read out politely). -->
+                            <StackPanel Visibility="{Binding Feedback, Converter={StaticResource VisibleIfSet}}">
+                                <TextBlock Style="{StaticResource BodyText}" Margin="0,2,0,4" AutomationProperties.LiveSetting="Polite"
+                                           Text="{Binding Feedback, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnFeedbackUpdated" />
+                                <Button HorizontalAlignment="Left" Content="See in the lesson" Command="{Binding SeeCommand}"
+                                        AutomationProperties.Name="See in the lesson where this is explained" />
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -1,0 +1,101 @@
+using AIAnatomy.Lessons;
+using AIAnatomy.Presentation.Services;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+namespace AIAnatomy.Presentation;
+
+/// <summary>The "Check yourself" questions at the end of a lesson page. No score is kept: the lesson is marked Checked when
+/// every question has been answered (right or not) or when the learner skips, and nothing about the answers is saved.</summary>
+public sealed partial class CheckYourselfViewModel : ObservableObject
+{
+    private readonly string _lessonId;
+    private readonly IProgressService _progress;
+
+    public CheckYourselfViewModel(Lesson lesson, IProgressService progress, Action<string> requestAnchor)
+    {
+        ArgumentNullException.ThrowIfNull(lesson);
+        ArgumentNullException.ThrowIfNull(requestAnchor);
+        _lessonId = lesson.Id;
+        _progress = progress ?? throw new ArgumentNullException(nameof(progress));
+        Questions = lesson.Questions.Select(q => new QuestionViewModel(q, requestAnchor, OnAnswered)).ToList();
+    }
+
+    public IReadOnlyList<QuestionViewModel> Questions { get; }
+
+    [ObservableProperty] private bool isSkipped;
+
+    [RelayCommand]
+    private void Skip()
+    {
+        IsSkipped = true;
+        _progress.MarkChecked(_lessonId);
+    }
+
+    [RelayCommand]
+    private void ShowAgain() => IsSkipped = false;
+
+    private void OnAnswered()
+    {
+        if (Questions.All(q => q.ChosenIndex != null)) _progress.MarkChecked(_lessonId);
+    }
+}
+
+/// <summary>One question: the learner may change the answer as often as they like; the reason is shown each time.</summary>
+public sealed partial class QuestionViewModel : ObservableObject
+{
+    private readonly Question _question;
+    private readonly Action<string> _requestAnchor;
+    private readonly Action _answered;
+
+    internal QuestionViewModel(Question question, Action<string> requestAnchor, Action answered)
+    {
+        _question = question;
+        _requestAnchor = requestAnchor;
+        _answered = answered;
+        Options = question.Answers.Select(a => new AnswerOption(a)).ToList();
+    }
+
+    public string Prompt => _question.Prompt;
+    public IReadOnlyList<string> Answers => _question.Answers;
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsRight), nameof(Feedback))]
+    private int? chosenIndex;
+
+    /// <summary>Null until an answer is chosen.</summary>
+    public bool? IsRight => ChosenIndex == null ? null : ChosenIndex == _question.CorrectIndex;
+
+    /// <summary>The answers as buttons; the chosen one says so in words ("✓ ... (your answer)"), not by colour alone.</summary>
+    public IReadOnlyList<AnswerOption> Options { get; }
+
+    /// <summary>"Right. " or "Not quite. " followed by the reason; words, so it never relies on colour or sound.</summary>
+    public string? Feedback => IsRight switch
+    {
+        null => null,
+        true => "Right. " + _question.Why,
+        false => "Not quite. " + _question.Why,
+    };
+
+    [RelayCommand]
+    private void Choose(int index)
+    {
+        if (index < 0 || index >= Answers.Count) return;
+        ChosenIndex = index;
+        for (int i = 0; i < Options.Count; i++) Options[i].IsChosen = i == index;
+        _answered();
+    }
+
+    [RelayCommand]
+    private void See() => _requestAnchor(_question.See);
+}
+
+/// <summary>One answer button's text.</summary>
+public sealed partial class AnswerOption(string text) : ObservableObject
+{
+    public string Text { get; } = text;
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(Label))]
+    private bool isChosen;
+
+    public string Label => IsChosen ? $"✓ {Text} (your answer)" : Text;
+}

@@ -311,7 +311,8 @@ public sealed partial class MainViewModel : ObservableObject
             BrainsAndModels = lesson.BrainsAndModels;
             CurrentLab = Labs.IsRegistered(lesson.LabId) ? Labs.Create(lesson.LabId) : new ComingLaterLabViewModel();
             if (CurrentLab is TrainLabViewModel train && !ReferenceEquals(train, _trainLab)) WatchTrainLab(train);
-            CurrentPage = new LessonPageViewModel(lesson, _lessons, CurrentLab, _connections, _map);
+            CurrentPage = new LessonPageViewModel(lesson, _lessons, CurrentLab, _connections, _map, _progress,
+                anchor => AnchorRequest = new AnchorRequest(anchor, ++_anchorSerial));
             SelectedLesson = lesson;
             GoNextCommand.NotifyCanExecuteChanged();
             GoBackCommand.NotifyCanExecuteChanged();

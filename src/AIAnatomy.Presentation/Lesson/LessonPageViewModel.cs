@@ -1,4 +1,5 @@
 using AIAnatomy.Lessons;
+using AIAnatomy.Presentation.Services;
 
 namespace AIAnatomy.Presentation;
 
@@ -6,13 +7,17 @@ namespace AIAnatomy.Presentation;
 /// connections to other ideas, and the lessons before and after it.</summary>
 public sealed class LessonPageViewModel
 {
-    public LessonPageViewModel(Lesson lesson, LessonCatalog catalog, LabViewModel lab, ConnectionList connections, IdeaMapData map)
+    public LessonPageViewModel(Lesson lesson, LessonCatalog catalog, LabViewModel lab, ConnectionList connections, IdeaMapData map,
+        IProgressService progress, Action<string> requestAnchor)
     {
         Lesson = lesson ?? throw new ArgumentNullException(nameof(lesson));
         ArgumentNullException.ThrowIfNull(catalog);
         Lab = lab ?? throw new ArgumentNullException(nameof(lab));
         ArgumentNullException.ThrowIfNull(connections);
         ArgumentNullException.ThrowIfNull(map);
+
+        ArgumentNullException.ThrowIfNull(progress);
+        ArgumentNullException.ThrowIfNull(requestAnchor);
 
         Number = catalog.NumberOf(lesson);
         Path = $"{SectionInfo.Number(lesson.Section)} {SectionInfo.Title(lesson.Section)} › {Number}";
@@ -22,6 +27,7 @@ public sealed class LessonPageViewModel
         Part = lesson.Part;
         TryThis = lesson.IsPlaceholder ? [] : lesson.TryThis;
 
+        Check = !lesson.IsPlaceholder && lesson.Questions.Count > 0 ? new CheckYourselfViewModel(lesson, progress, requestAnchor) : null;
         Connections = connections.Of(lesson.Id).Select(c => Chip(c, lesson.Id, catalog, map)).ToList();
 
         var order = catalog.InContentsOrder;
@@ -45,6 +51,9 @@ public sealed class LessonPageViewModel
     public string? Part { get; }
     public IReadOnlyList<string> TryThis { get; }
     public LabViewModel Lab { get; }
+
+    /// <summary>The Check yourself questions; null when the lesson has none.</summary>
+    public CheckYourselfViewModel? Check { get; }
     public IReadOnlyList<ConnectionChip> Connections { get; }
 
     /// <summary>The built lesson before this one in the contents (null at the start); "coming later" pages are skipped.</summary>
