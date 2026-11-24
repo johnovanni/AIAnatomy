@@ -130,4 +130,19 @@ public class CommandLineTests
         var o = DiagnosticOptions.Parse(["--render-png", "gallery,,sources", "g.png"]);
         Assert.Equal("--render-png needs a view and a .png file.", o.Error);
     }
+
+    [Fact]
+    public void IdeaMapViews_AreRadialAndLoopOnly()
+    {
+        var ok = DiagnosticOptions.Parse(["--render-png", "ideamap-loop", "m.png"]);
+        Assert.Null(ok.Error);
+        Assert.Equal(new[] { "ideamap-loop" }, ok.Views);
+        Assert.Null(DiagnosticOptions.Parse(["--render-png", "ideamap-radial,ideamap-loop", "m.png"]).Error);
+
+        Assert.Null(DiagnosticOptions.Parse(["--render-png", "ideamap-radial-chosen,ideamap-loop-chosen,ideamap-loop-learning", "m.png"]).Error);
+
+        var bad = DiagnosticOptions.Parse(["--render-png", "ideamap-sideways", "m.png"]);
+        Assert.Equal("Idea map views are ideamap-radial, ideamap-loop, ideamap-radial-chosen, ideamap-loop-chosen and ideamap-loop-learning.", bad.Error);
+        Assert.NotNull(DiagnosticOptions.Parse(["--render-png", "ideamap-radial", "m.png", "--full-lab"]).Error);
+    }
 }

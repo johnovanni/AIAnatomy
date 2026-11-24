@@ -18,7 +18,11 @@ public class IdeaMapDataTests
     [Fact]
     public void RealMap_FlowEdgesAndGroupAreAsDesigned()
     {
-        Assert.Equal(7, Map.FlowEdges.Count);
+        Assert.Equal(8, Map.FlowEdges.Count);
+        // The Block group is on the flow: the stream goes into it (an edge to the group box, drawn to its frame).
+        Assert.Contains(Map.FlowEdges, e => e is { From: "residual-stream", To: "block", Label: "each block reads it and adds back" });
+        Assert.Contains(Map.FlowEdges, e => e is { From: "residual-stream", To: "output-sampling", Label: "after the last block" });
+        Assert.Empty(Map.Validate(Catalog));
         Assert.Contains(Map.FlowEdges, e => e is { From: "next-character", To: "your-text", Label: "added to the text" });
         Assert.Equal(["attention", "multi-head", "feed-forward"], Map.GroupMembers);
         Assert.Single(Map.Nodes, n => n.Kind == IdeaMapData.Centre);

@@ -6,22 +6,86 @@ namespace AIAnatomy.Presentation.Tests.IdeaMap;
 /// <summary>The MSAGL layout of the shipped idea map, with bubble sizes estimated from the text at a given body size.</summary>
 public class GraphLayoutTests
 {
-    /// <summary>Bubble size for a body text size: 8.6 px per character plus 24 px padding, 36 px tall, at 13 pt.</summary>
+    /// <summary>
+    /// A bubble's size as IdeaMapView builds it, estimated without WPF: small text (0.85 × body, never under 9 pt; 4/3 px
+    /// per pt), a number line (Cascadia Mono, 0.6 em a character) when the bubble has a number or a mark, then the label
+    /// (about 0.5 em a character, wrapping at 11 em), each line 1.25 em high, plus 10 px padding and a 3 px border on each
+    /// side. Every lesson is taken as checked ("  ✓ checked" on its number line), the widest a mark makes it.
+    /// </summary>
     internal static Dictionary<string, (double Width, double Height)> Sizes(IdeaMapViewModel map, double bodyPt) =>
-        map.Bubbles.ToDictionary(b => b.Id, b =>
-        {
-            var text = b.Number == null ? b.Label : $"{b.Number} {b.Label}";
-            return (8.6 * text.Length * bodyPt / 13 + 24, 36 * bodyPt / 13);
-        });
+        map.Bubbles.ToDictionary(b => b.Id, b => BubbleSize(b, bodyPt));
 
-    private static GraphLayoutResult LayOut(MapMode mode, double bodyPt)
+    internal static (double Width, double Height) BubbleSize(IdeaBubble b, double bodyPt)
+    {
+        double small = Math.Max(9, 0.85 * bodyPt) * 4 / 3;
+        string head = (b.Number ?? "") + (b.IsLesson && !b.IsLater ? "  ✓ checked" : b.IsLater ? "  later" : "");
+        double headWidth = head.Length * 0.6 * small;
+        double labelWidth = b.Label.Length * 0.5 * small, wrap = 11 * small;
+        int lines = (head.Length > 0 ? 1 : 0) + (int)Math.Ceiling(labelWidth / wrap);
+        return (Math.Ceiling(Math.Max(headWidth, Math.Min(labelWidth, wrap)) + 26), Math.Ceiling(lines * 1.25 * small + 16));
+    }
+
+    /// <summary>A line label's size as IdeaMapView's chip: small text (0.5 em a character, one line of 1.25 em) plus 5/1 px
+    /// padding and a 1 px border.</summary>
+    internal static (double Width, double Height) LabelSize(string text, double bodyPt)
+    {
+        double small = Math.Max(9, 0.85 * bodyPt) * 4 / 3;
+        return (Math.Ceiling(text.Length * 0.5 * small + 12), Math.Ceiling(1.25 * small + 4));
+    }
+
+    internal static Dictionary<string, (double Width, double Height)> LabelSizes(IdeaMapViewModel map, double bodyPt) =>
+        map.LineLabels.ToDictionary(l => l, l => LabelSize(l, bodyPt));
+
+    private static GraphLayoutResult LayOut(MapMode mode, double bodyPt) => LayOut(mode, bodyPt, out _);
+
+    private static GraphLayoutResult LayOut(MapMode mode, double bodyPt, out IdeaMapViewModel map)
     {
         using var env = new TestEnvironment();
-        var map = IdeaMapViewModelTests.NewMap(env);
+        map = IdeaMapViewModelTests.NewMap(env);
         map.Mode = mode;
-        map.Arrange(Sizes(map, bodyPt));
+        map.Arrange(Sizes(map, bodyPt), LabelSizes(map, bodyPt));
         return map.Layout!;
     }
+
+    [Theory]
+    [InlineData(10)]
+    [InlineData(13)]
+    [InlineData(24)]
+    public void Loop_FlowLabels_HaveRoomOfTheirOwn(double bodyPt)
+    {
+        var layout = LayOut(MapMode.Loop, bodyPt, out var map);
+        var labelled = layout.Edges.Where(e => map.FlowLabel(e) != null).ToList();
+        Assert.Equal(IdeaMapViewModelTests.Map().FlowEdges.Count, labelled.Count);
+        var rects = labelled.Select(e =>
+        {
+            Assert.NotNull(e.LabelCentre);
+            var (w, h) = LabelSize(map.FlowLabel(e)!, bodyPt);
+            var c = e.LabelCentre!.Value;
+            return (Edge: e, X: c.X - w / 2, Y: c.Y - h / 2, W: w, H: h);
+        }).ToList();
+        var g = layout.Group!.Value;
+
+        foreach (var r in rects)
+        {
+            string name = $"'{map.FlowLabel(r.Edge)}' at {bodyPt} pt";
+            Assert.True(r.X >= 0 && r.Y >= 0 && r.X + r.W <= layout.Width && r.Y + r.H <= layout.Height, $"{name} is outside the map.");
+            foreach (var n in layout.Nodes)
+                Assert.False(Overlap(r.X, r.Y, r.W, r.H, n.X, n.Y, n.Width, n.Height), $"{name} covers {n.Id}.");
+            bool inside = r.X > g.X && r.Y > g.Y && r.X + r.W < g.X + g.Width && r.Y + r.H < g.Y + g.Height;
+            Assert.True(inside || !Overlap(r.X, r.Y, r.W, r.H, g.X, g.Y, g.Width, g.Height), $"{name} lies across the Block frame's border.");
+            foreach (var o in rects.Where(o => o.Edge != r.Edge))
+                Assert.False(Overlap(r.X, r.Y, r.W, r.H, o.X, o.Y, o.W, o.H), $"{name} covers '{map.FlowLabel(o.Edge)}'.");
+            // Its own line runs through it; no other line does.
+            Assert.Contains(r.Edge.Points, p => DistanceToRect(p, r.X, r.Y, r.W, r.H) <= 2);
+            foreach (var other in layout.Edges.Where(e => e != r.Edge))
+                for (int i = 0; i + 1 < other.Points.Count; i++)
+                    Assert.False(SegmentHitsRect(other.Points[i], other.Points[i + 1], r.X + 2, r.Y + 2, r.X + r.W - 2, r.Y + r.H - 2),
+                        $"The line {other.From} -> {other.To} crosses {name}.");
+        }
+    }
+
+    private static bool Overlap(double ax, double ay, double aw, double ah, double bx, double by, double bw, double bh) =>
+        ax < bx + bw && bx < ax + aw && ay < by + bh && by < ay + ah;
 
     [Theory]
     [InlineData(MapMode.Radial, 10)]
@@ -138,7 +202,7 @@ public class GraphLayoutTests
 
         Assert.NotNull(layout.Group);
         var toLoop = layout.Edges.Where(e => e.To == ConnectionList.WholeLoop).Select(e => e.From).Order().ToList();
-        Assert.Equal(["architecture-map", "scale", "step-through"], toLoop);
+        Assert.Equal(["architecture-map", "residual-stream", "scale", "step-through"], toLoop);   // three connections and the flow
     }
 
     /// <summary>The empty space between two boxes: the larger of the horizontal and vertical gaps (negative if they overlap).</summary>

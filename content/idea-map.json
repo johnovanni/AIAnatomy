@@ -36,9 +36,9 @@
       "description": "Follow one prediction through the model step by step, with the real numbers at every step." },
     { "id": "scale", "label": "Scale", "kind": "flow",
       "description": "Count the numbers in each part of the model and compare the total with GPT-2 and GPT-3." },
-    { "id": "family-coming", "label": "The family of AI (later)", "kind": "flow",
+    { "id": "family-coming", "label": "The family of AI", "kind": "flow",
       "description": "Coming in a later stage of the app." },
-    { "id": "beyond-coming", "label": "Beyond the model (later)", "kind": "flow",
+    { "id": "beyond-coming", "label": "Beyond the model", "kind": "flow",
       "description": "Coming in a later stage of the app." }
   ],
   "flowEdges": [
@@ -46,6 +46,7 @@
     { "from": "tokens", "to": "embeddings", "label": "look up" },
     { "from": "position", "to": "embeddings", "label": "added" },
     { "from": "embeddings", "to": "residual-stream", "label": "start the stream" },
+    { "from": "residual-stream", "to": "block", "label": "each block reads it and adds back" },
     { "from": "residual-stream", "to": "output-sampling", "label": "after the last block" },
     { "from": "output-sampling", "to": "next-character", "label": "pick one" },
     { "from": "next-character", "to": "your-text", "label": "added to the text" }

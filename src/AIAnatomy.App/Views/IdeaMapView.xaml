@@ -1,0 +1,105 @@
+<UserControl x:Class="AIAnatomy.App.Views.IdeaMapView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views">
+    <!-- DataContext: IdeaMapViewModel. The bubbles and lines are built in the code-behind (they depend on measured sizes). -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+
+        <!-- A bubble: a rounded box with a coloured edge (the lesson's part). The chosen one is filled. -->
+        <Style x:Key="BubbleButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="3" CornerRadius="9" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The Radial / Loop switch: two pills, the chosen one filled. -->
+        <Style x:Key="ModeToggle" TargetType="ToggleButton">
+            <Setter Property="FontSize" Value="{DynamicResource SmallFontSize}" />
+            <Setter Property="Foreground" Value="{DynamicResource ButtonTextBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ButtonBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="Padding" Value="16,6" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Pill" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="2" CornerRadius="999" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Style="{StaticResource Pane}" Padding="16,12">
+        <DockPanel>
+            <!-- Follows the body text size: the view measures its bubbles again when this changes. -->
+            <TextBlock x:Name="SizeProbe" Visibility="Collapsed" FontSize="{DynamicResource BodyFontSize}" />
+
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="Idea map" Style="{StaticResource HeadingText}" Margin="0,0,16,0" VerticalAlignment="Center" />
+                <ToggleButton x:Name="RadialToggle" Style="{StaticResource ModeToggle}" Content="Radial"
+                              AutomationProperties.Name="Radial layout: the contents round the centre" Click="OnRadialClick" />
+                <ToggleButton x:Name="LoopToggle" Style="{StaticResource ModeToggle}" Content="Loop"
+                              AutomationProperties.Name="Loop layout: the path text takes through the model" Click="OnLoopClick" />
+            </StackPanel>
+
+            <!-- The side card: what the chosen bubble is and how it connects. -->
+            <Border x:Name="CardPanel" DockPanel.Dock="Right" Width="{DynamicResource LessonsColumnWidth}" MinWidth="260"
+                    Style="{StaticResource ScreenFrame}" Margin="12,0,0,0">
+                <ScrollViewer Style="{StaticResource PaneScroller}" AutomationProperties.Name="About the chosen idea">
+                    <StackPanel>
+                        <TextBlock x:Name="EmptyCard" Style="{StaticResource MutedText}" Text="Choose an idea to see how it fits in." />
+                        <StackPanel x:Name="CardBody" Visibility="Collapsed">
+                            <TextBlock Style="{StaticResource HeadingText}" Margin="0,0,0,2" Text="{Binding Card.Title}" />
+                            <TextBlock Style="{StaticResource MutedText}" FontSize="{DynamicResource SmallFontSize}" Margin="0,0,0,8"
+                                       Text="{Binding Card.Number, StringFormat=Contents number {0}}"
+                                       Visibility="{Binding Card.Number, Converter={StaticResource VisibleIfSet}}" />
+                            <TextBlock Style="{StaticResource BodyText}" Text="{Binding Card.Description}"
+                                       Visibility="{Binding Card.Description, Converter={StaticResource VisibleIfSet}}" />
+                            <TextBlock x:Name="ConnectsHeading" Style="{StaticResource SubheadingText}" Margin="0,4,0,6" Text="How it connects" />
+                            <ItemsControl ItemsSource="{Binding Card.Sentences}" Focusable="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource BodyText}" Text="{Binding}" Margin="0,0,0,8" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button x:Name="OpenLessonButton" Content="Open lesson" Command="{Binding OpenChosenLessonCommand}"
+                                    HorizontalAlignment="Left" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Border Style="{StaticResource ScreenFrame}" Padding="0">
+                <ScrollViewer x:Name="MapScroller" Style="{StaticResource PaneScroller}" HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Idea map">
+                    <Canvas x:Name="MapCanvas" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </ScrollViewer>
+            </Border>
+        </DockPanel>
+    </Border>
+</UserControl>

@@ -45,7 +45,8 @@ Microsoft Automatic Graph Layout (MSAGL), NuGet package AutomaticGraphLayout 1.1
   routes (no drawing; the app draws the map itself)
   Source:   https://github.com/microsoft/automatic-graph-layout (NuGet package AutomaticGraphLayout, version 1.1.12)
   Licence:  MIT. The package itself carries no licence file, licence expression or copyright attribute; the notice below
-            is the project's LICENSE file from the source repository (read on 2026-11-24).
+            is the project's LICENSE file from the source repository (read on 2026-11-24), copied verbatim: the
+            ""Software"" and "Layout,MSAGL" spellings are the original's.
 
   Microsoft Automatic Graph Layout,MSAGL
 

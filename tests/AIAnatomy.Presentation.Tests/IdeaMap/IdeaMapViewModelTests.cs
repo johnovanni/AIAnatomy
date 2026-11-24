@@ -46,6 +46,35 @@ public class IdeaMapViewModelTests
     private static List<(string, string)> Pairs(IEnumerable<Connection> connections) => connections.Select(c => (c.From, c.To)).ToList();
 
     [Fact]
+    public void IsStructural_TellsTreeAndFlowLinesFromConnectionLines()
+    {
+        using var env = new TestEnvironment();
+        var map = NewMap(env);
+        Assert.True(map.IsStructural(new RoutedEdge("centre", "section-1", [])));
+        Assert.True(map.IsStructural(new RoutedEdge("section-2", Catalog().InSection(Section.Parts)[0].Id, [])));
+        Assert.False(map.IsStructural(new RoutedEdge("attention", "residual", [])));
+
+        map.Mode = MapMode.Loop;
+        var flow = Map().FlowEdges[0];
+        Assert.True(map.IsStructural(new RoutedEdge(flow.To, flow.From, [])));
+        Assert.False(map.IsStructural(new RoutedEdge("attention", "LOOP", [])));
+    }
+
+    [Fact]
+    public void FlowLabel_GivesTheFlowEdgesLabelInLoopOnly()
+    {
+        using var env = new TestEnvironment();
+        var map = NewMap(env);
+        var flow = Map().FlowEdges.First(f => f.Label.Length > 0 && Map().Nodes.Single(n => n.Id == f.From).Kind != IdeaMapData.Group
+            && Map().Nodes.Single(n => n.Id == f.To).Kind != IdeaMapData.Group);
+        Assert.Null(map.FlowLabel(new RoutedEdge(flow.From, flow.To, [])));
+
+        map.Mode = MapMode.Loop;
+        Assert.Equal(flow.Label, map.FlowLabel(new RoutedEdge(flow.From, flow.To, [])));
+        Assert.Null(map.FlowLabel(new RoutedEdge("attention", "LOOP", [])));
+    }
+
+    [Fact]
     public void Map_DefaultsToRadial_AndRemembersLoop()
     {
         using var env = new TestEnvironment();
@@ -215,7 +244,56 @@ public class IdeaMapViewModelTests
 
         var later = map.Bubbles.Where(b => b.IsLater).Select(b => b.Id).Order();
 
-        Assert.Equal(["beyond-coming", "family-coming", "section-4", "section-5"], later);
+        var catalog = Catalog();
+        var placeholders = catalog.All.Where(l => l.IsPlaceholder).Select(l => l.Id);
+        var laterSections = Enum.GetValues<Section>()
+            .Where(s => catalog.InSection(s).Count > 0 && catalog.InSection(s).All(l => l.IsPlaceholder))
+            .Select(IdeaMapViewModel.SectionId);
+        Assert.NotEmpty(placeholders);
+        Assert.Equal(placeholders.Concat(laterSections).Order(), later);
+        Assert.All(map.Bubbles.Where(b => b.IsLater), b => Assert.DoesNotContain("(later)", b.Label));
+    }
+
+    /// <summary>Settings whose saved map layout is whatever the test says, unchecked.</summary>
+    private sealed class RawSettings(string layout) : ISettingsService
+    {
+        public AppSettings Current { get; private set; } = new(IdeaMapLayout: layout);
+        public string? LastSaveProblem => null;
+        public event EventHandler? SaveFailed { add { } remove { } }
+        public void Save(AppSettings settings) => Current = settings;
+    }
+
+    [Theory]
+    [InlineData("1")]
+    [InlineData("7")]
+    [InlineData("loop")]
+    [InlineData("")]
+    public void Mode_IgnoresASavedLayoutThatIsNotAName(string saved)
+    {
+        using var env = new TestEnvironment();
+        var settings = new RawSettings(saved);
+
+        Assert.Equal(MapMode.Radial, NewMap(env, new CountingLayout(), settings, models: env.NewActiveModels()).Mode);
+        Assert.Equal(MapMode.Loop, NewMap(env, new CountingLayout(), new RawSettings("Loop"), models: env.NewActiveModels()).Mode);
+    }
+
+    [Fact]
+    public void Loop_TheStreamFlowsIntoTheBlock_AsAStructuralLineToTheFrame()
+    {
+        using var env = new TestEnvironment();
+        var map = NewMap(env);
+        map.Mode = MapMode.Loop;
+        map.Arrange(GraphLayoutTests.Sizes(map, 13));
+
+        var layout = map.Layout!;
+        var g = layout.Group!.Value;
+        var intoBlock = Assert.Single(layout.Edges, e => e.From == "residual-stream" && e.To == ConnectionList.WholeLoop);
+        Assert.True(map.IsStructural(intoBlock));
+        var end = intoBlock.Points[^1];
+        double outside = Math.Max(Math.Max(g.X - end.X, end.X - (g.X + g.Width)), Math.Max(g.Y - end.Y, end.Y - (g.Y + g.Height)));
+        double inside = Math.Min(Math.Min(end.X - g.X, g.X + g.Width - end.X), Math.Min(end.Y - g.Y, g.Y + g.Height - end.Y));
+        Assert.True(outside <= 2 && inside <= 2, "The line from the stream should end on the Block frame.");
+        Assert.False(map.IsStructural(layout.Edges.Single(e => e.From == "scale")));   // a whole-loop connection
     }
 
     [Fact]

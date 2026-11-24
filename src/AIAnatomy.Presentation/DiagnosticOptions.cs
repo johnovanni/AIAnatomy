@@ -6,7 +6,7 @@ public enum DiagnosticMode { Normal, RenderPng, SelfTest }
 
 /// <summary>
 /// The app's command line, for checks and diagnostics only:
-/// <c>--render-png &lt;lessonId|gallery|sources|settings&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
+/// <c>--render-png &lt;lessonId|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
 /// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 13 pt unless
 /// told otherwise, so pictures do not depend on the user's own settings. Several views may be given as
 /// <c>gallery,sources,settings</c>; each then goes to "file-view.png". <c>--full-lab</c> (lesson ids only) draws the lab
@@ -28,6 +28,13 @@ public sealed record DiagnosticOptions(
     public const string Gallery = "gallery";
     public const string SourcesView = "sources";
     public const string SettingsView = "settings";
+    public const string IdeaMapRadial = "ideamap-radial";
+    public const string IdeaMapLoop = "ideamap-loop";
+    public const string IdeaMapRadialChosen = "ideamap-radial-chosen";   // Attention chosen
+    public const string IdeaMapLoopChosen = "ideamap-loop-chosen";       // Residual stream chosen
+    public const string IdeaMapLoopLearning = "ideamap-loop-learning";   // Learning chosen
+    public static bool IsIdeaMapView(string v) =>
+        v is IdeaMapRadial or IdeaMapLoop or IdeaMapRadialChosen or IdeaMapLoopChosen or IdeaMapLoopLearning;
     public const string AllLabsTest = "all-labs";
     public const string TrainTest = "train";
 
@@ -117,7 +124,9 @@ public sealed record DiagnosticOptions(
         if (error == null && render && selfTest != null) error = "Use either --render-png or --selftest, not both.";
         if (error == null && renderOnlyOption && !render)
             error = "--theme, --text-size, --width and --height only go with --render-png.";
-        if (error == null && fullLab && (!render || view!.Split(',').Any(v => v is Gallery or SourcesView or SettingsView)))
+        if (error == null && render && view!.Split(',').Any(v => v.StartsWith("ideamap-", StringComparison.Ordinal) && !IsIdeaMapView(v)))
+            error = "Idea map views are ideamap-radial, ideamap-loop, ideamap-radial-chosen, ideamap-loop-chosen and ideamap-loop-learning.";
+        if (error == null && fullLab && (!render || view!.Split(',').Any(v => v is Gallery or SourcesView or SettingsView || IsIdeaMapView(v))))
             error = "--full-lab only goes with --render-png and a lesson id.";
 
         var mode = render ? DiagnosticMode.RenderPng : selfTest != null ? DiagnosticMode.SelfTest : DiagnosticMode.Normal;

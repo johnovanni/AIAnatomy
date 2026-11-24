@@ -31,6 +31,7 @@ public sealed partial class IdeaMapViewModel : ObservableObject
     private readonly IActiveModelService _models;
     private readonly IGraphLayout _graphLayout;
     private IReadOnlyDictionary<string, (double Width, double Height)>? _sizes;
+    private IReadOnlyDictionary<string, (double Width, double Height)> _labelSizes = new Dictionary<string, (double, double)>();
 
     public IdeaMapViewModel(LessonCatalog catalog, ConnectionList connections, IdeaMapData map, IProgressService progress,
         ISettingsService settings, IActiveModelService models, IGraphLayout layout)
@@ -43,7 +44,9 @@ public sealed partial class IdeaMapViewModel : ObservableObject
         _models = models ?? throw new ArgumentNullException(nameof(models));
         _graphLayout = layout ?? throw new ArgumentNullException(nameof(layout));
 
-        _mode = Enum.TryParse<MapMode>(settings.Current.IdeaMapLayout, out var saved) ? saved : MapMode.Radial;
+        // Only the names count (Enum.TryParse would also take numbers such as "1" or "7").
+        var saved = settings.Current.IdeaMapLayout;
+        _mode = Enum.GetNames<MapMode>().Contains(saved) ? Enum.Parse<MapMode>(saved) : MapMode.Radial;
         _groupLabel = MakeGroupLabel();
         _bubbles = BuildBubbles();
         _progress.Changed += (_, _) => Bubbles = BuildBubbles();
@@ -85,13 +88,21 @@ public sealed partial class IdeaMapViewModel : ObservableObject
     }
     private MapMode _mode;
 
-    /// <summary>Lays the map out for these bubble sizes (px, by bubble id). Every bubble needs a size.</summary>
-    public void Arrange(IReadOnlyDictionary<string, (double Width, double Height)> sizes)
+    /// <summary>The labels drawn on this map's lines (Loop: the flow labels; Radial: none). Give their sizes to
+    /// <see cref="Arrange"/> so the layout keeps room for them.</summary>
+    public IReadOnlyList<string> LineLabels =>
+        Mode == MapMode.Loop ? _map.FlowEdges.Select(f => f.Label).Where(l => l.Length > 0).Distinct().ToList() : [];
+
+    /// <summary>Lays the map out for these bubble sizes (px, by bubble id; every bubble needs one) and, optionally, the
+    /// sizes of the <see cref="LineLabels"/> (px, by label text; a label without one gets no room kept for it).</summary>
+    public void Arrange(IReadOnlyDictionary<string, (double Width, double Height)> sizes,
+        IReadOnlyDictionary<string, (double Width, double Height)>? labelSizes = null)
     {
         ArgumentNullException.ThrowIfNull(sizes);
         var missing = Bubbles.FirstOrDefault(b => !sizes.ContainsKey(b.Id));
         if (missing != null) throw new ArgumentException($"No size for bubble '{missing.Id}'.", nameof(sizes));
         _sizes = new Dictionary<string, (double, double)>(sizes);
+        if (labelSizes != null) _labelSizes = new Dictionary<string, (double, double)>(labelSizes);
         Layout = RunLayout(_sizes);
     }
 
@@ -174,11 +185,40 @@ public sealed partial class IdeaMapViewModel : ObservableObject
             return new GraphInput(MapMode.Radial, nodes, tree, ideas, centre, []);
         }
 
-        var placement = _map.FlowEdges.Select(f => new LayoutEdge(f.From, f.To)).ToList();
+        var placement = _map.FlowEdges.Select(f => _labelSizes.TryGetValue(f.Label, out var label)
+            ? new LayoutEdge(LayoutEnd(f.From), LayoutEnd(f.To), label.Width, label.Height)
+            : new LayoutEdge(LayoutEnd(f.From), LayoutEnd(f.To))).ToList();
         foreach (var c in connections)
             if (!placement.Any(e => SamePair(e, c.From, c.To))) placement.Add(new LayoutEdge(c.From, c.To));
         return new GraphInput(MapMode.Loop, nodes, placement, [], null, _map.GroupMembers);
     }
+
+    /// <summary>True for a line of the map's own structure (Radial: centre to section, section to lesson; Loop: the flow
+    /// of text), false for a line that only shows a connection between ideas. The view draws the first kind always and the
+    /// second only for the chosen bubble.</summary>
+    public bool IsStructural(RoutedEdge edge)
+    {
+        ArgumentNullException.ThrowIfNull(edge);
+        if (Mode == MapMode.Radial)
+            return edge.From == Bubbles[0].Id || edge.From.StartsWith("section-", StringComparison.Ordinal);
+        return _map.FlowEdges.Any(f => (LayoutEnd(f.From) == edge.From && LayoutEnd(f.To) == edge.To)
+            || (LayoutEnd(f.From) == edge.To && LayoutEnd(f.To) == edge.From));
+    }
+
+    /// <summary>The label of the flow line this routed line draws ("split", "look up", ...), or null when it is not a flow
+    /// line (Radial, or a connection line).</summary>
+    public string? FlowLabel(RoutedEdge edge)
+    {
+        ArgumentNullException.ThrowIfNull(edge);
+        if (Mode != MapMode.Loop) return null;
+        return _map.FlowEdges.FirstOrDefault(f => (LayoutEnd(f.From) == edge.From && LayoutEnd(f.To) == edge.To)
+            || (LayoutEnd(f.From) == edge.To && LayoutEnd(f.To) == edge.From))?.Label;
+    }
+
+    /// <summary>A flow-edge end as the layout knows it: the group box (Block) is its frame, which the layout calls
+    /// <see cref="ConnectionList.WholeLoop"/>.</summary>
+    private string LayoutEnd(string id) =>
+        _map.Nodes.Any(n => n.Id == id && n.Kind == IdeaMapData.Group) ? ConnectionList.WholeLoop : id;
 
     private static bool SamePair(LayoutEdge e, string a, string b) => (e.From == a && e.To == b) || (e.From == b && e.To == a);
 

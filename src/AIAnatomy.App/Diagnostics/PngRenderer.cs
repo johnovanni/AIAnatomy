@@ -29,21 +29,21 @@ public static class PngRenderer
         {
             using var folder = new TemporaryFolder();
             var services = AppServices.Create(new InMemorySettings(new AppSettings(options.TextSize, options.Theme, ScaleVersion: SettingsService.CurrentScaleVersion)), folder.Path);
-            await RenderViewAsync(options, services, view, options.OutputFileFor(view));
+            await RenderViewAsync(options, services, view, options.OutputFileFor(view), folder.Path);
         }
     }
 
-    private static async Task RenderViewAsync(DiagnosticOptions options, AppServices services, string view, string file)
+    private static async Task RenderViewAsync(DiagnosticOptions options, AppServices services, string view, string file, string scratchFolder)
     {
         var viewModel = services.NewMainViewModel();
         var window = new MainWindow(viewModel);
-        Show(window, viewModel, services, view);
+        var map = Show(window, viewModel, services, view, scratchFolder);
 
         if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
 
         // The window is never shown: its content is laid out and drawn on its own, at exactly the size asked for.
         var content = window.Shell;
-        double height = options.Height;
+        double width = options.Width, height = options.Height;
         await SettleAsync(content, options.Width, height);
         if (options.FullLab)
         {
@@ -52,7 +52,17 @@ public static class PngRenderer
             window.ShowFullLabPage();
             await SettleAsync(content, options.Width, height);
         }
-        if (view == DiagnosticOptions.Gallery || options.FullLab)
+        if (map != null)
+        {
+            // The idea map is drawn whole (it scrolls in the window), so the picture shows all of it.
+            map.ShowWholeMap();
+            await SettleAsync(content, options.Width, height);
+            content.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            width = Math.Min(MaxGalleryHeight, Math.Max(width, Math.Ceiling(content.DesiredSize.Width)));
+            height = Math.Min(MaxGalleryHeight, Math.Max(height, Math.Ceiling(content.DesiredSize.Height)));
+            await SettleAsync(content, width, height);
+        }
+        else if (view == DiagnosticOptions.Gallery || options.FullLab)
         {
             // The gallery (or a full lab) is drawn at its full height so everything is in the picture.
             content.Measure(new Size(options.Width, double.PositiveInfinity));
@@ -60,29 +70,50 @@ public static class PngRenderer
             await SettleAsync(content, options.Width, height);
         }
 
-        var bitmap = new RenderTargetBitmap(options.Width, (int)height, 96, 96, PixelFormats.Pbgra32);
+        var bitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
         bitmap.Render(content);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(file))!);
         await using var stream = File.Create(file);
         encoder.Save(stream);
-        Console.WriteLine($"Saved {file} ({options.Width} x {(int)height}, {ThemeManager.Theme}, {options.TextSize} pt).");
+        Console.WriteLine($"Saved {file} ({(int)width} x {(int)height}, {ThemeManager.Theme}, {options.TextSize} pt){MapSize(map)}.");
     }
 
-    private static void Show(MainWindow window, MainViewModel viewModel, AppServices services, string view)
+    private static string MapSize(IdeaMapView? map) =>
+        map?.DataContext is AIAnatomy.Presentation.IdeaMap.IdeaMapViewModel { Layout: { } l }
+            ? $"; map layout {Math.Ceiling(l.Width)} x {Math.Ceiling(l.Height)} px" : "";
+
+    /// <summary>Shows the view; returns the idea map view when that is what was asked for.</summary>
+    private static IdeaMapView? Show(MainWindow window, MainViewModel viewModel, AppServices services, string view, string scratchFolder)
     {
         switch (view)
         {
+            case var v when DiagnosticOptions.IsIdeaMapView(v):
+                // Progress is kept in the scratch folder, like the models, so the picture never shows the user's own marks.
+                var ideaMap = services.NewIdeaMap(new ProgressService(Path.Combine(scratchFolder, "progress.json")));
+                ideaMap.Mode = view.StartsWith("ideamap-loop", StringComparison.Ordinal) ? AIAnatomy.Presentation.IdeaMap.MapMode.Loop : AIAnatomy.Presentation.IdeaMap.MapMode.Radial;
+                string? chosen = view switch
+                {
+                    DiagnosticOptions.IdeaMapRadialChosen => "attention",
+                    DiagnosticOptions.IdeaMapLoopChosen => "residual-stream",
+                    DiagnosticOptions.IdeaMapLoopLearning => "learning",
+                    _ => null,
+                };
+                if (chosen != null) ideaMap.Choose(chosen);
+                var mapView = new IdeaMapView { DataContext = ideaMap };
+                window.ShowDiagnosticPage(mapView);
+                return mapView;
             case DiagnosticOptions.Gallery: window.ShowDiagnosticPage(new ControlGallery()); break;
             case DiagnosticOptions.SourcesView: viewModel.ShowSourcesCommand.Execute(null); break;
             case DiagnosticOptions.SettingsView: viewModel.ShowSettingsCommand.Execute(null); break;
             default:
                 if (services.Lessons.All.All(l => l.Id != view))
-                    throw new ArgumentException($"There is no lesson or view called '{view}'. Use a lesson id, gallery, sources or settings.");
+                    throw new ArgumentException($"There is no lesson or view called '{view}'. Use a lesson id, gallery, sources, settings, ideamap-radial or ideamap-loop.");
                 viewModel.NavigateToLesson(view);
                 break;
         }
+        return null;
     }
 
     // Layout, then let the dispatcher finish bindings, flow documents and formulas (Background priority), twice over.

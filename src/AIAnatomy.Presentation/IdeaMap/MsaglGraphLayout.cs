@@ -38,14 +38,22 @@ public sealed class MsaglGraphLayout : IGraphLayout
     private const double ShareExponent = 0.8;         // a child's share of the circle grows as (its children)^this
     private const double AreaFactor = 1.2;            // map area / box area before overlap removal
     private const double RoutePadding = 4;            // least space between a line and a box it passes, px
+
+    // Loop: the group frame's padding, as a fraction of its tallest box (the top holds the "Block × N" title).
+    private const double FramePadSide = 0.4, FramePadTop = 0.75;
+    private const double LabelGap = 4;            // px, least space round a line label
+    private const double CornerStep = 4;           // px, when looking for room in a corner
+    private const double LoopNodeSeparation = 20;  // MSAGL default 10; leaves lines a way between boxes in a row
+    private const double LoopLayerSeparation = 20; // MSAGL's default is 30; labels take a layer of their own between rows
     private const string GroupKey = "\u0001group";
 
     public GraphLayoutResult Layout(GraphInput input)
     {
         ArgumentNullException.ThrowIfNull(input);
         Rectangle? frame = null;
-        var centres = input.Mode == MapMode.Radial ? PlaceRadial(input) : PlaceLoop(input, out frame);
-        return Route(input, centres, frame);
+        Dictionary<(string, string), Point>? labels = null;
+        var centres = input.Mode == MapMode.Radial ? PlaceRadial(input) : PlaceLoop(input, out frame, out labels);
+        return Route(input, centres, frame, labels ?? []);
     }
 
     // ---- Placement -------------------------------------------------------------------------------------------------
@@ -135,34 +143,45 @@ public sealed class MsaglGraphLayout : IGraphLayout
         return nodes.ToDictionary(kv => kv.Key, kv => kv.Value.Center - shift, StringComparer.Ordinal);
     }
 
-    private static Dictionary<string, Point> PlaceLoop(GraphInput input, out Rectangle? groupBox)
+    private static Dictionary<string, Point> PlaceLoop(GraphInput input, out Rectangle? groupBox,
+        out Dictionary<(string, string), Point> labels)
     {
+        labels = [];
         var members = input.GroupMembers.Where(m => input.Nodes.Any(n => n.Id == m)).ToHashSet(StringComparer.Ordinal);
         groupBox = null;
 
-        // 1. The group on its own: a small layered layout of its members and the lines between them.
+        // 1. The group on its own: its members in one row, in the given order, inside a frame with room for its title.
+        //    (One row rather than a layered layout of the members: it keeps the map a row shorter.)
         Dictionary<string, Point>? inner = null;
         Size frameSize = default;
         if (members.Count > 0)
         {
-            var g = new GeometryGraph();
-            var n = AddNodes(g, input.Nodes.Where(x => members.Contains(x.Id)));
-            foreach (var e in input.PlacementEdges)
-                if (members.Contains(e.From) && members.Contains(e.To)) g.Edges.Add(new Edge(n[e.From], n[e.To]));
-            new LayeredLayout(g, new SugiyamaLayoutSettings()).Run();
-            g.UpdateBoundingBox();
-            var box = new Rectangle(g.Nodes.Select(x => x.BoundingBox));
-            double rowHeight = input.Nodes.Where(x => members.Contains(x.Id)).Max(x => x.Height);
-            double padSide = 0.4 * rowHeight, padTop = rowHeight; // room for the group's title above its boxes
-            frameSize = new Size(box.Width + 2 * padSide, box.Height + padTop + padSide);
+            var row = input.GroupMembers.Distinct().Select(m => input.Nodes.First(x => x.Id == m)).ToList();
+            double rowHeight = row.Max(x => x.Height), rowWidth = row.Sum(x => x.Width) + (row.Count - 1) * BoxGap;
+            double padSide = FramePadSide * rowHeight, padTop = FramePadTop * rowHeight;
+            frameSize = new Size(rowWidth + 2 * padSide, rowHeight + padTop + padSide);
             // Offsets of member centres from the frame's centre (y up).
-            var frameCentre = new Point(box.Left - padSide + frameSize.Width / 2, box.Top + padTop - frameSize.Height / 2);
-            inner = n.ToDictionary(kv => kv.Key, kv => kv.Value.Center - frameCentre, StringComparer.Ordinal);
+            inner = new Dictionary<string, Point>(StringComparer.Ordinal);
+            double x = -frameSize.Width / 2 + padSide, y = frameSize.Height / 2 - padTop - rowHeight / 2;
+            foreach (var m in row)
+            {
+                inner[m.Id] = new Point(x + m.Width / 2, y);
+                x += m.Width + BoxGap;
+            }
         }
 
-        // 2. Everything else, with the group as one box.
+        // 2. Sort the other boxes: those joined only to the whole loop go in a column beside the group, those with no
+        //    lines at all in the corners; the rest are laid out in layers, with the group as one box.
+        var edges = input.PlacementEdges.Where(e => e.From != e.To).ToList();
+        bool Touches(LayoutEdge e, string id) => e.From == id || e.To == id;
+        var outside = input.Nodes.Where(x => !members.Contains(x.Id)).ToList();
+        var toLoop = outside.Where(x => edges.Any(e => Touches(e, x.Id))
+            && edges.Where(e => Touches(e, x.Id)).All(e => e.To == ConnectionList.WholeLoop)).ToList();
+        var loose = outside.Where(x => !edges.Any(e => Touches(e, x.Id))).ToList();
+        var layered = outside.Except(toLoop).Except(loose).ToList();
+
         var graph = new GeometryGraph();
-        var nodes = AddNodes(graph, input.Nodes.Where(x => !members.Contains(x.Id)));
+        var nodes = AddNodes(graph, layered);
         if (members.Count > 0)
         {
             var groupNode = new Node(CurveFactory.CreateRectangle(frameSize.Width, frameSize.Height, new Point()), GroupKey);
@@ -171,46 +190,121 @@ public sealed class MsaglGraphLayout : IGraphLayout
         }
         string Outer(string id) => id == ConnectionList.WholeLoop || members.Contains(id) ? GroupKey : id;
         var seen = new HashSet<(string, string)>();
-        foreach (var e in input.PlacementEdges)
+        var labelled = new List<(LayoutEdge Layout, Edge Edge)>();
+        foreach (var e in edges)
         {
-            // A line to the whole loop places its lesson below the group (as if it hung from it).
-            var (from, to) = e.To == ConnectionList.WholeLoop ? (GroupKey, e.From) : (Outer(e.From), Outer(e.To));
+            var (from, to) = (Outer(e.From), Outer(e.To));
             if (from == to || !nodes.ContainsKey(from) || !nodes.ContainsKey(to) || !seen.Add((from, to))) continue;
-            graph.Edges.Add(new Edge(nodes[from], nodes[to]));
+            // A labelled edge gets an MSAGL label of the asked size, so the layered layout keeps room for it.
+            var edge = e.HasLabel ? new Edge(nodes[from], nodes[to], e.LabelWidth, e.LabelHeight, 1) : new Edge(nodes[from], nodes[to]);
+            graph.Edges.Add(edge);
+            if (e.HasLabel) labelled.Add((e, edge));
         }
-        var settings = new SugiyamaLayoutSettings();
-        // Boxes with no lines at all (lessons still to come) go in the top row rather than the bottom one.
-        var loose = nodes.Values.Where(n => !n.Edges.Any()).ToArray();
-        var top = nodes.Values.FirstOrDefault(n => n.Edges.Any() && !n.InEdges.Any());
-        if (top != null) foreach (var l in loose) graph.Edges.Add(new Edge(l, top));
+        var settings = new SugiyamaLayoutSettings { LayerSeparation = LoopLayerSeparation, NodeSeparation = LoopNodeSeparation };
+        // A box whose only line goes out to one other box (Rules vs learning and Train a model, to Learning) sits beside
+        // that box in its row rather than in a row of its own above it: the first such box on the left, the next on the right.
+        foreach (var target in nodes.Values.Where(t => t.InEdges.Any()).ToList())
+        {
+            var leaves = target.InEdges.Select(e => e.Source).Where(src => !src.InEdges.Any() && src.OutEdges.Count() == 1).ToList();
+            if (leaves.Count == 0) continue;
+            var row = new List<Node>(leaves.Take(1)) { target };
+            row.AddRange(leaves.Skip(1).Take(1));
+            settings.AddSameLayerNeighbors(row);
+        }
         new LayeredLayout(graph, settings).Run();
 
-        // They share the top row by themselves; put them in their given order, keeping the gaps between them.
-        var byX = loose.OrderBy(n => n.Center.X).ToList();
-        if (top != null && byX.Count > 1 && !byX.SequenceEqual(loose))
-        {
-            var gaps = byX.Zip(byX.Skip(1), (a, b) => b.BoundingBox.Left - a.BoundingBox.Right).ToList();
-            double x = byX[0].BoundingBox.Left;
-            for (int i = 0; i < loose.Length; i++)
-            {
-                loose[i].Center = new Point(x + loose[i].Width / 2, loose[i].Center.Y);
-                x += loose[i].Width + (i < gaps.Count ? gaps[i] : 0);
-            }
-        }
-
         var centres = nodes.Where(kv => kv.Key != GroupKey).ToDictionary(kv => kv.Key, kv => kv.Value.Center, StringComparer.Ordinal);
+        var taken = nodes.Values.Select(n => n.BoundingBox).ToList();
+        // The layered layout's own lines count as taken too, so the boxes placed below do not block their way (such as
+        // the way back from Next character to Your text, round the side).
+        foreach (var edge in graph.Edges.Where(e => e.Curve != null))
+            taken.AddRange(Sample(edge.Curve).Select(p => new Rectangle(p)));
+        // Labels: where the layered layout put them, unless that touches a box or an earlier label; then the nearest
+        // clear point along the edge's own line (from its middle outwards).
+        var labelBoxes = new List<Rectangle>();
+        foreach (var (layout, edge) in labelled)
+        {
+            if (edge.Label == null) continue;
+            var size = new Size(layout.LabelWidth, layout.LabelHeight);
+            var candidates = new List<Point> { edge.Label.Center };
+            if (edge.Curve != null)
+                foreach (double t in new[] { 0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8 })
+                    candidates.Add(edge.Curve[edge.Curve.ParStart + t * (edge.Curve.ParEnd - edge.Curve.ParStart)]);
+            bool Clear(Point c)
+            {
+                var r = new Rectangle(new Size(size.Width + 2 * LabelGap, size.Height + 2 * LabelGap), c);
+                return !nodes.Values.Any(n => n.BoundingBox.Intersects(r)) && !labelBoxes.Any(l => l.Intersects(r));
+            }
+            var at = candidates.FirstOrDefault(Clear, candidates[0]);
+            labels[(layout.From, layout.To)] = at;
+            labelBoxes.Add(new Rectangle(size, at));
+        }
+        taken.AddRange(labelBoxes);
         if (inner != null)
         {
             var g = nodes[GroupKey].Center;
             foreach (var (id, offset) in inner) centres[id] = g + offset;
             groupBox = new Rectangle(new Size(frameSize.Width, frameSize.Height), g);
         }
+
+        // 3. The whole-loop column: beside the group (or the layers), top-aligned with it, moved right until it is clear.
+        if (toLoop.Count > 0)
+        {
+            var anchor = groupBox ?? new Rectangle(taken);
+            double colWidth = toLoop.Max(x => x.Width);
+            double colHeight = toLoop.Sum(x => x.Height) + (toLoop.Count - 1) * BoxGap;
+            double left = anchor.Right + 2 * BoxGap, top = anchor.Top;
+            Rectangle Column() => new(left, top - colHeight, left + colWidth, top);
+            for (var hit = Clash(Column(), taken); hit != null; hit = Clash(Column(), taken)) left = hit.Value.Right + 2 * BoxGap + 1;
+            double y = top;
+            foreach (var x in toLoop)
+            {
+                centres[x.Id] = new Point(left + colWidth / 2, y - x.Height / 2);
+                taken.Add(new Rectangle(new Size(x.Width, x.Height), centres[x.Id]));
+                y -= x.Height + BoxGap;
+            }
+        }
+
+        // 4. Boxes with no lines: the first in the top right corner, the others in the bottom right corner (stacked
+        //    upwards). Each goes as near its corner as it can be clear of every box and line (moving down from the top,
+        //    or up from the bottom, at most half the map's height); failing that, the same on the left; failing that,
+        //    just outside the map on the right.
+        if (loose.Count > 0)
+        {
+            var all = new Rectangle(taken);
+            for (int i = 0; i < loose.Count; i++)
+            {
+                var x = loose[i];
+                bool fromTop = i == 0;
+                double y0 = fromTop ? all.Top - x.Height / 2 : all.Bottom + x.Height / 2 + (loose.Count - 1 - i) * (x.Height + BoxGap);
+                Point? spot = null;
+                foreach (double cx in new[] { all.Right - x.Width / 2, all.Left + x.Width / 2 })
+                    for (double moved = 0; moved <= all.Height / 2 && spot == null; moved += CornerStep)
+                    {
+                        var at = new Point(cx, fromTop ? y0 - moved : y0 + moved);
+                        if (Clash(new Rectangle(new Size(x.Width, x.Height), at), taken) == null) spot = at;
+                    }
+                var place = spot ?? new Point(all.Right + 2 * BoxGap + x.Width / 2, y0);
+                centres[x.Id] = place;
+                taken.Add(new Rectangle(new Size(x.Width, x.Height), place));
+            }
+        }
         return centres;
+    }
+
+    /// <summary>The first box in <paramref name="taken"/> that comes within 2 × <see cref="BoxGap"/> of <paramref name="r"/>.</summary>
+    private static Rectangle? Clash(Rectangle r, IEnumerable<Rectangle> taken)
+    {
+        var grown = new Rectangle(r.Left - 2 * BoxGap, r.Bottom - 2 * BoxGap, r.Right + 2 * BoxGap, r.Top + 2 * BoxGap);
+        foreach (var t in taken)
+            if (t.Intersects(grown)) return t;
+        return null;
     }
 
     // ---- Routing ---------------------------------------------------------------------------------------------------
 
-    private static GraphLayoutResult Route(GraphInput input, Dictionary<string, Point> centres, Rectangle? frame)
+    private static GraphLayoutResult Route(GraphInput input, Dictionary<string, Point> centres, Rectangle? frame,
+        Dictionary<(string, string), Point> labels)
     {
         var graph = new GeometryGraph();
         var nodes = new Dictionary<string, Node>(StringComparer.Ordinal);
@@ -232,23 +326,36 @@ public sealed class MsaglGraphLayout : IGraphLayout
         }
 
         Node? End(string id) => id == ConnectionList.WholeLoop ? group : nodes.GetValueOrDefault(id);
-        var edges = new List<(LayoutEdge Layout, Edge Edge)>();
+        // A line with a label is routed in two parts through a box the size of its label, which also keeps every other
+        // line off the label.
+        var edges = new List<(LayoutEdge Layout, Edge[] Parts, Node? Label)>();
         var seen = new HashSet<(string, string)>();
         foreach (var e in input.PlacementEdges.Concat(input.RoutedOnlyEdges))
         {
             if (End(e.From) is not { } from || End(e.To) is not { } to || !seen.Add((e.From, e.To))) continue;
-            var edge = new Edge(from, to);
-            graph.Edges.Add(edge);
-            edges.Add((e, edge));
+            Edge[] parts;
+            Node? labelNode = null;
+            if (labels.TryGetValue((e.From, e.To), out var at))
+            {
+                labelNode = new Node(CurveFactory.CreateRectangle(e.LabelWidth, e.LabelHeight, at), e);
+                graph.Nodes.Add(labelNode);
+                parts = [new Edge(from, labelNode), new Edge(labelNode, to)];
+            }
+            else parts = [new Edge(from, to)];
+            foreach (var part in parts) graph.Edges.Add(part);
+            edges.Add((e, parts, labelNode));
         }
         graph.UpdateBoundingBox();
         new SplineRouter(graph, new EdgeRoutingSettings { EdgeRoutingMode = EdgeRoutingMode.Spline, Padding = RoutePadding }).Run();
 
-        var sampled = edges.Select(x => (x.Layout, Points: Sample(x.Edge.Curve ?? new LineSegment(x.Edge.Source.Center, x.Edge.Target.Center)))).ToList();
+        static List<Point> Line(Edge e) => Sample(e.Curve ?? new LineSegment(e.Source.Center, e.Target.Center));
+        var sampled = edges.Select(x => (x.Layout, Points: x.Parts.SelectMany(Line).ToList(), x.Label)).ToList();
         var bounds = new Rectangle(nodes.Values.Select(n => n.BoundingBox));
         if (frame is { } fr) bounds.Add(fr);
-        foreach (var (_, points) in sampled)
-            foreach (var p in points) bounds.Add(p);
+        foreach (var x in sampled)
+            if (x.Label != null) bounds.Add(x.Label.BoundingBox);
+        foreach (var x in sampled)
+            foreach (var p in x.Points) bounds.Add(p);
 
         // MSAGL's y axis points up; the map's points down.
         double left = bounds.Left - Margin, top = bounds.Top + Margin;
@@ -258,7 +365,8 @@ public sealed class MsaglGraphLayout : IGraphLayout
             var b = nodes[n.Id].BoundingBox;
             return new PlacedNode(n.Id, b.Left - left, top - b.Top, n.Width, n.Height);
         }).ToList();
-        var routed = sampled.Select(s => new RoutedEdge(s.Layout.From, s.Layout.To, s.Points.Select(ToMap).ToList())).ToList();
+        var routed = sampled.Select(s => new RoutedEdge(s.Layout.From, s.Layout.To, s.Points.Select(ToMap).ToList(),
+            s.Label == null ? null : ToMap(s.Label.Center))).ToList();
         (double, double, double, double)? groupRect = frame is { } r ? (r.Left - left, top - r.Top, r.Width, r.Height) : null;
         return new GraphLayoutResult(placed, routed, bounds.Width + 2 * Margin, bounds.Height + 2 * Margin, groupRect);
     }
