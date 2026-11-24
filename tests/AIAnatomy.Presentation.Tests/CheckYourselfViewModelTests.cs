@@ -45,10 +45,11 @@ public class CheckYourselfViewModelTests : IDisposable
         var q = vm.Questions[0];
         Assert.All(q.Options, o => Assert.DoesNotContain("your answer", o.Label));
         q.ChooseCommand.Execute(2);
-        Assert.Equal("✓ Sounds (your answer)", q.Options[2].Label);
+        // A tick only when the chosen answer is right; a cross and "not quite" when it is wrong (final review I4).
+        Assert.Equal("✗ Sounds (your answer: not quite)", q.Options[2].Label);
         q.ChooseCommand.Execute(1);
         Assert.Equal("Sounds", q.Options[2].Label);
-        Assert.Equal("✓ Token information (your answer)", q.Options[1].Label);
+        Assert.Equal("✓ Token information (your answer: right)", q.Options[1].Label);
     }
 
     [Fact]

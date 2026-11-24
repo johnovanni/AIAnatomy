@@ -42,6 +42,17 @@ public static class AxisTicks
         return (min - by, max + by);
     }
 
+    /// <summary>
+    /// <see cref="Widen"/>, but a range narrower than <paramref name="minSpan"/> runs from <paramref name="min"/> to
+    /// min + minSpan. A loss chart with one point at step 0 then shows 0 to one chunk of steps instead of −1 to 1
+    /// (final review M12). A span of 0 or less is plain <see cref="Widen"/>.
+    /// </summary>
+    public static (double Min, double Max) WidenTo(double min, double max, double minSpan)
+    {
+        if (!double.IsFinite(min) || !double.IsFinite(max) || !double.IsFinite(minSpan) || minSpan <= 0) return Widen(min, max);
+        return max - min < minSpan ? (min, min + minSpan) : (min, max);
+    }
+
     /// <summary><see cref="Widen"/>, then 5% more room at each end.</summary>
     public static (double Min, double Max) Pad(double min, double max)
     {

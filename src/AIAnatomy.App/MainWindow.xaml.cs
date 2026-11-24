@@ -57,6 +57,9 @@ public partial class MainWindow : Window
         ContentsPane.Visibility = Visibility.Collapsed;
     }
 
+    /// <summary>The lesson page (for <c>--render-png</c> and the self-test's anchor check).</summary>
+    public LessonPageView Page => LessonPage;
+
     /// <summary>The idea map page, which the window shows when the view-model says so (for <c>--render-png</c>).</summary>
     public IdeaMapView IdeaMap => IdeaMapPage;
 

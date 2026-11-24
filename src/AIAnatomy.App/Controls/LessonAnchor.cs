@@ -6,11 +6,12 @@ namespace AIAnatomy.App.Controls;
 /// <summary>
 /// Names a place on a lesson page (or inside a lab view) so the page can scroll to it when a lesson branch or a Check
 /// yourself question points there. Set <c>c:LessonAnchor.Name="..."</c> on any element. The page itself names
-/// <see cref="Explanation"/>, <see cref="Formula"/>, <see cref="Brains"/> and <see cref="Lab"/>.
+/// <see cref="Explanation"/>, <see cref="Formula"/>, <see cref="Brains"/>, <see cref="Lab"/> and <see cref="Check"/> (Check
+/// yourself; used by the renders, no lesson branch points there).
 /// </summary>
 public static class LessonAnchor
 {
-    public const string Explanation = "explanation", Formula = "formula", Brains = "brains", Lab = "lab";
+    public const string Explanation = "explanation", Formula = "formula", Brains = "brains", Lab = "lab", Check = "check";
 
     public static readonly DependencyProperty NameProperty = DependencyProperty.RegisterAttached(
         "Name", typeof(string), typeof(LessonAnchor), new PropertyMetadata(null));

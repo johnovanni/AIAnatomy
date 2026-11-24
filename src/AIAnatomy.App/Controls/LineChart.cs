@@ -21,11 +21,16 @@ public sealed class LineChart : ChartBase
     public static readonly DependencyProperty XAxisTitleProperty = Register<string?>(nameof(XAxisTitle), null);
     public static readonly DependencyProperty YAxisTitleProperty = Register<string?>(nameof(YAxisTitle), null);
 
+    /// <summary>The x axis covers at least this much from its first value (0: just the data). With one point at step 0
+    /// and a span of 20, the axis runs 0 to 20 rather than −1 to 1.</summary>
+    public static readonly DependencyProperty MinXSpanProperty = Register(nameof(MinXSpan), 0.0);
+
     public LineChart() => ToolTipService.SetInitialShowDelay(this, 200);
 
     public IReadOnlyList<LineSeries>? Series { get => (IReadOnlyList<LineSeries>?)GetValue(SeriesProperty); set => SetValue(SeriesProperty, value); }
     public string? XAxisTitle { get => (string?)GetValue(XAxisTitleProperty); set => SetValue(XAxisTitleProperty, value); }
     public string? YAxisTitle { get => (string?)GetValue(YAxisTitleProperty); set => SetValue(YAxisTitleProperty, value); }
+    public double MinXSpan { get => (double)GetValue(MinXSpanProperty); set => SetValue(MinXSpanProperty, value); }
 
     private IEnumerable<(double X, double Y)> AllPoints => (Series ?? []).SelectMany(s => s.Points).Where(p => double.IsFinite(p.X) && double.IsFinite(p.Y));
 
@@ -51,8 +56,8 @@ public sealed class LineChart : ChartBase
     private AxisFrame Frame(double legendHeight)
     {
         var points = AllPoints.ToList();
-        // The x axis starts and ends at the data (widened only when all x are nearly equal); y gets 5% room.
-        var (xMin, xMax) = AxisTicks.Widen(points.Min(p => p.X), points.Max(p => p.X));
+        // The x axis starts and ends at the data (widened only when all x are nearly equal, or to MinXSpan); y gets 5% room.
+        var (xMin, xMax) = AxisTicks.WidenTo(points.Min(p => p.X), points.Max(p => p.X), MinXSpan);
         var (yMin, yMax) = AxisTicks.Pad(points.Min(p => p.Y), points.Max(p => p.Y));
         var bounds = new Rect(0, legendHeight + Gap, ActualWidth, Math.Max(40, ActualHeight - legendHeight - Gap));
         return LayoutAxes(bounds, xMin, xMax, yMin, yMax, XAxisTitle, YAxisTitle);

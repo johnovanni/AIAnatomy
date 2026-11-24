@@ -83,13 +83,15 @@ public class CheckedQuestionTests : IDisposable
     {
         var lab = new RulesVsLearningLabViewModel(Fables);
         Assert.Equal(0, lab.StepsTrained);
-        int characters = AIAnatomy.Models.Tokenization.CharTokenizer.FromText(Fables()).VocabularySize;
-        Assert.Equal(69, characters);
-        // The mean loss of a table that makes every character equally likely is ln V; the why quotes it as 4.234.
-        Assert.Equal(Math.Log(characters), lab.UntrainedLoss, 1e-9);
+        int tokens = AIAnatomy.Models.Tokenization.CharTokenizer.FromText(Fables()).VocabularySize;
+        Assert.Equal(69, tokens);   // the 68 characters of the fables plus the unknown token
+        // The mean loss of a table that makes every token equally likely is ln V; the why quotes it as 4.234.
+        Assert.Equal(Math.Log(tokens), lab.UntrainedLoss, 1e-9);
         Assert.Equal(lab.UntrainedLoss, lab.Loss);
         Assert.StartsWith("Loss 4.234: nothing learned yet", lab.LossText);
-        Assert.Contains($"all {characters} characters, and the loss is ln {characters}, about 4.234", QuestionNaming(nameof(RulesVsLearning_UntrainedTableIsUniform)).Why);
+        // Final review M5: 69 tokens, not 69 characters (the unknown token is why "�" shows in the gibberish).
+        Assert.Contains($"all {tokens} tokens (the {tokens - 1} characters of the fables and the unknown token), and the loss is ln {tokens}, about 4.234",
+            QuestionNaming(nameof(RulesVsLearning_UntrainedTableIsUniform)).Why);
         Assert.Equal("Every score starts at zero, so every character is equally likely", Correct(nameof(RulesVsLearning_UntrainedTableIsUniform)));
     }
 

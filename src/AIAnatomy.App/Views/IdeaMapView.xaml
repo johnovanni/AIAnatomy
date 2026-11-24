@@ -88,7 +88,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <Button x:Name="OpenLessonButton" Content="Open lesson" Command="{Binding OpenChosenLessonCommand}"
-                                    HorizontalAlignment="Left" Margin="0,8,0,0" />
+                                    HorizontalAlignment="Left" Margin="0,8,0,0" ToolTip="Or press Enter again on the chosen bubble" />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

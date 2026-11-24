@@ -36,6 +36,8 @@ public sealed class LessonPageViewModel
         Next = order.Skip(at + 1).FirstOrDefault(l => !l.IsPlaceholder);
         PreviousLabel = Previous == null ? null : $"← {catalog.NumberOf(Previous)} {Previous.Title}";
         NextLabel = Next == null ? null : $"Next: {catalog.NumberOf(Next)} {Next.Title} →";
+        PreviousName = Previous == null ? null : $"Back to the previous lesson, {catalog.NumberOf(Previous)} {Previous.Title}";
+        NextName = Next == null ? null : $"On to the next lesson, {catalog.NumberOf(Next)} {Next.Title}";
     }
 
     public Lesson Lesson { get; }
@@ -67,6 +69,12 @@ public sealed class LessonPageViewModel
 
     /// <summary>The Next button's text, for example "Next: 2.5 Multi-head attention →"; null when there is no lesson after this one.</summary>
     public string? NextLabel { get; }
+
+    /// <summary>The Back button's name for screen readers, for example "Back to the previous lesson, 2.3 Position".</summary>
+    public string? PreviousName { get; }
+
+    /// <summary>The Next button's name for screen readers, for example "On to the next lesson, 2.5 Multi-head attention".</summary>
+    public string? NextName { get; }
 
     private static ConnectionChip Chip(Connection c, string ownId, LessonCatalog catalog, IdeaMapData map)
     {

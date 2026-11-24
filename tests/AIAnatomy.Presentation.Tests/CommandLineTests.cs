@@ -141,9 +141,23 @@ public class CommandLineTests
 
         Assert.Null(DiagnosticOptions.Parse(["--render-png", "ideamap-radial-chosen,ideamap-loop-chosen,ideamap-loop-learning", "m.png"]).Error);
 
+        Assert.Null(DiagnosticOptions.Parse(["--render-png", "ideamap-radial-progress", "m.png"]).Error);
+
         var bad = DiagnosticOptions.Parse(["--render-png", "ideamap-sideways", "m.png"]);
-        Assert.Equal("Idea map views are ideamap-radial, ideamap-loop, ideamap-radial-chosen, ideamap-loop-chosen and ideamap-loop-learning.", bad.Error);
+        Assert.Equal("Idea map views are ideamap-radial, ideamap-loop, ideamap-radial-chosen, ideamap-loop-chosen, ideamap-loop-learning and ideamap-radial-progress.", bad.Error);
         Assert.NotNull(DiagnosticOptions.Parse(["--render-png", "ideamap-radial", "m.png", "--full-lab"]).Error);
+    }
+
+    [Fact]
+    public void CheckYourselfAndBranchViews_AreRenderViews_NotForFullLab()
+    {
+        // Final review I3 and I4: Check yourself answered (one right, one wrong) and skipped, and a page opened at a branch.
+        Assert.Null(DiagnosticOptions.Parse(["--render-png", DiagnosticOptions.SettingsResetQuestion, "s.png"]).Error);   // re-review N1
+        Assert.NotNull(DiagnosticOptions.Parse(["--render-png", DiagnosticOptions.SettingsResetQuestion, "s.png", "--full-lab"]).Error);
+        var o = DiagnosticOptions.Parse(["--render-png", "check-answered,check-skipped,branch-anchor", "c.png"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { DiagnosticOptions.CheckAnswered, DiagnosticOptions.CheckSkipped, DiagnosticOptions.BranchAnchor }, o.Views);
+        Assert.NotNull(DiagnosticOptions.Parse(["--render-png", "check-answered", "c.png", "--full-lab"]).Error);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using System.Windows;
 using AIAnatomy.App.Themes;
+using AIAnatomy.App.Views;
 using AIAnatomy.Presentation;
 using AIAnatomy.Presentation.Labs;
 using AIAnatomy.Presentation.Services;
@@ -24,8 +25,10 @@ public static class SelfTests
     };
 
     /// <summary>
-    /// Opens every lesson, creates its lab, checks a view exists for it, calls Reset (waiting for any work that starts) and
-    /// Deactivate. Fails if any of that throws, or if a lesson names a lab that is not registered.
+    /// Opens every lesson, creates its lab, checks a view exists for it, that every branch anchor is on the page and scrolls
+    /// to the top, and that the view's screen names are the ones the lab reports, then calls Reset (waiting for any work
+    /// that starts) and Deactivate. Fails if any of that throws or does not hold, or if a lesson names a lab that is not
+    /// registered.
     /// </summary>
     private static async Task<int> AllLabsAsync()
     {
@@ -52,6 +55,11 @@ public static class SelfTests
                     return Fail($"Lesson '{lesson.Id}': there is no view for {lab.GetType().Name}.");
                 if (await MissingAnchorAsync(window, lesson) is { } anchor)
                     return Fail($"Lesson '{lesson.Id}': the branch anchor '{anchor}' is not in the {lab.GetType().Name} view.");
+                if (await MisplacedAnchorAsync(window, lesson) is { } misplaced)
+                    return Fail($"Lesson '{lesson.Id}': {misplaced}");
+                await lab.WorkCompleted.WaitAsync(Patience);
+                if (await ScreenNameMismatchAsync(window, lab) is { } mismatch)
+                    return Fail($"Lesson '{lesson.Id}' ({lab.GetType().Name}): {mismatch}");
                 lab.Reset();
                 await lab.WorkCompleted.WaitAsync(Patience);
                 if (lab is RulesVsLearningLabViewModel rules)
@@ -84,6 +92,60 @@ public static class SelfTests
     private static async Task<string?> MissingAnchorAsync(MainWindow window, AIAnatomy.Lessons.Lesson lesson)
     {
         if (lesson.Branches.Count == 0) return null;
+        await LayOutAsync(window);
+        return lesson.Branches.Select(b => b.Anchor).FirstOrDefault(a => AIAnatomy.App.Controls.LessonAnchor.Find(window.Shell, a) == null);
+    }
+
+    /// <summary>
+    /// Scrolls the page to each branch anchor, as a click on the branch does, and says which one did not end up with its top
+    /// near the top of the page (final review I3, AA-011). A place near the page's end may stay lower, with the page
+    /// scrolled to its end. Null when every one is in place.
+    /// </summary>
+    private static async Task<string?> MisplacedAnchorAsync(MainWindow window, AIAnatomy.Lessons.Lesson lesson)
+    {
+        foreach (var branch in lesson.Branches)
+        {
+            window.Page.ScrollTo(branch.Anchor);
+            await LayOutAsync(window);
+            if (window.Page.AnchorPosition(branch.Anchor) is not { } at)
+                return $"the branch anchor '{branch.Anchor}' could not be scrolled to.";
+            bool atTop = Math.Abs(at.Top - LessonPageView.AnchorGap) <= 2;
+            if (!atTop && !(at.AtEnd && at.Top >= 0))
+                return $"after scrolling to '{branch.Anchor}' its top is {Math.Round(at.Top)} px below the top of the page, not {LessonPageView.AnchorGap}.";
+            Console.WriteLine($"  {branch.Anchor}: top at {Math.Round(at.Top)} px{(atTop ? "" : " (page at its end)")}");
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Compares the <c>ScreenName</c>s of the screens on the lesson page with the screen names the lab has reported: a name
+    /// in the view that the lab never reports is a screen that can never light (a typo), and a name the lab reports that no
+    /// screen shows lights nothing (final review M14). Null when they agree.
+    /// </summary>
+    private static async Task<string?> ScreenNameMismatchAsync(MainWindow window, LabViewModel lab)
+    {
+        await LayOutAsync(window);
+        var shown = new SortedSet<string>(StringComparer.Ordinal);
+        Collect(window.Page, shown);
+        var reported = new SortedSet<string>(lab.ReportedScreens, StringComparer.Ordinal);
+        Console.WriteLine($"  screens: {(shown.Count == 0 ? "none" : string.Join(", ", shown))}");
+        var neverLit = shown.Except(reported).ToList();
+        var unseen = reported.Except(shown).ToList();
+        if (neverLit.Count > 0) return $"the view has screens the lab never reports: {string.Join(", ", neverLit)}.";
+        if (unseen.Count > 0) return $"the lab reports screens the view does not show: {string.Join(", ", unseen)}.";
+        return null;
+
+        static void Collect(DependencyObject parent, ISet<string> into)
+        {
+            if (parent is AIAnatomy.App.Controls.Screen { ScreenName.Length: > 0 } screen) into.Add(screen.ScreenName);
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++) Collect(System.Windows.Media.VisualTreeHelper.GetChild(parent, i), into);
+        }
+    }
+
+    // The window is never shown: its content is laid out at 1600 × 1000 and the dispatcher finishes bindings, three times.
+    private static async Task LayOutAsync(MainWindow window)
+    {
         var content = window.Shell;
         for (int pass = 0; pass < 3; pass++)
         {
@@ -92,7 +154,6 @@ public static class SelfTests
             content.UpdateLayout();
             await content.Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
         }
-        return lesson.Branches.Select(b => b.Anchor).FirstOrDefault(a => AIAnatomy.App.Controls.LessonAnchor.Find(content, a) == null);
     }
 
     /// <summary>Opens the Train lab with its default settings and trains for 5 steps through its view-model.</summary>

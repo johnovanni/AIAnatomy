@@ -7,7 +7,31 @@ namespace AIAnatomy.Presentation.IdeaMap;
 
 /// <summary>One bubble on the idea map. <see cref="Number"/> is the contents number ("2.4", or "2" for a section);
 /// <see cref="Part"/> is the lesson's part key; <see cref="IsLater"/> marks lessons and sections not built yet.</summary>
-public sealed record IdeaBubble(string Id, string Label, string? Number, string? Part, bool IsLater, bool IsLesson, LessonMark Mark);
+public sealed record IdeaBubble(string Id, string Label, string? Number, string? Part, bool IsLater, bool IsLesson, LessonMark Mark)
+{
+    /// <summary>The marks a lesson bubble can show, in words as well as the contents tree's symbols. The view sizes every
+    /// lesson bubble for the widest of these, so a mark that changes never changes a bubble's size (final review I1, I2).</summary>
+    public static IReadOnlyList<string> LessonMarkTexts { get; } = ["✓ opened", "✔ checked"];
+
+    /// <summary>The mark after the number: the tree's symbols ("✓ opened", "✔ checked"), nothing before a lesson is
+    /// opened, and "later" (not a mark) on a lesson or section that is not built yet.</summary>
+    public string MarkText => IsLater ? "later"
+        : !IsLesson ? ""
+        : Mark switch { LessonMark.Checked => LessonMarkTexts[1], LessonMark.Opened => LessonMarkTexts[0], _ => "" };
+
+    /// <summary>What a screen reader says: "2.1 Tokens, lesson, checked", "2 The parts, section".</summary>
+    public string AutomationName
+    {
+        get
+        {
+            string kind = IsLesson ? "lesson" : Id.StartsWith("section-", StringComparison.Ordinal) ? "section" : "idea";
+            string state = IsLater ? ", not built yet"
+                : !IsLesson ? ""
+                : Mark switch { LessonMark.Checked => ", checked", LessonMark.Opened => ", opened", _ => ", not opened yet" };
+            return $"{(Number != null ? Number + " " : "")}{Label}, {kind}{state}";
+        }
+    }
+}
 
 /// <summary>The side card for the chosen bubble: its title, number, a short description, the sentences of its
 /// connections on this map, and the lesson it opens (null for bubbles that are not lessons).</summary>
@@ -49,14 +73,21 @@ public sealed partial class IdeaMapViewModel : ObservableObject
         _mode = Enum.GetNames<MapMode>().Contains(saved) ? Enum.Parse<MapMode>(saved) : MapMode.Radial;
         _groupLabel = MakeGroupLabel();
         _bubbles = BuildBubbles();
-        _progress.Changed += (_, _) => Bubbles = BuildBubbles();
+        _progress.Changed += (_, _) => UpdateMarks();
         _models.Changed += (_, _) => GroupLabel = MakeGroupLabel();
     }
 
     /// <summary>"Block × N", N being the active model's number of layers.</summary>
     [ObservableProperty] private string _groupLabel;
 
-    [ObservableProperty] private IReadOnlyList<IdeaBubble> _bubbles;
+    /// <summary>The bubbles of the current map, in contents order. A new list (a change of mode) is raised as a property change
+    /// and makes the view measure and lay out again; a change of marks is not (see <see cref="MarksChanged"/>).</summary>
+    public IReadOnlyList<IdeaBubble> Bubbles
+    {
+        get => _bubbles;
+        private set => SetProperty(ref _bubbles, value);
+    }
+    private IReadOnlyList<IdeaBubble> _bubbles;
     [ObservableProperty] private GraphLayoutResult? _layout;
     [ObservableProperty] private string? _chosenId;
     [ObservableProperty] private IReadOnlyList<Connection> _chosenConnections = [];
@@ -67,6 +98,17 @@ public sealed partial class IdeaMapViewModel : ObservableObject
 
     /// <summary>Raised with a lesson id when the user asks to open the chosen bubble's lesson.</summary>
     public event EventHandler<string>? OpenLessonRequested;
+
+    /// <summary>Raised when a progress mark changes. <see cref="Bubbles"/> then holds the same bubbles, in the same order,
+    /// with their new marks; it is not raised as a property change, because a new map is measured and laid out again
+    /// (spec 5.3: the layout is computed once per text size, not on every click). The view updates the text in place.</summary>
+    public event EventHandler? MarksChanged;
+
+    private void UpdateMarks()
+    {
+        _bubbles = _bubbles.Select(b => b.IsLesson ? b with { Mark = _progress.MarkOf(b.Id) } : b).ToList();
+        MarksChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>Radial or Loop. Saved to the settings, so the last choice is remembered.</summary>
     public MapMode Mode
@@ -115,6 +157,14 @@ public sealed partial class IdeaMapViewModel : ObservableObject
         ChosenId = id;
         ChosenConnections = _connections.Of(id).Where(IsOnThisMap).ToList();
         Card = MakeCard(bubble, ChosenConnections);
+    }
+
+    /// <summary>Enter on a bubble: chooses it, or, when it is already the chosen bubble, opens its lesson (a bubble that is
+    /// not a lesson just stays chosen). Saves the keyboard user a long way back to the card's Open lesson button.</summary>
+    public void ChooseOrOpen(string id)
+    {
+        if (ChosenId == id && Card?.LessonId != null) OpenChosenLesson();
+        else Choose(id);
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenChosenLesson))]

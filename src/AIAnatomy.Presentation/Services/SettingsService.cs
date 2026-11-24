@@ -76,6 +76,7 @@ public sealed class SettingsService : ISettingsService
         string theme = s.Theme == "Light" ? "Light" : "Dark";
         string layout = s.IdeaMapLayout == "Loop" ? "Loop" : "Radial";
         string? model = string.IsNullOrWhiteSpace(s.ActiveModelName) ? null : s.ActiveModelName;
-        return new AppSettings(body, theme, model, layout, CurrentScaleVersion);
+        string? lastLesson = string.IsNullOrWhiteSpace(s.LastLessonId) ? null : s.LastLessonId;
+        return new AppSettings(body, theme, model, layout, CurrentScaleVersion, lastLesson);
     }
 }

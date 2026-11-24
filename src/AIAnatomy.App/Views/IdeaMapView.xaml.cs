@@ -6,16 +6,17 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using AIAnatomy.App.Controls;
 using AIAnatomy.Lessons;
 using AIAnatomy.Presentation.IdeaMap;
-using AIAnatomy.Presentation.Services;
 
 namespace AIAnatomy.App.Views;
 
 /// <summary>
 /// The idea map: bubbles (buttons, in contents order so Tab follows it) and lines on a canvas the size of the layout.
 /// The bubbles are measured at the current text size and handed to the view-model's <c>Arrange</c>; this happens again
-/// when the text size or the mode changes. Colours are all theme resources, so a theme switch needs no redraw.
+/// when the text size or the mode changes, never when a progress mark changes (the mark text is updated in place, and
+/// every lesson bubble was sized for its widest mark). Colours are all theme resources, so a theme switch needs no redraw.
 /// </summary>
 public partial class IdeaMapView : UserControl
 {
@@ -24,6 +25,7 @@ public partial class IdeaMapView : UserControl
 
     private IdeaMapViewModel? _map;
     private readonly Dictionary<string, Button> _buttons = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TextBlock> _heads = new(StringComparer.Ordinal);
     private readonly Canvas _highlights = new() { IsHitTestVisible = false };
     private bool _measurePending;
 
@@ -46,10 +48,15 @@ public partial class IdeaMapView : UserControl
 
     private void Attach(IdeaMapViewModel? map)
     {
-        if (_map != null) _map.PropertyChanged -= OnMapChanged;
+        if (_map != null)
+        {
+            _map.PropertyChanged -= OnMapChanged;
+            _map.MarksChanged -= OnMarksChanged;
+        }
         _map = map;
         if (_map == null) return;
         _map.PropertyChanged += OnMapChanged;
+        _map.MarksChanged += OnMarksChanged;
         SyncToggles();
         SyncChoice();
         SyncCard();
@@ -69,13 +76,28 @@ public partial class IdeaMapView : UserControl
         switch (e.PropertyName)
         {
             case nameof(IdeaMapViewModel.Layout): Redraw(); break;
-            case nameof(IdeaMapViewModel.Bubbles): ScheduleMeasure(); break;   // a new map (mode) or new marks
+            case nameof(IdeaMapViewModel.Bubbles): ScheduleMeasure(); break;   // a new map (mode); marks come as MarksChanged
             case nameof(IdeaMapViewModel.Mode): SyncToggles(); break;
             case nameof(IdeaMapViewModel.ChosenId):
             case nameof(IdeaMapViewModel.ChosenConnections): SyncChoice(); break;
             case nameof(IdeaMapViewModel.Card): SyncCard(); break;
         }
     }
+
+    // A mark changed: the text is updated in place. Every lesson bubble was measured with room for its widest mark, so
+    // no size changes and nothing is measured or laid out again (final review I2).
+    private void OnMarksChanged(object? sender, EventArgs e)
+    {
+        if (_map == null) return;
+        foreach (var bubble in _map.Bubbles)
+        {
+            if (_heads.TryGetValue(bubble.Id, out var head)) head.Text = HeadText(bubble);
+            if (_buttons.TryGetValue(bubble.Id, out var button)) AutomationProperties.SetName(button, bubble.AutomationName);
+        }
+    }
+
+    private static string HeadText(IdeaBubble bubble) =>
+        (bubble.Number ?? "") + (bubble.MarkText.Length > 0 ? "  " + bubble.MarkText : "");
 
     private void OnRadialClick(object sender, RoutedEventArgs e) { if (_map != null) _map.Mode = MapMode.Radial; SyncToggles(); }
     private void OnLoopClick(object sender, RoutedEventArgs e) { if (_map != null) _map.Mode = MapMode.Loop; SyncToggles(); }
@@ -107,6 +129,7 @@ public partial class IdeaMapView : UserControl
         MapCanvas.Children.Clear();
         _highlights.Children.Clear();
         _buttons.Clear();
+        _heads.Clear();
 
         var sizes = new Dictionary<string, (double Width, double Height)>(StringComparer.Ordinal);
         foreach (var bubble in _map.Bubbles)
@@ -134,14 +157,33 @@ public partial class IdeaMapView : UserControl
     {
         double small = (double)FindResource("SmallFontSize");
         var text = new StackPanel();
-        if (bubble.Number != null || bubble.Mark != LessonMark.NotOpened || bubble.IsLater)
+        if (bubble.Number != null || bubble.MarkText.Length > 0)
         {
-            // Marks are words and symbols as well as colour: a tick for checked, a dot for opened, "later" for not built.
-            string mark = bubble.Mark == LessonMark.Checked ? "  ✓ checked" : bubble.Mark == LessonMark.Opened ? "  ● opened" : bubble.IsLater ? "  later" : "";
-            var head = new TextBlock { FontWeight = FontWeights.SemiBold, Text = (bubble.Number ?? "") + mark };
-            head.SetResourceReference(TextBlock.FontSizeProperty, "SmallFontSize");
-            head.SetResourceReference(TextBlock.FontFamilyProperty, "NumberFont");
-            text.Children.Add(head);
+            // Marks are words and symbols as well as colour, the contents tree's own: ✓ opened, ✔ checked, nothing before
+            // a lesson is opened; "later" for what is not built (final review I1).
+            TextBlock Head(string content)
+            {
+                var t = new TextBlock { FontWeight = FontWeights.SemiBold, Text = content };
+                t.SetResourceReference(TextBlock.FontSizeProperty, "SmallFontSize");
+                t.SetResourceReference(TextBlock.FontFamilyProperty, "NumberFont");
+                return t;
+            }
+            var head = Head(HeadText(bubble));
+            _heads[bubble.Id] = head;
+            if (bubble.IsLesson && !bubble.IsLater)
+            {
+                // Hidden copies with every mark keep room for the widest one, so a new mark never changes the size.
+                var line = new Grid();
+                foreach (string mark in IdeaBubble.LessonMarkTexts)
+                {
+                    var room = Head($"{bubble.Number}  {mark}");
+                    room.Visibility = Visibility.Hidden;
+                    line.Children.Add(room);
+                }
+                line.Children.Add(head);
+                text.Children.Add(line);
+            }
+            else text.Children.Add(head);
         }
         var label = new TextBlock { Text = bubble.Label, TextWrapping = TextWrapping.Wrap, MaxWidth = small * 11 };
         label.SetResourceReference(TextBlock.FontSizeProperty, "SmallFontSize");
@@ -156,25 +198,24 @@ public partial class IdeaMapView : UserControl
         };
         button.SetResourceReference(BackgroundProperty, "ScreenBrush");
         button.SetResourceReference(ForegroundProperty, bubble.IsLater ? "MutedTextBrush" : "ScreenTextBrush");
-        button.SetResourceReference(BorderBrushProperty, EdgeBrushKey(bubble));
-        string kind = bubble.IsLesson ? "lesson" : bubble.Id.StartsWith("section-", StringComparison.Ordinal) ? "section" : "idea";
-        AutomationProperties.SetName(button, $"{(bubble.Number != null ? bubble.Number + " " : "")}{bubble.Label}, {kind}{(bubble.IsLater ? ", not built yet" : "")}");
+        button.SetResourceReference(BorderBrushProperty, bubble.IsLater ? "PartLaterBrush" : PartResource.BrushKey(bubble.Part, "BorderBrush"));
+        AutomationProperties.SetName(button, bubble.AutomationName);
+        if (bubble.IsLesson) AutomationProperties.SetHelpText(button, "Enter chooses it; Enter again opens the lesson.");
         button.Click += (_, _) =>
         {
             _map?.Choose(bubble.Id);
             button.BringIntoView();
         };
+        // Enter on the chosen bubble opens its lesson (final review M6); Space and the mouse only choose.
+        button.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != System.Windows.Input.Key.Enter || _map == null) return;
+            _map.ChooseOrOpen(bubble.Id);
+            button.BringIntoView();
+            e.Handled = true;
+        };
         button.GotKeyboardFocus += (_, _) => button.BringIntoView();
         return button;
-    }
-
-    // A part's colour is "Part" + its name + "Brush"; no part (or one with no brush) gets a neutral edge.
-    private string EdgeBrushKey(IdeaBubble bubble)
-    {
-        if (bubble.IsLater) return "PartLaterBrush";
-        if (!Parts.IsKnown(bubble.Part)) return "BorderBrush";
-        string key = $"Part{char.ToUpperInvariant(bubble.Part![0])}{bubble.Part[1..]}Brush";
-        return TryFindResource(key) != null ? key : "BorderBrush";
     }
 
     // ---- Drawing ---------------------------------------------------------------------------------------------------

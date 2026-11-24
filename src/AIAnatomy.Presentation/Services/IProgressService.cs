@@ -20,4 +20,7 @@ public interface IProgressService
 
     /// <summary>Why the last change could not be written to disk, or null if it was. The marks are kept for this run either way.</summary>
     string? LastSaveProblem { get; }
+
+    /// <summary>Raised when a change could not be written to disk (see <see cref="LastSaveProblem"/>), before <see cref="Changed"/>.</summary>
+    event EventHandler? SaveFailed;
 }

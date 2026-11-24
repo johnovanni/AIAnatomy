@@ -45,6 +45,17 @@ public class AxisTicksTests
     }
 
     [Fact]
+    public void WidenTo_GivesAtLeastTheSpanFromTheFirstValue()
+    {
+        // Final review M12: one loss point at step 0 gives a 0 to 20 axis (one chunk), not -1 to 1.
+        Assert.Equal((0.0, 20.0), AxisTicks.WidenTo(0, 0, 20));
+        Assert.Equal((0.0, 20.0), AxisTicks.WidenTo(0, 10, 20));
+        Assert.Equal((0.0, 400.0), AxisTicks.WidenTo(0, 400, 20));   // wider data keeps its own range
+        Assert.Equal((-1.0, 1.0), AxisTicks.WidenTo(0, 0, 0));         // no span asked: as Widen
+        Assert.Equal((0.0, 1.0), AxisTicks.WidenTo(double.NaN, 1, 20));
+    }
+
+    [Fact]
     public void Pad_AddsFivePercent()
     {
         Assert.Equal((-0.5, 10.5), AxisTicks.Pad(0, 10));

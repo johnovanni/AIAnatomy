@@ -93,6 +93,28 @@ public class SettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void Settings_LastLesson_RoundTrips_AndBlankIsNone()
+    {
+        // Final review M13: the last opened lesson is kept with the other settings.
+        new SettingsService(_env.SettingsFile).Save(new AppSettings(LastLessonId: "attention"));
+        Assert.Equal("attention", new SettingsService(_env.SettingsFile).Current.LastLessonId);
+        new SettingsService(_env.SettingsFile).Save(new AppSettings(LastLessonId: "  "));
+        Assert.Null(new SettingsService(_env.SettingsFile).Current.LastLessonId);
+    }
+
+    [Fact]
+    public void Settings_OldFiles_WithoutALastLesson_StillLoadAndMigrate()
+    {
+        // A file from before the last lesson was kept (old scale too) loads as before, with no last lesson.
+        File.WriteAllText(_env.SettingsFile, """{ "BodyFontSize": 20, "Theme": "Light", "IdeaMapLayout": "Loop" }""");
+        var s = _env.NewSettings().Current;
+        Assert.Equal(new AppSettings(13, "Light", null, "Loop", 2, null), s);
+
+        File.WriteAllText(_env.SettingsFile, """{ "BodyFontSize": 16, "ScaleVersion": 2, "LastLessonId": "tokens" }""");
+        Assert.Equal(new AppSettings(16, "Dark", null, "Radial", 2, "tokens"), _env.NewSettings().Current);
+    }
+
+    [Fact]
     public void Settings_SaveFails_KeepsCurrent_ReportsProblem_AndRaisesEvent()
     {
         Directory.CreateDirectory(_env.SettingsFile);   // a folder where the file should be

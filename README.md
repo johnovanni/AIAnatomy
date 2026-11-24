@@ -6,7 +6,7 @@ AI Anatomy is a C#/WPF teaching app that explains how transformers work. Every n
 
 The window has a **contents tree** on the left, numbered like a book (1 The big picture, 2 The parts, 3 The whole model, 4 The family of AI, 5 Beyond the model). Each lesson can have branches under it (for example Tokens has Byte-pair encoding and Count the letters). Each lesson shows a mark: a small dot (not opened yet), a tick (opened), or a heavy tick (you answered, or skipped, its Check yourself questions). Click a lesson, or move with the arrow keys and press Enter or Space; headings open and close the same way. Lessons in sections 4 and 5 are placeholders ("Coming later") and show no marks. Back and Next at the foot of a lesson follow the contents order, and Next skips placeholders.
 
-**Idea map.** The Idea map page draws every idea in the contents and how they connect, in two layouts you switch between at the top: **Radial** (the default; the contents round a centre, grouped by section) and **Loop** (the path your text takes through the model, with the block drawn as a repeating frame). Your last choice is remembered. The map scrolls rather than shrinking. Pick a bubble to see its connections, then open its lesson.
+**Idea map.** The Idea map page draws every idea in the contents and how they connect, in two layouts you switch between at the top: **Radial** (the default; the contents round a centre, grouped by section) and **Loop** (the path your text takes through the model, with the block drawn as a repeating frame). Your last choice is remembered. The map scrolls rather than shrinking. Lesson bubbles carry the same marks as the contents, in words too ("✓ opened", "✔ checked"; "later" for placeholders), and the bubbles never move when a mark changes. Pick a bubble to see its connections, then open its lesson (with the keyboard, press Enter on the chosen bubble again).
 
 **A lesson page** has, from the top: the path (for example "2 The parts > 2.4"), a header band in the colour of the lesson's part of the transformer with the title and the one-sentence big idea, **Try this** (numbered steps), the lab and the explanation, **Check yourself**, **How this connects** (a chip for each connection; hover or focus shows its sentence; a chip opens the lesson or the map), and Back/Next.
 
@@ -14,7 +14,7 @@ The window has a **contents tree** on the left, numbered like a book (1 The big 
 
 **Check yourself** asks two or three multiple-choice questions per lesson. You pick an answer, see at once whether it is right and why, and can skip the questions. No score is kept. Questions that depend on the app's models are checked by unit tests against the real answer.
 
-**Progress** (which lessons you have opened and checked) is saved on your PC; Reset on the Settings page forgets it.
+**Progress** (which lessons you have opened and checked) is saved on your PC; Reset progress on the Settings page forgets it after you confirm. The app opens at the lesson you had open last.
 
 **Text size and colours.** Settings has one slider for the text size, 10 to 24 pt (13 pt by default), and a Dark or Light theme (Dark by default for a new install). Titles are twice the body size, section headings 1.15 times, small text 0.85 times and never under 9 pt. From 18 pt the explanation goes under the lab instead of beside it. Every message is shown on screen; nothing depends on sound.
 

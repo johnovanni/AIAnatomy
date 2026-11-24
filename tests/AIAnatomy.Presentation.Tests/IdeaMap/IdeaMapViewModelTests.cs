@@ -313,6 +313,96 @@ public class IdeaMapViewModelTests
     }
 
     [Fact]
+    public void ProgressChange_UpdatesMarksInPlace_WithoutANewMapOrLayout()
+    {
+        // The view measures and calls Arrange (the full layout) when Bubbles or Mode changes; a mark change must raise
+        // neither, only MarksChanged, so the bubbles keep their places (final review I2).
+        using var env = new TestEnvironment();
+        var progress = env.NewProgress();
+        var layout = new CountingLayout();
+        var map = NewMap(env, layout, progress: progress);
+        map.Arrange(AnySizes(map));
+        var before = map.Layout;
+        var raised = new List<string?>();
+        map.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        int marks = 0;
+        map.MarksChanged += (_, _) => marks++;
+
+        progress.MarkOpened("attention");
+        progress.MarkChecked("tokens");
+
+        Assert.Equal(2, marks);
+        Assert.DoesNotContain(nameof(IdeaMapViewModel.Bubbles), raised);
+        Assert.DoesNotContain(nameof(IdeaMapViewModel.Layout), raised);
+        Assert.Same(before, map.Layout);
+        Assert.Equal(1, layout.Runs);
+        Assert.Equal("✓ opened", map.Bubbles.Single(b => b.Id == "attention").MarkText);
+        Assert.Equal("✔ checked", map.Bubbles.Single(b => b.Id == "tokens").MarkText);
+    }
+
+    [Fact]
+    public void MarkText_UsesTheContentsTreesSymbols_AndLaterOnPlaceholders()
+    {
+        // The tree: no mark until opened, ✓ opened, ✔ checked; placeholders carry no mark (final review I1).
+        using var env = new TestEnvironment();
+        var progress = env.NewProgress();
+        var map = NewMap(env, new CountingLayout(), progress: progress);
+        string placeholder = Catalog().All.First(l => l.IsPlaceholder).Id;
+        progress.MarkOpened(placeholder);   // Ctrl+4 opens a placeholder page
+        progress.MarkOpened("attention");
+        progress.MarkChecked("tokens");
+
+        IdeaBubble B(string id) => map.Bubbles.Single(b => b.Id == id);
+        Assert.Equal("", B("embeddings").MarkText);
+        Assert.Equal("✓ opened", B("attention").MarkText);
+        Assert.Equal("✔ checked", B("tokens").MarkText);
+        Assert.Equal("later", B(placeholder).MarkText);
+        Assert.Equal("", B("centre").MarkText);
+        Assert.Equal("", B("section-2").MarkText);
+        Assert.Equal("later", B("section-4").MarkText);   // Family: every lesson in it is a placeholder
+        Assert.Equal(["✓ opened", "✔ checked"], IdeaBubble.LessonMarkTexts);
+    }
+
+    [Fact]
+    public void AutomationName_SaysNumberLabelKindAndMark()
+    {
+        using var env = new TestEnvironment();
+        var progress = env.NewProgress();
+        var map = NewMap(env, new CountingLayout(), progress: progress);
+        progress.MarkChecked("tokens");
+        string placeholder = Catalog().All.First(l => l.IsPlaceholder).Id;
+
+        IdeaBubble B(string id) => map.Bubbles.Single(b => b.Id == id);
+        Assert.Equal("2.1 Tokens, lesson, checked", B("tokens").AutomationName);
+        Assert.Equal("2.4 Attention, lesson, not opened yet", B("attention").AutomationName);
+        Assert.Equal("2 The parts, section", B("section-2").AutomationName);
+        Assert.EndsWith(", lesson, not built yet", B(placeholder).AutomationName);
+    }
+
+    [Fact]
+    public void ChooseOrOpen_ChoosesFirst_ThenOpensTheChosenLesson()
+    {
+        // Enter on a bubble chooses it; Enter again on the chosen bubble opens its lesson (final review M6).
+        using var env = new TestEnvironment();
+        var map = NewMap(env, new CountingLayout());
+        string? opened = null;
+        map.OpenLessonRequested += (_, id) => opened = id;
+
+        map.ChooseOrOpen("attention");
+        Assert.Equal("attention", map.ChosenId);
+        Assert.Null(opened);
+
+        map.ChooseOrOpen("attention");
+        Assert.Equal("attention", opened);
+
+        opened = null;
+        map.ChooseOrOpen("section-2");
+        map.ChooseOrOpen("section-2");   // not a lesson: stays chosen, opens nothing
+        Assert.Equal("section-2", map.ChosenId);
+        Assert.Null(opened);
+    }
+
+    [Fact]
     public void GroupLabel_FollowsTheActiveModel()
     {
         using var env = new TestEnvironment();

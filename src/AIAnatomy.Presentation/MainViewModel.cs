@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using AIAnatomy.Lessons;
-using AIAnatomy.Lessons.Markdown;
 using AIAnatomy.Models.Language;
 using AIAnatomy.Presentation.Contents;
 using AIAnatomy.Presentation.IdeaMap;
@@ -52,10 +51,22 @@ public sealed partial class MainViewModel : ObservableObject
         SettingsPage.Applied += (_, _) => OnPropertyChanged(nameof(UseStackedLayout));
         settings.SaveFailed += (_, _) =>
             StatusMessage = $"Your settings couldn't be saved: {settings.LastSaveProblem}. They'll apply until you close the app.";
+        // Said once (final review M1): a failing disk would otherwise repeat it on every lesson opened.
+        progress.SaveFailed += (_, _) =>
+        {
+            if (_progressProblemShown) return;
+            _progressProblemShown = true;
+            StatusMessage = $"Your progress marks couldn't be saved: {progress.LastSaveProblem}. They'll be kept until you close the app.";
+        };
 
+        // The lesson open when the app was last closed (final review M13); a placeholder or an id no longer in the
+        // contents gives the first lesson.
         var first = lessons.InSection(Section.Map).FirstOrDefault();
-        if (first != null) Show(first);
+        var last = settings.Current.LastLessonId is { } id ? lessons.All.FirstOrDefault(l => l.Id == id && !l.IsPlaceholder) : null;
+        if ((last ?? first) is { } start) Show(start);
     }
+
+    private bool _progressProblemShown;
 
     /// <summary>The numbered contents (sections, lessons, branches and their marks).</summary>
     public ContentsTreeViewModel Contents { get; }
@@ -93,19 +104,19 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private AnchorRequest? anchorRequest;
     [ObservableProperty] private LabViewModel? currentLab;
     [ObservableProperty] private ModelEntry? selectedModelEntry;
-    [ObservableProperty] private MarkdownDocument? explanation;
-    [ObservableProperty] private MarkdownDocument? formula;
-    [ObservableProperty] private MarkdownDocument? brainsAndModels;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsShowingLesson))]
+    [NotifyCanExecuteChangedFor(nameof(ResetLabCommand))]
     private bool isShowingSources;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsShowingLesson))]
+    [NotifyCanExecuteChangedFor(nameof(ResetLabCommand))]
     private bool isShowingSettings;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsShowingLesson))]
+    [NotifyCanExecuteChangedFor(nameof(ResetLabCommand))]
     private bool isShowingIdeaMap;
 
     /// <summary>True when the lesson (lab and explanation) is showing, not the idea map, Sources or Settings page.</summary>
@@ -122,7 +133,11 @@ public sealed partial class MainViewModel : ObservableObject
     // Not halfway through Show (which updates the line itself at the end): a lesson change passes through a moment where
     // the old Train lab looks uncovered, which would wrongly count as having seen how its run ended.
     partial void OnIsShowingSourcesChanged(bool value) { if (!_navigating) UpdateBackgroundStatus(); }
-    partial void OnIsShowingSettingsChanged(bool value) { if (!_navigating) UpdateBackgroundStatus(); }
+    partial void OnIsShowingSettingsChanged(bool value)
+    {
+        if (!value) SettingsPage.Leave();   // an unanswered Reset progress question is dropped (re-review N2)
+        if (!_navigating) UpdateBackgroundStatus();
+    }
     partial void OnIsShowingIdeaMapChanged(bool value) { if (!_navigating) UpdateBackgroundStatus(); }
 
     /// <summary>True when the kept Train lab is the lab on screen (not covered by Sources or Settings).</summary>
@@ -185,11 +200,8 @@ public sealed partial class MainViewModel : ObservableObject
         IsShowingSettings = false;
     }
 
-    /// <summary>Leaves the idea map, Sources or Settings page and shows the open lesson (next to the contents) again.</summary>
-    [RelayCommand]
-    private void ShowContents() => BackToLesson();
-
-    /// <summary>Leaves the idea map, Sources or Settings page and shows the current lesson again.</summary>
+    /// <summary>Leaves the idea map, Sources or Settings page and shows the current lesson again (also the Contents
+    /// switch above the tree).</summary>
     [RelayCommand]
     private void BackToLesson()
     {
@@ -260,8 +272,17 @@ public sealed partial class MainViewModel : ObservableObject
         else Show(_lessons.Get(id));
     }
 
-    [RelayCommand]
-    private void ResetLab() => CurrentLab?.Reset();
+    /// <summary>The top bar's Reset: only while the lesson shows, so it never resets a lab hidden under the idea map,
+    /// Sources or Settings (final review M8).</summary>
+    [RelayCommand(CanExecute = nameof(CanResetLab))]
+    private void ResetLab()
+    {
+        if (CanResetLab()) CurrentLab?.Reset();
+    }
+
+    private bool CanResetLab() => IsShowingLesson && CurrentLab != null;
+
+    partial void OnCurrentLabChanged(LabViewModel? value) => ResetLabCommand.NotifyCanExecuteChanged();
 
     partial void OnSelectedModelEntryChanged(ModelEntry? value)
     {
@@ -306,9 +327,6 @@ public sealed partial class MainViewModel : ObservableObject
             IsShowingIdeaMap = false;
             // A lab that keeps running (the Train lab, R35) is not stopped when the user leaves it.
             if (CurrentLab is { KeepsRunningWhenLeft: false } leaving) leaving.Deactivate();
-            Explanation = lesson.Explanation;
-            Formula = lesson.Formula;
-            BrainsAndModels = lesson.BrainsAndModels;
             CurrentLab = Labs.IsRegistered(lesson.LabId) ? Labs.Create(lesson.LabId) : new ComingLaterLabViewModel();
             if (CurrentLab is TrainLabViewModel train && !ReferenceEquals(train, _trainLab)) WatchTrainLab(train);
             CurrentPage = new LessonPageViewModel(lesson, _lessons, CurrentLab, _connections, _map, _progress,
@@ -317,6 +335,7 @@ public sealed partial class MainViewModel : ObservableObject
             GoNextCommand.NotifyCanExecuteChanged();
             GoBackCommand.NotifyCanExecuteChanged();
             Contents.Select(lesson.Id);
+            if (Settings.Current.LastLessonId != lesson.Id) Settings.Save(Settings.Current with { LastLessonId = lesson.Id });
             _progress.MarkOpened(lesson.Id);
             UpdateBackgroundStatus();
         }

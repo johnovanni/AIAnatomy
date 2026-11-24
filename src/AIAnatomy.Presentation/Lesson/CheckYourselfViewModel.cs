@@ -53,7 +53,7 @@ public sealed partial class QuestionViewModel : ObservableObject
         _question = question;
         _requestAnchor = requestAnchor;
         _answered = answered;
-        Options = question.Answers.Select(a => new AnswerOption(a)).ToList();
+        Options = question.Answers.Select((a, i) => new AnswerOption(a, i == question.CorrectIndex)).ToList();
     }
 
     public string Prompt => _question.Prompt;
@@ -65,7 +65,8 @@ public sealed partial class QuestionViewModel : ObservableObject
     /// <summary>Null until an answer is chosen.</summary>
     public bool? IsRight => ChosenIndex == null ? null : ChosenIndex == _question.CorrectIndex;
 
-    /// <summary>The answers as buttons; the chosen one says so in words ("✓ ... (your answer)"), not by colour alone.</summary>
+    /// <summary>The answers as buttons; the chosen one says so in words ("✓ ... (your answer: right)" or "✗ ... (your answer:
+    /// not quite)"), not by colour alone.</summary>
     public IReadOnlyList<AnswerOption> Options { get; }
 
     /// <summary>"Right. " or "Not quite. " followed by the reason; words, so it never relies on colour or sound.</summary>
@@ -89,13 +90,14 @@ public sealed partial class QuestionViewModel : ObservableObject
     private void See() => _requestAnchor(_question.See);
 }
 
-/// <summary>One answer button's text.</summary>
-public sealed partial class AnswerOption(string text) : ObservableObject
+/// <summary>One answer button's text. A tick only on a chosen answer that is right; a cross on a chosen answer that is
+/// not, with words either way (final review I4: a tick is the sign for "correct", so a wrong choice never carries one).</summary>
+public sealed partial class AnswerOption(string text, bool isCorrect) : ObservableObject
 {
     public string Text { get; } = text;
 
     [ObservableProperty, NotifyPropertyChangedFor(nameof(Label))]
     private bool isChosen;
 
-    public string Label => IsChosen ? $"✓ {Text} (your answer)" : Text;
+    public string Label => !IsChosen ? Text : isCorrect ? $"✓ {Text} (your answer: right)" : $"✗ {Text} (your answer: not quite)";
 }

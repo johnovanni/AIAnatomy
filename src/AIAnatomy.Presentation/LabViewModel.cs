@@ -39,6 +39,7 @@ public abstract partial class LabViewModel : ObservableObject
 
     private readonly object _screenLock = new();
     private readonly Dictionary<string, object?> _lastScreenValues = new(StringComparer.Ordinal);
+    private readonly List<string> _reportedScreens = [];
     private Dictionary<string, object?>? _valuesAtRunStart;
     private int _runDepth;
 
@@ -46,6 +47,13 @@ public abstract partial class LabViewModel : ObservableObject
     /// when a run the user started has ended with a different value. Screens in the view listen for their own name and light up.
     /// A handler that throws is logged through <see cref="ErrorLog.ReportBackground"/> and the others still run.</summary>
     public event EventHandler<ScreenChangedEventArgs>? ScreenChanged;
+
+    /// <summary>Every screen name this lab has reported so far, in the order of their first reports. The all-labs
+    /// self-test compares them with the views' <c>ScreenName</c> values, so a typo cannot silently stop a screen lighting.</summary>
+    public IReadOnlyList<string> ReportedScreens
+    {
+        get { lock (_screenLock) return _reportedScreens.ToArray(); }
+    }
 
     /// <summary>
     /// Says that a screen now shows <paramref name="value"/>. The first report of a screen is only a baseline (labs report
@@ -61,6 +69,7 @@ public abstract partial class LabViewModel : ObservableObject
         lock (_screenLock)
         {
             bool known = _lastScreenValues.TryGetValue(screen, out var last);
+            if (!known) _reportedScreens.Add(screen);
             if (known && Equals(last, current)) return;
             _lastScreenValues[screen] = current;
             if (!known || _runDepth > 0) return;   // a baseline, or a run that raises at its end

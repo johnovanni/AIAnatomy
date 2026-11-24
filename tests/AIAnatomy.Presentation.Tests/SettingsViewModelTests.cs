@@ -74,4 +74,53 @@ public class SettingsViewModelTests : IDisposable
         Assert.NotNull(vm.SettingsPage);
         Assert.Equal(13, vm.SettingsPage.BodyFontSize);
     }
+
+    [Fact]
+    public void ResetProgress_AsksFirst_ThenForgets_AndSaysSo()
+    {
+        // Final review M9: one click only asks; "Yes, forget my progress" forgets; a line says it was done.
+        var progress = _env.NewProgress();
+        progress.MarkChecked("tokens");
+        var vm = new SettingsViewModel(_env.NewSettings(), progress);
+        Assert.False(vm.IsConfirmingReset);
+        Assert.Null(vm.ProgressMessage);
+
+        vm.ResetProgressCommand.Execute(null);
+        Assert.True(vm.IsConfirmingReset);
+        Assert.Equal(Services.LessonMark.Checked, progress.MarkOf("tokens"));
+
+        vm.CancelResetProgressCommand.Execute(null);
+        Assert.False(vm.IsConfirmingReset);
+        Assert.Equal(Services.LessonMark.Checked, progress.MarkOf("tokens"));
+        Assert.Null(vm.ProgressMessage);
+
+        vm.ResetProgressCommand.Execute(null);
+        vm.ConfirmResetProgressCommand.Execute(null);
+        Assert.False(vm.IsConfirmingReset);
+        Assert.Equal(Services.LessonMark.NotOpened, progress.MarkOf("tokens"));
+        Assert.Equal("Progress forgotten.", vm.ProgressMessage);
+
+        vm.ResetProgressCommand.Execute(null);   // asking again clears the old line
+        Assert.Null(vm.ProgressMessage);
+    }
+
+    [Fact]
+    public void ResetProgress_StaysInPlaceButDisabled_WhileAsking()
+    {
+        // Re-review N1: the Reset button keeps its place (disabled) while the question shows, so a double-click's second
+        // click lands on it, never on "Yes, forget my progress".
+        var progress = _env.NewProgress();
+        progress.MarkChecked("tokens");
+        var vm = new SettingsViewModel(_env.NewSettings(), progress);
+        Assert.True(vm.ResetProgressCommand.CanExecute(null));
+
+        vm.ResetProgressCommand.Execute(null);
+        Assert.False(vm.ResetProgressCommand.CanExecute(null));
+        vm.ResetProgressCommand.Execute(null);   // the second click of a double-click
+        Assert.True(vm.IsConfirmingReset);
+        Assert.Equal(Services.LessonMark.Checked, progress.MarkOf("tokens"));
+
+        vm.CancelResetProgressCommand.Execute(null);
+        Assert.True(vm.ResetProgressCommand.CanExecute(null));
+    }
 }

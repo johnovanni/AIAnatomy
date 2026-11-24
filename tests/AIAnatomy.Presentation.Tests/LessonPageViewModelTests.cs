@@ -72,6 +72,20 @@ public class LessonPageViewModelTests : IDisposable
     }
 
     [Fact]
+    public void BackAndNextNames_SayWhichLesson_ForScreenReaders()
+    {
+        // Final review M11: the buttons' names carry the lesson, not only "On to the next lesson".
+        var vm = _env.NewMain();
+        vm.NavigateToLesson("attention");
+        var page = vm.CurrentPage!;
+        Assert.Equal($"Back to the previous lesson, 2.3 {page.Previous!.Title}", page.PreviousName);
+        Assert.Equal($"On to the next lesson, 2.5 {page.Next!.Title}", page.NextName);
+
+        vm.NavigateToLesson("rules-vs-learning");
+        Assert.Null(vm.CurrentPage!.PreviousName);
+    }
+
+    [Fact]
     public void Next_FollowsContentsOrder_AcrossSections()
     {
         var vm = _env.NewMain();
@@ -162,6 +176,8 @@ public class LessonPageViewModelTests : IDisposable
         var vm = _env.NewMain(progress: progress);
         vm.NavigateToLesson("attention");
         vm.SettingsPage.ResetProgressCommand.Execute(null);
+        Assert.Equal(LessonMark.Opened, progress.MarkOf("attention"));   // the first click only asks (final review M9)
+        vm.SettingsPage.ConfirmResetProgressCommand.Execute(null);
         Assert.Equal(LessonMark.NotOpened, progress.MarkOf("attention"));
         Assert.Equal(LessonMark.NotOpened, progress.MarkOf("rules-vs-learning"));
     }
@@ -207,7 +223,7 @@ public class LessonPageViewModelTests : IDisposable
         Assert.False(vm.IsShowingLesson);
         vm.ShowIdeaMapCommand.Execute(null);
         Assert.False(vm.IsShowingSources);
-        vm.ShowContentsCommand.Execute(null);
+        vm.BackToLessonCommand.Execute(null);   // the Contents switch (ShowContents was the same command; final review M10)
         Assert.True(vm.IsShowingLesson);
     }
 

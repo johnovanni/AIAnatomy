@@ -32,7 +32,7 @@ public static class ThemeManager
         resources["SubheadingFontSize"] = bodyPt * 1.15 * PxPerPt;
         resources["SmallFontSize"] = Math.Max(9, bodyPt * 0.85) * PxPerPt;
         resources["FormulaScale"] = bodyPt * 1.1 * PxPerPt;
-        resources["LessonsColumnWidth"] = bodyPt * 11 * PxPerPt;   // whole words of lesson titles fit at every text size
+        resources["LessonsColumnWidth"] = bodyPt * 11 * PxPerPt;   // the idea map's side card (once the lesson list): 11 em at every text size
         // The contents tree: 11 em at 13 pt (so the idea map keeps its 1040 px beside it at 1280 px), growing to 14.5 em at 24 pt so labels do not break mid-word.
         resources["TreeColumnWidth"] = bodyPt * (11 + 3.5 * Math.Clamp((bodyPt - 13) / 11, 0, 1)) * PxPerPt;
         resources["GraphDiagramHeight"] = bodyPt * 30 * PxPerPt;    // the expression graph has six boxes with two lines of numbers each

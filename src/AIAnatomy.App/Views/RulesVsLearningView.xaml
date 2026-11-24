@@ -91,7 +91,8 @@
                 <DataTemplate><TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4" Text="{Binding}" /></DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <c:LineChart Series="{Binding LossSeries}" XAxisTitle="training step" YAxisTitle="loss" Height="180" Margin="0,8,0,0" />
+        <c:LineChart Series="{Binding LossSeries}" XAxisTitle="training step" YAxisTitle="loss" Height="180" Margin="0,8,0,0"
+                     MinXSpan="{Binding LossAxisMinimumSteps}" />
 
         <WrapPanel Margin="0,12,0,0">
             <TextBlock Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="0,0,8,8" Text="Seed (for the learned model's random choices)" />

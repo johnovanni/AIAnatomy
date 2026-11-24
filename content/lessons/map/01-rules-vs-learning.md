@@ -47,7 +47,7 @@ checked-by-code: RulesVsLearning_RulesRepeatTheFromTheStartText
 * Every score starts at zero, so every character is equally likely
 - The fables are written in an old kind of English that it cannot read yet
 - The ten written rules in the lab get in its way and scramble it
-why: Softmax turns equal scores into equal probabilities, so each character is a random draw from all 69 characters, and the loss is ln 69, about 4.234. Read the loss line under the two screens before you press Learn.
+why: Softmax turns equal scores into equal probabilities, so each character is a random draw from all 69 tokens (the 68 characters of the fables and the unknown token), and the loss is ln 69, about 4.234. Read the loss line under the two screens before you press Learn.
 see: formula
 checked-by-code: RulesVsLearning_UntrainedTableIsUniform
 

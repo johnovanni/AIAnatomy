@@ -6,7 +6,7 @@ public enum DiagnosticMode { Normal, RenderPng, SelfTest }
 
 /// <summary>
 /// The app's command line, for checks and diagnostics only:
-/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning|rules-vs-learning-trained&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
+/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning|ideamap-radial-progress|rules-vs-learning-trained|check-answered|check-skipped|branch-anchor|settings-reset-question&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
 /// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 13 pt unless
 /// told otherwise, so pictures do not depend on the user's own settings. Several views may be given as
 /// <c>gallery,sources,settings</c>; each then goes to "file-view.png". <c>--full-lab</c> (lesson ids only) draws the lab
@@ -34,8 +34,22 @@ public sealed record DiagnosticOptions(
     public const string IdeaMapRadialChosen = "ideamap-radial-chosen";   // Attention chosen
     public const string IdeaMapLoopChosen = "ideamap-loop-chosen";       // Residual stream chosen
     public const string IdeaMapLoopLearning = "ideamap-loop-learning";   // Learning chosen
+    /// <summary>Radial, laid out first, then marks changed (one lesson opened, one checked, a placeholder opened) without
+    /// a new layout: the marks as the tree shows them, and the layout kept (final review I1, I2).</summary>
+    public const string IdeaMapRadialProgress = "ideamap-radial-progress";
     public static bool IsIdeaMapView(string v) =>
-        v is IdeaMapRadial or IdeaMapLoop or IdeaMapRadialChosen or IdeaMapLoopChosen or IdeaMapLoopLearning;
+        v is IdeaMapRadial or IdeaMapLoop or IdeaMapRadialChosen or IdeaMapLoopChosen or IdeaMapLoopLearning or IdeaMapRadialProgress;
+    /// <summary>The Tokens lesson's Check yourself with the first question answered rightly and the second wrongly,
+    /// scrolled to the top of the page (final review I4).</summary>
+    public const string CheckAnswered = "check-answered";
+    /// <summary>The Tokens lesson's Check yourself after Skip (final review I4).</summary>
+    public const string CheckSkipped = "check-skipped";
+    /// <summary>The Learning lesson opened from its "Backpropagation on a small graph" branch, as a click in the contents
+    /// does: the branch's heading should be near the top of the page (final review I3, AA-011).</summary>
+    public const string BranchAnchor = "branch-anchor";
+    /// <summary>The Settings page after one press of Reset progress: the question and its two buttons (re-review N1).</summary>
+    public const string SettingsResetQuestion = "settings-reset-question";
+    private static bool IsLessonPageView(string v) => v is CheckAnswered or CheckSkipped or BranchAnchor or SettingsResetQuestion;
     /// <summary>The Rules vs learning lesson after two presses of Learn, so its history shows (a render cannot press Learn).</summary>
     public const string RulesVsLearningTrained = "rules-vs-learning-trained";
     public const string AllLabsTest = "all-labs";
@@ -128,8 +142,8 @@ public sealed record DiagnosticOptions(
         if (error == null && renderOnlyOption && !render)
             error = "--theme, --text-size, --width and --height only go with --render-png.";
         if (error == null && render && view!.Split(',').Any(v => v.StartsWith("ideamap-", StringComparison.Ordinal) && !IsIdeaMapView(v)))
-            error = "Idea map views are ideamap-radial, ideamap-loop, ideamap-radial-chosen, ideamap-loop-chosen and ideamap-loop-learning.";
-        if (error == null && fullLab && (!render || view!.Split(',').Any(v => v is Gallery or SourcesView or SettingsView or ContentsView || IsIdeaMapView(v))))
+            error = "Idea map views are ideamap-radial, ideamap-loop, ideamap-radial-chosen, ideamap-loop-chosen, ideamap-loop-learning and ideamap-radial-progress.";
+        if (error == null && fullLab && (!render || view!.Split(',').Any(v => v is Gallery or SourcesView or SettingsView or ContentsView || IsIdeaMapView(v) || IsLessonPageView(v))))
             error = "--full-lab only goes with --render-png and a lesson id.";
 
         var mode = render ? DiagnosticMode.RenderPng : selfTest != null ? DiagnosticMode.SelfTest : DiagnosticMode.Normal;

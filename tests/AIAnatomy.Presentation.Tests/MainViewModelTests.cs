@@ -23,7 +23,7 @@ public class MainViewModelTests : IDisposable
         var vm = _env.NewMain();
         Assert.Equal("rules-vs-learning", vm.SelectedLesson!.Id);
         Assert.Equal("rules-vs-learning", vm.CurrentPage!.Lesson.Id);
-        Assert.NotNull(vm.Explanation);
+        Assert.NotNull(vm.CurrentPage.Lesson.Explanation);
         Assert.Equal(new[] { Section.Map, Section.Parts, Section.Whole, Section.Family, Section.Beyond }, vm.Contents.Sections.Select(s => s.Section));
     }
 
@@ -44,9 +44,10 @@ public class MainViewModelTests : IDisposable
         vm.NavigateToLesson("attention");
 
         Assert.IsType<FakeLab>(vm.CurrentLab);
-        Assert.Same(vm.SelectedLesson!.Explanation, vm.Explanation);
-        Assert.Same(vm.SelectedLesson!.Formula, vm.Formula);
-        Assert.Same(vm.SelectedLesson!.BrainsAndModels, vm.BrainsAndModels);
+        // The page shows the lesson's own texts (CurrentPage.Lesson); MainViewModel keeps no copies (final review M10).
+        Assert.Same(vm.SelectedLesson, vm.CurrentPage!.Lesson);
+        Assert.NotNull(vm.CurrentPage.Lesson.Explanation);
+        Assert.NotNull(vm.CurrentPage.Lesson.Formula);
     }
 
     [Fact]
@@ -217,6 +218,89 @@ public class MainViewModelTests : IDisposable
         Assert.StartsWith("Your settings couldn't be saved: ", vm.StatusMessage);
         Assert.EndsWith(". They'll apply until you close the app.", vm.StatusMessage);
         Assert.Contains(settings.LastSaveProblem!, vm.StatusMessage);
+    }
+
+    [Fact]
+    public void Main_ResetLab_OnlyWhileALessonShows()
+    {
+        // Final review M8: the top-bar Reset would otherwise reset a lab hidden under the map, Sources or Settings.
+        var vm = _env.NewMain();
+        vm.Labs.Register("AttentionLab", () => new FakeLab());
+        vm.NavigateToLesson("attention");
+        Assert.True(vm.ResetLabCommand.CanExecute(null));
+        int changes = 0;
+        vm.ResetLabCommand.CanExecuteChanged += (_, _) => changes++;
+
+        foreach (var cover in new[] { vm.ShowIdeaMapCommand, vm.ShowSourcesCommand, vm.ShowSettingsCommand })
+        {
+            cover.Execute(null);
+            Assert.False(vm.ResetLabCommand.CanExecute(null));
+            vm.ResetLabCommand.Execute(null);   // a stray call does nothing either
+            vm.BackToLessonCommand.Execute(null);
+            Assert.True(vm.ResetLabCommand.CanExecute(null));
+        }
+        Assert.Equal(0, ((FakeLab)vm.CurrentLab!).Resets);
+        Assert.True(changes >= 6);
+    }
+
+    [Fact]
+    public void Main_ProgressSaveFails_ShowsAPlainMessageOnce()
+    {
+        // Final review M1: the marks are kept for this run; the learner is told once, not on every lesson.
+        string folder = Path.Combine(_env.Root, "blocked");
+        File.WriteAllText(folder, "a file where the folder should be");
+        var progress = new AIAnatomy.Presentation.Services.ProgressService(Path.Combine(folder, "progress.json"));
+        var vm = _env.NewMain(progress: progress);   // opening the first lesson already tries to save
+
+        Assert.StartsWith("Your progress marks couldn't be saved: ", vm.StatusMessage);
+        Assert.EndsWith(". They'll be kept until you close the app.", vm.StatusMessage);
+        Assert.Contains(progress.LastSaveProblem!, vm.StatusMessage);
+
+        vm.StatusMessage = null;
+        vm.NavigateToLesson("attention");   // fails again, but has been said
+        Assert.Null(vm.StatusMessage);
+    }
+
+    [Fact]
+    public void Main_RemembersTheLastLesson_AndOpensItAtStart()
+    {
+        // Final review M13: the "you are here" place is kept in the settings.
+        var vm = _env.NewMain();
+        vm.NavigateToLesson("attention");
+        Assert.Equal("attention", _env.NewSettings().Current.LastLessonId);
+
+        var again = _env.NewMain();
+        Assert.Equal("attention", again.SelectedLesson!.Id);
+        Assert.Equal("attention", again.CurrentPage!.Lesson.Id);
+    }
+
+    [Theory]
+    [InlineData("no-such-lesson")]
+    [InlineData(null)]
+    [InlineData("PLACEHOLDER")]
+    public void Main_LastLessonThatCannotBeShown_StartsAtTheFirstLesson(string? saved)
+    {
+        if (saved == "PLACEHOLDER") saved = LessonCatalog.Load(TestEnvironment.Content).All.First(l => l.IsPlaceholder).Id;
+        var settings = _env.NewSettings();
+        settings.Save(settings.Current with { LastLessonId = saved });
+
+        var vm = _env.NewMain(settings: _env.NewSettings());
+
+        Assert.Equal("rules-vs-learning", vm.SelectedLesson!.Id);
+    }
+
+    [Fact]
+    public void Main_LeavingSettings_ClearsAnOpenResetQuestion()
+    {
+        // Re-review N2: the question does not wait for the learner's return.
+        var vm = _env.NewMain();
+        vm.ShowSettingsCommand.Execute(null);
+        vm.SettingsPage.ResetProgressCommand.Execute(null);
+        Assert.True(vm.SettingsPage.IsConfirmingReset);
+
+        vm.BackToLessonCommand.Execute(null);
+
+        Assert.False(vm.SettingsPage.IsConfirmingReset);
     }
 
     [Fact]

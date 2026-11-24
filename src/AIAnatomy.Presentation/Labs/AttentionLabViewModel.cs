@@ -77,10 +77,12 @@ public sealed partial class AttentionLabViewModel : LabViewModel
     {
         Toy.Reset();
         // Resetting the experiment and showing the demo again is one run: its screens light once, when the demo is back.
-        var run = BeginRun();
-        Induction.Reset();
-        Induction.ShowDemoCommand.Execute(null);   // the measuring runs in the background
-        run.Dispose();
+        // Closed in a finally, as every other lab does, so a failure cannot leave the run open (final review M4).
+        using (BeginRun())
+        {
+            Induction.Reset();
+            Induction.ShowDemoCommand.Execute(null);   // the measuring runs in the background
+        }
         _refreshing = true;
         Seed = 1;
         Layer = 1;

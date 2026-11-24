@@ -59,12 +59,29 @@ public static class PngRenderer
             window.ExpandContents();
             await SettleAsync(content, options.Width, height);
         }
+        if (view is DiagnosticOptions.CheckAnswered or DiagnosticOptions.CheckSkipped or DiagnosticOptions.BranchAnchor)
+            await ShowLessonPageViewAsync(window, viewModel, services, view, content, options.Width, height);
         if (options.FullLab)
         {
             // The lab pane's width is read from the window as laid out above (stacked or side by side), then the lab is
             // shown by itself and drawn at its full height like the gallery (final review I8).
             window.ShowFullLabPage();
             await SettleAsync(content, options.Width, height);
+        }
+        if (map != null && view == DiagnosticOptions.IdeaMapRadialProgress)
+        {
+            // Laid out above; now marks change as they do when lessons are opened and checked. The map must keep its layout
+            // (no new measure or Arrange) and show the new marks in place (final review I1, I2).
+            await SettleAsync(content, options.Width, height);
+            var before = viewModel.IdeaMap.Layout;
+            string placeholder = services.Lessons.All.First(l => l.IsPlaceholder).Id;
+            services.Progress.MarkOpened("attention");
+            services.Progress.MarkChecked("tokens");
+            services.Progress.MarkOpened(placeholder);
+            await SettleAsync(content, options.Width, height);
+            Console.WriteLine($"Marks changed: layout kept = {before != null && ReferenceEquals(before, viewModel.IdeaMap.Layout)}; " +
+                string.Join("; ", new[] { "rules-vs-learning", "tokens", "attention", "embeddings", placeholder }
+                    .Select(id => viewModel.IdeaMap.Bubbles.Single(b => b.Id == id).AutomationName)));
         }
         if (map != null)
         {
@@ -98,6 +115,46 @@ public static class PngRenderer
         map?.DataContext is AIAnatomy.Presentation.IdeaMap.IdeaMapViewModel { Layout: { } l }
             ? $"; map layout {Math.Ceiling(l.Width)} x {Math.Ceiling(l.Height)} px" : "";
 
+    /// <summary>
+    /// The lesson-page views (final review I3, I4). Check yourself: the Tokens lesson with its first question answered
+    /// rightly and its second wrongly (or skipped), scrolled so Check yourself is at the top. Branch: the Learning lesson
+    /// opened from its "backprop" branch the way a click in the contents opens it, from the first lesson already on show.
+    /// Each prints where the place's top ended up.
+    /// </summary>
+    private static async Task ShowLessonPageViewAsync(MainWindow window, MainViewModel viewModel, AppServices services, string view,
+        FrameworkElement content, double width, double height)
+    {
+        string anchor;
+        if (view == DiagnosticOptions.BranchAnchor)
+        {
+            var branch = services.Lessons.Get("learning").Branches.Single(b => b.Anchor == "backprop");
+            viewModel.OpenBranchCommand.Execute(branch);   // the page scrolls itself when the request arrives
+            if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;
+            anchor = branch.Anchor;
+            await SettleAsync(content, width, height);
+        }
+        else
+        {
+            await viewModel.NavigateToLesson("tokens");
+            if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // the BPE, so the page has its final height
+            var check = viewModel.CurrentPage?.Check ?? throw new InvalidOperationException("The Tokens lesson has no Check yourself.");
+            var questions = services.Lessons.Get("tokens").Questions;
+            if (view == DiagnosticOptions.CheckSkipped) check.SkipCommand.Execute(null);
+            else
+            {
+                check.Questions[0].ChooseCommand.Execute(questions[0].CorrectIndex);                          // right
+                check.Questions[1].ChooseCommand.Execute((questions[1].CorrectIndex + 1) % questions[1].Answers.Count);   // not quite
+            }
+            anchor = AIAnatomy.App.Controls.LessonAnchor.Check;
+            await SettleAsync(content, width, height);
+            window.Page.ScrollTo(anchor);
+            await SettleAsync(content, width, height);
+        }
+        Console.WriteLine(window.Page.AnchorPosition(anchor) is { } at
+            ? $"'{anchor}' top is {Math.Round(at.Top)} px below the top of the page{(at.AtEnd ? " (page scrolled to its end)" : "")}."
+            : $"'{anchor}' is not on the page.");
+    }
+
     /// <summary>Shows the view; returns the idea map view when that is what was asked for.</summary>
     private static IdeaMapView? Show(MainWindow window, MainViewModel viewModel, AppServices services, string view)
     {
@@ -118,9 +175,14 @@ public static class PngRenderer
                 viewModel.ShowIdeaMapCommand.Execute(null);
                 return window.IdeaMap;
             case DiagnosticOptions.ContentsView: break;   // the first lesson, with the tree opened in RenderViewAsync
+            case DiagnosticOptions.CheckAnswered or DiagnosticOptions.CheckSkipped or DiagnosticOptions.BranchAnchor: break;   // after the first layout
             case DiagnosticOptions.Gallery: window.ShowDiagnosticPage(new ControlGallery()); break;
             case DiagnosticOptions.SourcesView: viewModel.ShowSourcesCommand.Execute(null); break;
             case DiagnosticOptions.SettingsView: viewModel.ShowSettingsCommand.Execute(null); break;
+            case DiagnosticOptions.SettingsResetQuestion:   // one press of Reset progress: the question shows (re-review N1)
+                viewModel.ShowSettingsCommand.Execute(null);
+                viewModel.SettingsPage.ResetProgressCommand.Execute(null);
+                break;
             default:
                 if (services.Lessons.All.All(l => l.Id != view))
                     throw new ArgumentException($"There is no lesson or view called '{view}'. Use a lesson id, contents, gallery, sources, settings, ideamap-radial or ideamap-loop.");

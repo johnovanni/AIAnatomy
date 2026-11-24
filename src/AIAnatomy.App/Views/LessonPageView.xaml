@@ -138,17 +138,17 @@
                     </Border.Style>
                     <StackPanel>
                         <TextBlock Style="{StaticResource PaneTitle}" Text="Explanation" />
-                        <c:MarkdownView Document="{Binding Explanation}" />
+                        <c:MarkdownView Document="{Binding CurrentPage.Lesson.Explanation}" />
                         <Expander x:Name="FormulaExpander" c:LessonAnchor.Name="formula" Header="Show formula" Margin="0,12,0,0"
-                                  AutomationProperties.Name="Show formula" Visibility="{Binding Formula, Converter={StaticResource VisibleIfSet}}">
-                            <c:MarkdownView Document="{Binding Formula}" />
+                                  AutomationProperties.Name="Show formula" Visibility="{Binding CurrentPage.Lesson.Formula, Converter={StaticResource VisibleIfSet}}">
+                            <c:MarkdownView Document="{Binding CurrentPage.Lesson.Formula}" />
                         </Expander>
                         <Border c:LessonAnchor.Name="brains" Margin="0,20,0,0" Padding="14,10" CornerRadius="8" BorderThickness="6,1,1,1"
                                 BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource WindowBrush}"
-                                Visibility="{Binding BrainsAndModels, Converter={StaticResource VisibleIfSet}}">
+                                Visibility="{Binding CurrentPage.Lesson.BrainsAndModels, Converter={StaticResource VisibleIfSet}}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="Brains and models" />
-                                <c:MarkdownView Document="{Binding BrainsAndModels}" />
+                                <c:MarkdownView Document="{Binding CurrentPage.Lesson.BrainsAndModels}" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -156,7 +156,7 @@
             </Grid>
 
             <!-- 5. Check yourself: shown only for a lesson that has questions (Check is null otherwise, so the slot takes no room). -->
-            <ContentControl x:Name="CheckYourselfSlot" Focusable="False" IsTabStop="False" Margin="0,0,0,12" Content="{Binding CurrentPage.Check}">
+            <ContentControl x:Name="CheckYourselfSlot" c:LessonAnchor.Name="check" Focusable="False" IsTabStop="False" Margin="0,0,0,12" Content="{Binding CurrentPage.Check}">
                 <ContentControl.ContentTemplate>
                     <DataTemplate><v:CheckYourselfView /></DataTemplate>
                 </ContentControl.ContentTemplate>
@@ -210,12 +210,12 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Button HorizontalAlignment="Left" Command="{Binding GoBackCommand}" AutomationProperties.Name="Back to the previous lesson"
+                <Button HorizontalAlignment="Left" Command="{Binding GoBackCommand}" AutomationProperties.Name="{Binding CurrentPage.PreviousName}"
                         Visibility="{Binding CurrentPage.PreviousLabel, Converter={StaticResource VisibleIfSet}}">
                     <TextBlock Text="{Binding CurrentPage.PreviousLabel}" TextWrapping="Wrap" />
                 </Button>
                 <Button Grid.Column="1" HorizontalAlignment="Right" Command="{Binding GoNextCommand}" BorderBrush="{DynamicResource AccentBrush}"
-                        AutomationProperties.Name="On to the next lesson"
+                        AutomationProperties.Name="{Binding CurrentPage.NextName}"
                         Visibility="{Binding CurrentPage.NextLabel, Converter={StaticResource VisibleIfSet}}">
                     <TextBlock Text="{Binding CurrentPage.NextLabel}" TextWrapping="Wrap" />
                 </Button>

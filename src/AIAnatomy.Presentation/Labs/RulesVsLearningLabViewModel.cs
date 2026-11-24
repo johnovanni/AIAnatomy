@@ -46,6 +46,7 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
     private BigramModel _model;
     private int _generation;
     private bool _runEntryAdded;
+    private bool _resetting;
     private List<(double X, double Y)> _lossPoints = new();
 
     public RulesVsLearningLabViewModel(Func<string> fablesText)
@@ -82,6 +83,10 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
 
     public string HistoryHeading => $"Written from “{StartText}”";
 
+    /// <summary>The loss chart's x axis covers at least one chunk, so before any training its one point sits at step 0 of
+    /// a 0 to 20 axis (final review M12).</summary>
+    public double LossAxisMinimumSteps => StepsPerChunk;
+
     /// <summary>How many 20-step chunks one press of Learn trains (a test can lower it).</summary>
     public int ChunksPerRun { get; set; } = DefaultChunksPerRun;
 
@@ -103,6 +108,7 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
     // during a run the table is changing, so the first new entry waits for the end of the chunk in progress.
     private void Restart()
     {
+        if (_resetting) return;   // Reset builds the fresh table and writes from it once (final review M3)
         Refresh(learned: !IsLearning);
         History.Clear();
         if (!IsLearning) History.Add(CurrentEntry());
@@ -155,8 +161,15 @@ public sealed partial class RulesVsLearningLabViewModel : LabViewModel
         LearnCancelCommand.Execute(null);
         _generation++;
         IsLearning = false;
-        Seed = 1;
-        StartText = DefaultStart;
+        // A chunk may still be training the old table on another thread, so nothing is written until ResetState has
+        // built the new one: the seed and start text change quietly (final review M3).
+        _resetting = true;
+        try
+        {
+            Seed = 1;
+            StartText = DefaultStart;
+        }
+        finally { _resetting = false; }
         ResetState();
     }
 

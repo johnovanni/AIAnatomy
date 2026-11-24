@@ -23,6 +23,7 @@ public sealed class ProgressService : IProgressService
 
     public string? LastSaveProblem { get; private set; }
     public event EventHandler? Changed;
+    public event EventHandler? SaveFailed;
 
     public LessonMark MarkOf(string lessonId) =>
         _checked.Contains(lessonId) ? LessonMark.Checked : _opened.Contains(lessonId) ? LessonMark.Opened : LessonMark.NotOpened;
@@ -76,8 +77,9 @@ public sealed class ProgressService : IProgressService
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // Keep the marks for this run, but say so: the caller shows the problem to the user.
+            // Keep the marks for this run, but say so: the window shows the problem to the user (final review M1).
             LastSaveProblem = e.Message;
+            SaveFailed?.Invoke(this, EventArgs.Empty);
         }
     }
 

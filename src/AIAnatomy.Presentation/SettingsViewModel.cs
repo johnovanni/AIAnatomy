@@ -36,9 +36,40 @@ public sealed partial class SettingsViewModel : ObservableObject
         set { if (value) IsDarkTheme = false; }
     }
 
-    /// <summary>Forgets which lessons have been opened or checked.</summary>
+    /// <summary>True while "Reset progress" waits for "Yes, forget my progress" or "Keep it" (final review M9).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ResetProgressCommand))]
+    private bool isConfirmingReset;
+
+    /// <summary>"Progress forgotten." after a confirmed reset; null otherwise.</summary>
+    [ObservableProperty] private string? progressMessage;
+
+    /// <summary>The first step: asks before anything is forgotten. Disabled (but kept in its place) while the question
+    /// shows, so the second click of a double-click lands on it and confirms nothing (re-review N1).</summary>
+    [RelayCommand(CanExecute = nameof(CanResetProgress))]
+    private void ResetProgress()
+    {
+        if (IsConfirmingReset) return;
+        ProgressMessage = null;
+        IsConfirmingReset = true;
+    }
+
+    /// <summary>The second step: forgets which lessons have been opened or checked, and says so.</summary>
     [RelayCommand]
-    private void ResetProgress() => _progress.Reset();
+    private void ConfirmResetProgress()
+    {
+        _progress.Reset();
+        IsConfirmingReset = false;
+        ProgressMessage = "Progress forgotten.";
+    }
+
+    private bool CanResetProgress() => !IsConfirmingReset;
+
+    [RelayCommand]
+    private void CancelResetProgress() => IsConfirmingReset = false;
+
+    /// <summary>Leaving the Settings page drops an unanswered question (re-review N2).</summary>
+    public void Leave() => IsConfirmingReset = false;
 
     /// <summary>Raised after a change has been saved.</summary>
     public event EventHandler? Applied;

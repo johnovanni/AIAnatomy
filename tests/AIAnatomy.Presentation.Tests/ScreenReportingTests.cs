@@ -165,4 +165,30 @@ public class ScreenReportingTests
         Assert.Equal(["a", "b"], raised.OrderBy(x => x));
         Assert.Equal(2, logged.Count);
     }
+
+    [Fact]
+    public void ReportedScreens_ListsEveryNameReported_InFirstReportOrder()
+    {
+        // The all-labs self-test compares these with the views' ScreenName values (final review M14).
+        var (lab, _) = NewLab();
+        Assert.Empty(lab.ReportedScreens);
+        lab.Report("b", 1);
+        lab.Report("a", 1);
+        lab.Report("b", 2);
+        Assert.Equal(["b", "a"], lab.ReportedScreens);
+    }
+
+    [Theory]
+    [InlineData("real-heads", "Real heads screen")]
+    [InlineData("crossentropy", "Cross-entropy screen")]
+    [InlineData("head-2", "Head 2 screen")]
+    [InlineData("lens", "Logit lens screen")]
+    [InlineData("backprop", "Backpropagation screen")]
+    [InlineData("probabilities", "Probabilities screen")]
+    [InlineData("", "Screen")]
+    public void ReadableName_TurnsAScreenIdIntoWords(string id, string expected)
+    {
+        // Final review M11: screen readers hear words, not internal ids.
+        Assert.Equal(expected, ScreenNames.Readable(id));
+    }
 }

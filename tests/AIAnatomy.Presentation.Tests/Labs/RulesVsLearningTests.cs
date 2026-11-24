@@ -210,6 +210,34 @@ public class RulesVsLearningTests
     }
 
     [Fact]
+    public async Task ResetDuringRun_WritesOnlyFromTheFreshTable()
+    {
+        // Final review M3: Reset during a Learn run must not write text from the table the running chunk is changing.
+        // With a seed and start text of the learner's own, setting them back used to rewrite the learned text from the
+        // old table (twice) before the fresh table was built; now the only text written is the fresh table's. The table is
+        // trained once first, so text from it differs from the fresh table's (an untrained table writes the same text from
+        // any start, as every next character is equally likely).
+        var lab = new RulesVsLearningLabViewModel(Fables) { ChunksPerRun = 1 };
+        await lab.LearnCommand.ExecuteAsync(null);
+        lab.ChunksPerRun = 5;
+        lab.Seed = 3;
+        lab.StartText = "A ";
+        var written = new List<string>();
+        lab.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(lab.LearnedOutput)) written.Add(lab.LearnedOutput); };
+        var run = lab.LearnCommand.ExecuteAsync(null);
+        Assert.True(lab.IsLearning);
+
+        lab.Reset();
+        var duringReset = written.ToList();
+        await run;
+
+        var fresh = new RulesVsLearningLabViewModel(Fables);
+        Assert.Equal([fresh.LearnedOutput], duringReset);
+        Assert.Equal(fresh.LearnedOutput, lab.LearnedOutput);
+        Assert.Equal((1, "The "), (lab.Seed, lab.StartText));
+    }
+
+    [Fact]
     public async Task LeavingDuringRun_AddsNothingAfterwards()
     {
         // Deactivate while the first chunk is training: the run ends without adding an entry (none is added until a chunk

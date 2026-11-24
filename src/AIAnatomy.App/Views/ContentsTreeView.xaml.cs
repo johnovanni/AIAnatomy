@@ -27,6 +27,21 @@ public partial class ContentsTreeView : UserControl
             if (e.NewValue is MainViewModel now) now.PropertyChanged += OnMainChanged;
             Dispatcher.BeginInvoke(DispatcherPriority.Background, RevealSelected);
         };
+        Tree.PreviewGotKeyboardFocus += OnFocusArriving;
+    }
+
+    /// <summary>
+    /// Tab (or Shift+Tab) into the tree lands on the open lesson's row. WPF would otherwise return to the row that last had
+    /// the keyboard, which may be a lesson clicked several lessons ago (final review I5). A click still goes where it is aimed,
+    /// and moving inside the tree is not touched.
+    /// </summary>
+    private void OnFocusArriving(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (e.OldFocus is Visual old && Tree.IsAncestorOf(old)) return;
+        if (InputManager.Current.MostRecentInputDevice is not KeyboardDevice) return;
+        if (_openItem is not { IsVisible: true } item || ReferenceEquals(e.NewFocus, item) || !Tree.IsAncestorOf(item)) return;
+        e.Handled = true;   // cancels this move; the open lesson's row takes the focus instead
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () => item.Focus());
     }
 
     private void OnMainChanged(object? sender, PropertyChangedEventArgs e)
@@ -34,7 +49,15 @@ public partial class ContentsTreeView : UserControl
         if (e.PropertyName == nameof(MainViewModel.SelectedLesson)) Dispatcher.BeginInvoke(DispatcherPriority.Background, RevealSelected);
     }
 
-    /// <summary>Scrolls the open lesson's row into view, opening its section first if it is closed (a "coming later" one starts closed).</summary>
+    // The open lesson's row, once RevealSelected has found it.
+    private TreeViewItem? _openItem;
+
+    /// <summary>
+    /// Scrolls the open lesson's row into view, opening its section first if it is closed (a "coming later" one starts
+    /// closed), and makes it the tree's own selected row, so the keyboard starts at the lesson being read rather than at
+    /// the last row clicked (final review I5). Selecting only moves where the keyboard starts: a lesson still opens only
+    /// on a click or on Enter or Space.
+    /// </summary>
     private void RevealSelected()
     {
         if (DataContext is not MainViewModel { SelectedLesson: { } open }) return;
@@ -45,7 +68,10 @@ public partial class ContentsTreeView : UserControl
             if (row == null || Tree.ItemContainerGenerator.ContainerFromItem(section) is not TreeViewItem sectionItem) continue;
             if (!sectionItem.IsExpanded) sectionItem.IsExpanded = true;
             sectionItem.UpdateLayout();
-            (sectionItem.ItemContainerGenerator.ContainerFromItem(row) as FrameworkElement)?.BringIntoView();
+            if (sectionItem.ItemContainerGenerator.ContainerFromItem(row) is not TreeViewItem lessonItem) return;
+            lessonItem.IsSelected = true;
+            _openItem = lessonItem;
+            lessonItem.BringIntoView();
             return;
         }
     }
