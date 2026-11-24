@@ -1,6 +1,7 @@
 <!-- Dark theme. Text on every background here is at least 11:1, muted text at least 7.8:1, links 8.7:1. Brushes are swapped by ThemeManager; the HeatMap ramp (RampLow/Mid/High) is the same in both themes. -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <SolidColorBrush x:Key="WindowBrush" Color="#16171A" />
     <SolidColorBrush x:Key="SurfaceBrush" Color="#1F2125" />
     <SolidColorBrush x:Key="HeaderBrush" Color="#2A2C31" />
@@ -27,6 +28,22 @@
     <SolidColorBrush x:Key="ScrollThumbBrush" Color="#9A9AA4" />
     <SolidColorBrush x:Key="HighlightBrush" Color="#EDEDED" />
     <SolidColorBrush x:Key="LabelPlateBrush" Color="#1F2125" />
+    <!-- Screens (inset displays), connection gold and the part palette (Okabe-Ito based; each at least 3:1 on Surface and Screen). -->
+    <SolidColorBrush x:Key="ScreenBrush" Color="#0E0F11" />
+    <SolidColorBrush x:Key="ScreenTextBrush" Color="#E6EEF8" />
+    <SolidColorBrush x:Key="ConnectionBrush" Color="#FFC83D" />
+    <SolidColorBrush x:Key="PartIntroBrush" Color="#7FD0FF" />
+    <SolidColorBrush x:Key="PartTokensBrush" Color="#F5A623" />
+    <SolidColorBrush x:Key="PartEmbeddingsBrush" Color="#2FD0A0" />
+    <SolidColorBrush x:Key="PartPositionBrush" Color="#F0E442" />
+    <SolidColorBrush x:Key="PartAttentionBrush" Color="#FF7A33" />
+    <SolidColorBrush x:Key="PartFeedforwardBrush" Color="#E88FC0" />
+    <SolidColorBrush x:Key="PartResidualBrush" Color="#5C8DFF" />
+    <SolidColorBrush x:Key="PartOutputBrush" Color="#B9A0FF" />
+    <SolidColorBrush x:Key="PartLearningBrush" Color="#9AD955" />
+    <SolidColorBrush x:Key="PartWholeBrush" Color="#F2F2F2" />
+    <SolidColorBrush x:Key="PartLaterBrush" Color="#9AA0A6" />
+    <sys:Double x:Key="ScreenGlowOpacity">0.45</sys:Double>
     <!-- Single-hue sequential ramp for heat maps, light (small) to dark (large). -->
     <Color x:Key="RampLowColor">#F1F6FB</Color>
     <Color x:Key="RampMidColor">#6BAED6</Color>
