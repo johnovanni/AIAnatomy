@@ -14,6 +14,89 @@ public class LessonCatalogTests
         "family-coming", "beyond-coming",
     };
 
+    private const string Header = "---\nid: a\nsection: parts\norder: 1\ntitle: A\nlab: ALab\nsources: textbook\n";
+
+    [Fact]
+    public void Parse_ReadsIdeaPartBranches()
+    {
+        using var dir = new TempContent();
+        dir.Write("lessons/x/01-a.md", Header + "idea: Each token gathers.\npart: attention\nbranches: By hand=toy; In the model=heads\n---\nBody");
+        var a = LessonCatalog.Load(dir.Path).Get("a");
+        Assert.Equal("Each token gathers.", a.Idea);
+        Assert.Equal("attention", a.Part);
+        Assert.Equal([new LessonBranch("By hand", "toy"), new LessonBranch("In the model", "heads")], a.Branches);
+        Assert.False(a.IsPlaceholder);
+    }
+
+    [Fact]
+    public void Parse_NoNewFields_GivesEmptyDefaults()
+    {
+        using var dir = new TempContent();
+        dir.Write("lessons/x/01-a.md", Header + "---\nBody");
+        var a = LessonCatalog.Load(dir.Path).Get("a");
+        Assert.Null(a.Idea);
+        Assert.Null(a.Part);
+        Assert.Empty(a.Branches);
+        Assert.Empty(a.TryThis);
+        Assert.Empty(a.Questions);
+    }
+
+    [Fact]
+    public void Parse_TryThisAndCheckYourself_AreNotPartOfExplanation()
+    {
+        using var dir = new TempContent();
+        dir.Write("lessons/x/01-a.md", Header + "branches: In the model=heads\n---\nExplained here.\n\n## Try this\n1. Drag Q.\n2. Watch weight 2 grow.\n\n" +
+            "## Check yourself\n? Which?\n- one\n* two\nwhy: Because.\nsee: heads\n");
+        var a = LessonCatalog.Load(dir.Path).Get("a");
+        Assert.Equal(["Drag Q.", "Watch weight 2 grow."], a.TryThis);
+        Assert.Single(a.Questions);
+        Assert.Single(a.Explanation.Blocks);
+        var text = string.Join(" ", a.Explanation.Blocks.OfType<Paragraph>().SelectMany(p => p.Inlines).Select(i => i.ToString()));
+        Assert.Contains("Explained", text);
+        Assert.DoesNotContain("Drag", text);
+        Assert.DoesNotContain("Which", text);
+    }
+
+    [Fact]
+    public void Parse_UnknownPart_FailsNamingTheFile()
+    {
+        using var dir = new TempContent();
+        dir.Write("lessons/x/05-odd.md", Header + "part: nonsense\n---\nBody");
+        var ex = Assert.Throws<InvalidDataException>(() => LessonCatalog.Load(dir.Path));
+        Assert.Contains("05-odd.md", ex.Message);
+        Assert.Contains("part", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_BadQuestion_NamesFileAndQuestion()
+    {
+        using var dir = new TempContent();
+        dir.Write("lessons/x/05-odd.md", Header + "---\nBody\n## Check yourself\n? Q?\n- a\n* b\nwhy: x\nsee: nowhere\n");
+        var ex = Assert.Throws<InvalidDataException>(() => LessonCatalog.Load(dir.Path));
+        Assert.Contains("05-odd.md", ex.Message);
+        Assert.Contains("question 1", ex.Message);
+    }
+
+    [Fact]
+    public void Numbering_FollowsSectionAndOrder()
+    {
+        var catalog = LessonCatalog.Load(Content);
+        Assert.Equal("1.1", catalog.NumberOf(catalog.Get("rules-vs-learning")));
+        Assert.Equal("2.1", catalog.NumberOf(catalog.Get("tokens")));
+        Assert.Equal("2.4", catalog.NumberOf(catalog.Get("attention")));
+        Assert.Equal("3.3", catalog.NumberOf(catalog.Get("scale")));
+        Assert.Equal(catalog.All, catalog.InContentsOrder);
+    }
+
+    [Fact]
+    public void Placeholders_AreMarked()
+    {
+        var catalog = LessonCatalog.Load(Content);
+        Assert.True(catalog.Get("family-coming").IsPlaceholder);
+        Assert.True(catalog.Get("beyond-coming").IsPlaceholder);
+        Assert.False(catalog.Get("attention").IsPlaceholder);
+    }
+
     [Fact]
     public void Loads_AllStage1Lessons()
     {
