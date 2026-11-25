@@ -104,6 +104,12 @@ public static class PngRenderer
             await filters.WorkCompleted;   // the test digits and the network's filters loaded
             filters.ChoosePreset(filters.LearnedPresets[0]);   // Learned 1 on test digit 1 (sample 0)
         }
+        if (view == DiagnosticOptions.DigitNetworkSample)
+        {
+            await viewModel.NavigateToLesson("image-network");
+            if (viewModel.CurrentLab is not DigitNetworkLabViewModel digits) throw new InvalidOperationException("The image-network lesson did not open its lab.");
+            await digits.WorkCompleted;   // the digits and the shipped network loaded; the lab reads test digit 1 (sample 0)
+        }
         // A lab render view has already opened its lesson and set up its lab above.
         var map = DiagnosticOptions.IsLabRenderView(view) ? null : Show(window, viewModel, services, view);
 

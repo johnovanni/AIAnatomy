@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using AIAnatomy.Lessons;
 using AIAnatomy.Models.Transformers;
+using AIAnatomy.Models.Vision;
 using AIAnatomy.Presentation.Labs;
 using AIAnatomy.Presentation.Services;
 
@@ -597,6 +598,29 @@ public class CheckedQuestionTests : IDisposable
         Assert.Equal(64, positions);
         Assert.Equal(FiltersLabViewModel.CountText, $"The same 9 numbers were used at all {positions} positions.");
         Assert.Equal("At all 64 positions, with missing pixels at the edge as 0", Correct(nameof(Filters_OneFilterIsUsedAt64Positions)));
+    }
+
+    // ---- 4.7 Image networks: the whole network ----
+
+    [Fact]
+    public async Task DigitNetwork_ShippedAccuracyOnTheTestDigits()
+    {
+        // The shipped network's accuracy, worked out again here on the bundled test digits (the most probable digit against
+        // the label), must be the one the lab shows as recorded and the one the answer quotes.
+        SynchronizationContext.SetSynchronizationContext(null);
+        var family = new FamilyModels(TestEnvironment.Content);
+        var (net, info) = await family.DigitsAsync();
+        var test = await family.DigitTestSetAsync();
+        double accuracy = DigitTrainer.Accuracy(net, test);
+        Assert.Equal(info.Results!["testAccuracy"], accuracy, 1e-12);
+        int right = (int)Math.Round(accuracy * test.Count);
+        Assert.Equal(accuracy, right / (double)test.Count, 1e-12);
+
+        var lab = new DigitNetworkLabViewModel(family);
+        await lab.WorkCompleted;
+        Assert.True(lab.IsReady, lab.LoadMessage);
+        Assert.Contains($"right on {right:N0} of {test.Count:N0} test digits ({accuracy * 100:0.0}%)", lab.RecordedAccuracyText);
+        Assert.Equal($"Right on {right:N0} of {test.Count:N0}, about {accuracy * 100:0}%", Correct(nameof(DigitNetwork_ShippedAccuracyOnTheTestDigits)));
     }
 
     // ---- 4.8 Memory networks ----

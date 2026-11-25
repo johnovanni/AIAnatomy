@@ -40,6 +40,7 @@
         <DataTemplate DataType="{x:Type labs:ClassicMlLabViewModel}"><v:ClassicMlView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:RewardLabViewModel}"><v:RewardView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:FiltersLabViewModel}"><v:FiltersView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:DigitNetworkLabViewModel}"><v:DigitNetworkView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:MemoryNetworkLabViewModel}"><v:MemoryNetworkView /></DataTemplate>
 
         <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">

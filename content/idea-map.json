@@ -49,7 +49,7 @@
     { "id": "image-filters", "label": "Image filters", "kind": "flow",
       "description": "One 3 by 3 filter slides over an 8 by 8 digit, using the same nine numbers everywhere to make a feature map: hand-made presets beside the network's learned filters." },
     { "id": "image-network", "label": "Image network", "kind": "flow",
-      "description": "A small convolutional network reads a digit you draw. Coming in a later part of the app." },
+      "description": "A small convolutional network reads an 8 by 8 digit, drawn or picked: its feature maps layer by layer, its probabilities for 0 to 9, and train it again." },
     { "id": "memory-networks", "label": "Memory networks", "kind": "flow",
       "description": "A recurrent network carries one memory vector from character to character: compare its loss, speed and how far back it remembers with the transformer's." },
     { "id": "diffusion-shapes", "label": "Diffusion: shapes", "kind": "flow",
