@@ -21,6 +21,7 @@ using AIAnatomy.Models.Transformers;
 // Times training steps of a family network (Release, from the repository root), to choose sizes and steps:
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind memory --hidden 128 [--steps 50]
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind diffusion --hidden 128 [--steps 50] [--shape Spiral]
+//   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind digits --config 8,16,64 [--images 1600] [--batch 32] [--seed 1]
 
 const int WarmUpSteps = 30;   // speed: untimed steps first (see TimeSteps)
 
@@ -31,7 +32,8 @@ const string Usage =
     "       pretrain diffusion --shape <preset> --out <file> [--steps <n>] [--seed <n>]\n" +
     "       pretrain digits-subset --uci <optdigits.tra or .tes> --out <file>\n" +
     "       pretrain speed --kind memory --hidden <n> [--steps <n>] [--text <file>] [--model <file>]\n" +
-    "       pretrain speed --kind diffusion --hidden <n> [--steps <n>] [--shape <preset>]";
+    "       pretrain speed --kind diffusion --hidden <n> [--steps <n>] [--shape <preset>]\n" +
+    "       pretrain speed --kind digits --config <f1,f2,hidden> [--images <n>] [--batch <n>] [--seed <n>] [--train <file>] [--test <file>]";
 
 try
 {
@@ -251,14 +253,15 @@ static async Task<int> SpeedAsync(Dictionary<string, string> o)
     {
         "memory" => await MemorySpeedTrainerAsync(o),
         "diffusion" => DiffusionSpeedTrainer(o),
-        _ => throw new ArgumentException($"Unknown --kind '{kind}' (use memory or diffusion).\n{Usage}"),
+        "digits" => DigitsSpeedTrainer(o),
+        _ => throw new ArgumentException($"Unknown --kind '{kind}' (use memory, diffusion or digits).\n{Usage}"),
     };
-    TimeSteps(trainer.Trainer, Number(o, "steps", 50), trainer.Plans);
-    trainer.AfterTiming?.Invoke();
+    double msPerStep = TimeSteps(trainer.Trainer, trainer.TimedSteps ?? Number(o, "steps", 50), trainer.Plans);
+    trainer.AfterTiming?.Invoke(msPerStep);
     return 0;
 }
 
-static async Task<(ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Action? AfterTiming)> MemorySpeedTrainerAsync(Dictionary<string, string> o)
+static async Task<(ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, int? TimedSteps, Action<double>? AfterTiming)> MemorySpeedTrainerAsync(Dictionary<string, string> o)
 {
     int hidden = Number(o, "hidden", 0);
     if (hidden < 1) throw new ArgumentException("--hidden must be at least 1.");
@@ -271,11 +274,11 @@ static async Task<(ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Ac
     var trainer = new RnnTrainer(rnn, source, int.MaxValue, seed: 1);
     Console.WriteLine($"memory network: hidden {hidden}, {rnn.Config.CountParameters()} parameters, batch {RnnTrainer.DefaultBatchSize}, context {MemoryTraining.ContextLength}");
     return (trainer,
-        new[] { ("retrain", MemoryTraining.RetrainSteps), ("shipped", MemoryTraining.ShippedSteps) },
-        () => Console.WriteLine($"validation loss after {trainer.StepsTaken} steps: {trainer.ValidationLoss():F3}"));
+        new[] { ("retrain", MemoryTraining.RetrainSteps), ("shipped", MemoryTraining.ShippedSteps) }, null,
+        _ => Console.WriteLine($"validation loss after {trainer.StepsTaken} steps: {trainer.ValidationLoss():F3}"));
 }
 
-static (ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Action? AfterTiming) DiffusionSpeedTrainer(Dictionary<string, string> o)
+static (ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, int? TimedSteps, Action<double>? AfterTiming) DiffusionSpeedTrainer(Dictionary<string, string> o)
 {
     int hidden = Number(o, "hidden", 0);
     if (hidden < 1) throw new ArgumentException("--hidden must be at least 1.");
@@ -289,12 +292,44 @@ static (ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Action? After
     var trainer = new DiffusionTrainer(net, schedule, preset.Points, int.MaxValue, seed: 1);
     Console.WriteLine($"diffusion network: hidden {hidden}, {net.Config.CountParameters()} parameters, batch 128, {schedule.Steps} noise steps, shape {shapeName}");
     return (trainer,
-        new[] { ("retrain", DiffusionTraining.RetrainSteps), ("shipped", DiffusionTraining.ShippedSteps) },
-        () =>
+        new[] { ("retrain", DiffusionTraining.RetrainSteps), ("shipped", DiffusionTraining.ShippedSteps) }, null,
+        _ =>
         {
             var result = DiffusionSampler.Sample(net, schedule, 1000, new SeededRandom(2))[^1];
             var samples = Enumerable.Range(0, result.GetLength(0)).Select(i => (result[i, 0], result[i, 1])).ToList();
             Console.WriteLine($"mean distance to the shape of 1,000 samples after {trainer.StepsTaken} steps: {Shapes.MeanDistanceToShape(samples, preset.Points):F3}");
+        });
+}
+
+// Times forward plus backward (and the Adam step) of the image network on batches of the bundled training digits.
+// --images is how many images are timed after the warm-up (rounded up to whole batches); the report gives ms per image,
+// the time for one pass over the training images, and the test accuracy after all the steps taken (warm-up included).
+static (ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, int? TimedSteps, Action<double>? AfterTiming) DigitsSpeedTrainer(Dictionary<string, string> o)
+{
+    var parts = Required(o, "config").Split(',');
+    if (parts.Length != 3) throw new ArgumentException("--config must be three numbers: filters1,filters2,hidden (for example 8,16,64).");
+    var numbers = parts.Select(int.Parse).ToArray();
+    int batch = Number(o, "batch", DigitTrainer.DefaultBatchSize);
+    if (batch < 1) throw new ArgumentException("--batch must be at least 1.");
+    int images = Number(o, "images", 50 * batch);
+    if (images < 1) throw new ArgumentException("--images must be at least 1.");
+    var train = DigitSet.Load(o.TryGetValue("train", out var tr) ? tr : "content/data/digits/digits-train.bin.gz");
+    var test = DigitSet.Load(o.TryGetValue("test", out var te) ? te : "content/data/digits/digits-test.bin.gz");
+
+    var config = new DigitNetConfig(train.ImageSize, numbers[0], numbers[1], numbers[2]);
+    int seed = Number(o, "seed", 1);
+    var net = new DigitNet(config, new SeededRandom(seed));
+    var trainer = new DigitTrainer(net, train, int.MaxValue, seed, batchSize: batch);
+    int steps = (images + batch - 1) / batch;
+    Console.WriteLine($"image network: {train.ImageSize}x{train.ImageSize}, filters {config.Filters1} and {config.Filters2}, hidden {config.Hidden}, " +
+        $"{config.CountParameters()} parameters, batch {batch}; timing {steps} steps ({steps * batch} images)");
+    return (trainer,
+        new[] { ("retrain", DigitTraining.RetrainSteps), ("shipped", DigitTraining.ShippedSteps) }, steps,
+        msPerStep =>
+        {
+            double msPerImage = msPerStep / batch;
+            Console.WriteLine($"{msPerImage:F3} ms per image (forward, backward and Adam); one pass over the {train.Count} training images about {msPerImage * train.Count / 1000:F1} s");
+            Console.WriteLine($"test accuracy after {trainer.StepsTaken} steps: {DigitTrainer.Accuracy(net, test):F4} on {test.Count} images");
         });
 }
 
@@ -311,7 +346,7 @@ static void RequireRelease()
     if (!IsOptimised()) throw new ArgumentException("This is not an optimised (Release) build: its times would be wrong in a shipped file. Run with -c Release.");
 }
 
-static void TimeSteps(ISteppedTrainer trainer, int steps, (string Name, int Steps)[] plans)
+static double TimeSteps(ISteppedTrainer trainer, int steps, (string Name, int Steps)[] plans)
 {
     if (steps < 1) throw new ArgumentException("--steps must be at least 1.");
     if (!IsOptimised())
@@ -326,6 +361,7 @@ static void TimeSteps(ISteppedTrainer trainer, int steps, (string Name, int Step
     Console.WriteLine($"{WarmUpSteps} warm-up steps, then {steps} steps in {watch.Elapsed.TotalSeconds:F2} s: {ms:F2} ms per step (last train loss {loss:F3})");
     foreach (var (name, planned) in plans)
         Console.WriteLine($"  {name}: {planned} steps would take about {ms * planned / 1000:F0} s at this size");
+    return ms;
 }
 
 static async Task<TrainingStepReport> RunAsync(Trainer trainer, int steps)
