@@ -31,13 +31,13 @@ public sealed class Board
             if (m != Mark.None && cells[line[1]] == m && cells[line[2]] == m)
             {
                 Winner = m;
-                WinningLine = line;
+                WinningLine = Array.AsReadOnly((int[])line.Clone());
                 break;
             }
         }
         ToMove = _xCount == _oCount ? Mark.X : Mark.O;
         IsOver = Winner != Mark.None || _xCount + _oCount == 9;
-        EmptyCells = IsOver ? Array.Empty<int>() : Enumerable.Range(0, 9).Where(i => cells[i] == Mark.None).ToArray();
+        EmptyCells = IsOver ? Array.AsReadOnly(Array.Empty<int>()) : Array.AsReadOnly(Enumerable.Range(0, 9).Where(i => cells[i] == Mark.None).ToArray());
     }
 
     /// <summary>Reads nine characters ('.', 'X', 'O'); whose turn it is follows from the counts.</summary>
