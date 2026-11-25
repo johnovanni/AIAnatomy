@@ -47,7 +47,7 @@ public static class PartResource
         ["family"] = "\uE716",       // People: the family of AI
         ["rules"] = "\uE8A5",        // Document: a rule book, written by hand
         ["search"] = "\uE721",       // Search: looking through the options
-        ["classic"] = "\uE713",      // Settings: classic machine learning, a tuned machine
+        ["classic"] = "\uE71C",      // Filter: classic machine learning, sorting points into groups
         ["reward"] = "\uE734",       // FavoriteStar: the reward that learning chases
     };
 

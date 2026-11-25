@@ -43,11 +43,11 @@
     <SolidColorBrush x:Key="PartLearningBrush" Color="#085757" />
     <SolidColorBrush x:Key="PartWholeBrush" Color="#1C1C1C" />
     <SolidColorBrush x:Key="PartLaterBrush" Color="#848484" />
-    <SolidColorBrush x:Key="PartFamilyBrush" Color="#3F2FB9" />
-    <SolidColorBrush x:Key="PartRulesBrush" Color="#7A590D" />
-    <SolidColorBrush x:Key="PartSearchBrush" Color="#7220FA" />
-    <SolidColorBrush x:Key="PartClassicBrush" Color="#3485E5" />
-    <SolidColorBrush x:Key="PartRewardBrush" Color="#8B0236" />
+    <SolidColorBrush x:Key="PartFamilyBrush" Color="#206050" />
+    <SolidColorBrush x:Key="PartRulesBrush" Color="#604A20" />
+    <SolidColorBrush x:Key="PartSearchBrush" Color="#042895" />
+    <SolidColorBrush x:Key="PartClassicBrush" Color="#46931F" />
+    <SolidColorBrush x:Key="PartRewardBrush" Color="#AC3999" />
     <sys:Double x:Key="ScreenGlowOpacity">0</sys:Double>
     <!-- Single-hue sequential ramp for heat maps, light (small) to dark (large). -->
     <Color x:Key="RampLowColor">#F1F6FB</Color>
