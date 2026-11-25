@@ -170,6 +170,16 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void FamilyTreeChosen_IsARenderViewThatTakesFullLab()
+    {
+        var o = DiagnosticOptions.Parse(["--render-png", "family-tree," + DiagnosticOptions.FamilyTreeChosen, "t.png", "--full-lab"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "family-tree", "family-tree-chosen" }, o.Views);
+        Assert.True(o.FullLab);
+        Assert.Equal(Path.Combine("", "t-family-tree-chosen.png"), o.OutputFileFor(DiagnosticOptions.FamilyTreeChosen));
+    }
+
+    [Fact]
     public void ContentsView_IsAKnownView_ButNotForFullLab()
     {
         var ok = DiagnosticOptions.Parse(["--render-png", "contents,tokens", "c.png"]);

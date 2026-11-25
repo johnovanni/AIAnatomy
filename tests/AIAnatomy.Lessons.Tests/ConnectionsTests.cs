@@ -19,7 +19,7 @@ public class ConnectionsTests
     {
         Assert.Empty(Real.Validate(Catalog, Sources, Map));
         Assert.Empty(Map.Validate(Catalog));
-        Assert.Equal(20, Real.All.Count);
+        Assert.Equal(21, Real.All.Count);
     }
 
     [Fact]

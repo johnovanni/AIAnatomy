@@ -46,7 +46,13 @@ public static class PngRenderer
             await rules.LearnCommand.ExecuteAsync(null);
             await rules.LearnCommand.ExecuteAsync(null);
         }
-        var map = view == DiagnosticOptions.RulesVsLearningTrained ? null : Show(window, viewModel, services, view);
+        if (view == DiagnosticOptions.FamilyTreeChosen)
+        {
+            await viewModel.NavigateToLesson("family-tree");
+            if (viewModel.CurrentLab is not FamilyTreeLabViewModel tree) throw new InvalidOperationException("The family-tree lesson did not open its lab.");
+            tree.Choose("rules");
+        }
+        var map = view is DiagnosticOptions.RulesVsLearningTrained or DiagnosticOptions.FamilyTreeChosen ? null : Show(window, viewModel, services, view);
 
         if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
 

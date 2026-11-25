@@ -103,8 +103,12 @@ public class LessonPageViewModelTests : IDisposable
     {
         var vm = _env.NewMain();
         vm.NavigateToLesson("scale");
-        Assert.Null(vm.CurrentPage!.Next);   // Family and Beyond hold only "coming later" pages
+        Assert.Equal("family-tree", vm.CurrentPage!.Next!.Id);   // 4.1 is built (Stage 2A, Task 5)
         Assert.Equal("step-through", vm.CurrentPage.Previous!.Id);
+        // The last built lesson has no Next: the rest are "coming later" pages.
+        var lastBuilt = LessonCatalog.Load(TestEnvironment.Content).All.Last(l => !l.IsPlaceholder);
+        vm.NavigateToLesson(lastBuilt.Id);
+        Assert.Null(vm.CurrentPage!.Next);
         vm.NavigateToLesson("rules-vs-learning");
         Assert.Null(vm.CurrentPage!.Previous);
     }
@@ -119,7 +123,7 @@ public class LessonPageViewModelTests : IDisposable
         Assert.Null(page.Idea);
         Assert.Empty(page.TryThis);
         Assert.Empty(page.Lesson.Questions);
-        Assert.Equal("scale", page.Previous!.Id);   // the nearest built lesson before it
+        Assert.Equal(LessonCatalog.Load(TestEnvironment.Content).All.Last(l => !l.IsPlaceholder).Id, page.Previous!.Id);   // the nearest built lesson before it
         Assert.Null(page.Next);
     }
 
@@ -238,7 +242,7 @@ public class LessonPageViewModelTests : IDisposable
         Assert.Equal("architecture-map", vm.CurrentPage!.Lesson.Id);
         vm.NavigateToLesson("rules-vs-learning");
         Assert.False(vm.GoBackCommand.CanExecute(null));
-        vm.NavigateToLesson("scale");
+        vm.NavigateToLesson(LessonCatalog.Load(TestEnvironment.Content).All.Last(l => !l.IsPlaceholder).Id);
         Assert.False(vm.GoNextCommand.CanExecute(null));
         Assert.True(vm.GoBackCommand.CanExecute(null));
     }

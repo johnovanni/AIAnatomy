@@ -20,9 +20,11 @@ public sealed class ContentsTreeViewModelTests : IDisposable
         Assert.Equal(
             ["1 The big picture", "2 The parts", "3 The whole model", "4 The family of AI", "5 Beyond the model"],
             tree.Sections.Select(s => s.Heading).ToArray());
-        Assert.Equal([false, false, false, true, true], tree.Sections.Select(s => s.IsLater).ToArray());
+        // Section 4 has 4.1 built (Stage 2A, Task 5), so only Beyond is wholly later; a lesson is later when it is a placeholder.
+        Assert.Equal([false, false, false, false, true], tree.Sections.Select(s => s.IsLater).ToArray());
         Assert.All(tree.Sections.Where(s => s.IsLater).SelectMany(s => s.Lessons), l => Assert.True(l.IsLater));
-        Assert.All(tree.Sections.Where(s => !s.IsLater).SelectMany(s => s.Lessons), l => Assert.False(l.IsLater));
+        Assert.All(tree.Sections.SelectMany(s => s.Lessons), l => Assert.Equal(l.Lesson.IsPlaceholder, l.IsLater));
+        Assert.False(tree.Sections.Single(s => s.Section == Section.Family).Lessons[0].IsLater);
     }
 
     [Fact]

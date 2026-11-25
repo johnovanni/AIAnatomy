@@ -112,7 +112,8 @@ public class IdeaMapViewModelTests
         var map = NewMap(env);
         var after = map.Bubbles.SkipWhile(b => b.Id != "section-4").Skip(1).Take(10).ToList();
         Assert.Equal(Section4, after.Select(b => b.Id));
-        Assert.All(after, b => Assert.True(b.IsLater));
+        Assert.False(after[0].IsLater);   // 4.1 The family tree is built (Stage 2A, Task 5)
+        Assert.All(after.Skip(1), b => Assert.True(b.IsLater));
     }
 
     /// <summary>Guards the Tree mode added later: a saved "Tree" (or any other name) is read as Radial.</summary>
@@ -171,7 +172,9 @@ public class IdeaMapViewModelTests
         Assert.Equal(MapMode.Loop, loop.Mode);
         Assert.Null(loop.CentreId);
         Assert.Equal(["attention", "multi-head", "feed-forward"], loop.GroupMembers);
-        Assert.Empty(loop.RoutedOnlyEdges);
+        // Section 4 is off the flow of text: its connections are routed in Loop but do not place boxes.
+        Assert.Equal([new LayoutEdge("family-tree", "rules-vs-learning")], loop.RoutedOnlyEdges);
+        Assert.DoesNotContain(loop.PlacementEdges, e => e.From == "family-tree" || e.To == "family-tree");
         Assert.Contains(new LayoutEdge("next-character", "your-text"), loop.PlacementEdges);
         Assert.Contains(new LayoutEdge("learning", "attention"), loop.PlacementEdges);
         Assert.Contains(new LayoutEdge("scale", ConnectionList.WholeLoop), loop.PlacementEdges);
@@ -394,7 +397,7 @@ public class IdeaMapViewModelTests
         Assert.Equal("later", B(placeholder).MarkText);
         Assert.Equal("", B("centre").MarkText);
         Assert.Equal("", B("section-2").MarkText);
-        Assert.Equal("later", B("section-4").MarkText);   // Family: every lesson in it is a placeholder
+        Assert.Equal("", B("section-4").MarkText);   // Family: 4.1 is built, so the section is not "later"
         Assert.Equal(["✓ opened", "✔ checked"], IdeaBubble.LessonMarkTexts);
     }
 

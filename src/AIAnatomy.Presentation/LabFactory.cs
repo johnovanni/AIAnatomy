@@ -1,3 +1,5 @@
+using AIAnatomy.Lessons;
+using AIAnatomy.Presentation.IdeaMap;
 using AIAnatomy.Presentation.Labs;
 using AIAnatomy.Presentation.Services;
 
@@ -14,11 +16,15 @@ public sealed class LabFactory
     private readonly Dictionary<string, Func<LabViewModel>> _creators = new(StringComparer.Ordinal);
 
     /// <param name="libraryChanged">Called after a lab saves a model to the library, so the model picker can list it.</param>
-    public LabFactory(IActiveModelService models, string contentFolder, Action? libraryChanged = null)
+    /// <param name="lessons">The lesson catalog (the family tree numbers its bubbles from it); read from
+    /// <paramref name="contentFolder"/> when the family tree first needs it if not given.</param>
+    public LabFactory(IActiveModelService models, string contentFolder, Action? libraryChanged = null, LessonCatalog? lessons = null)
     {
         ArgumentNullException.ThrowIfNull(models);
         ArgumentException.ThrowIfNullOrWhiteSpace(contentFolder);
         var fables = new Lazy<string>(() => File.ReadAllText(Path.Combine(contentFolder, "texts", "aesop-fables.txt")));
+        var catalog = new Lazy<LessonCatalog>(() => lessons ?? LessonCatalog.Load(contentFolder));
+        var familyTree = new Lazy<FamilyTreeData>(() => FamilyTreeData.Load(Path.Combine(contentFolder, "family-tree.json")));
         Register(ComingLaterLabViewModel.Id, () => new ComingLaterLabViewModel());
         Register(RulesVsLearningLabViewModel.Id, () => new RulesVsLearningLabViewModel(() => fables.Value));
         Register(ArchitectureMapLabViewModel.Id, () => new ArchitectureMapLabViewModel(models));
@@ -33,6 +39,7 @@ public sealed class LabFactory
         Register(LearningLabViewModel.Id, () => new LearningLabViewModel(models));
         Register(StepThroughLabViewModel.Id, () => new StepThroughLabViewModel(models));
         Register(ScaleLabViewModel.Id, () => new ScaleLabViewModel(models));
+        Register(FamilyTreeLabViewModel.Id, () => new FamilyTreeLabViewModel(familyTree.Value, catalog.Value, new MsaglGraphLayout()));
         TrainLabViewModel? train = null;
         Register(TrainLabViewModel.Id, () => train ??= new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }

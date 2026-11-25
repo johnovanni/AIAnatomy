@@ -241,9 +241,16 @@ public sealed partial class IdeaMapViewModel : ObservableObject
         var placement = _map.FlowEdges.Select(f => _labelSizes.TryGetValue(f.Label, out var label)
             ? new LayoutEdge(LayoutEnd(f.From), LayoutEnd(f.To), label.Width, label.Height)
             : new LayoutEdge(LayoutEnd(f.From), LayoutEnd(f.To))).ToList();
+        // Section 4 (the family tree) is off the flow of text, so in Loop its connections are drawn but do not place
+        // boxes: the family tree keeps its corner, and the rows of the flow stay as they are.
+        var family = _catalog.InSection(Section.Family).Select(l => l.Id).ToHashSet(StringComparer.Ordinal);
+        var routedOnly = new List<LayoutEdge>();
         foreach (var c in connections)
-            if (!placement.Any(e => SamePair(e, c.From, c.To))) placement.Add(new LayoutEdge(c.From, c.To));
-        return new GraphInput(MapMode.Loop, nodes, placement, [], null, _map.GroupMembers);
+        {
+            if (placement.Any(e => SamePair(e, c.From, c.To)) || routedOnly.Any(e => SamePair(e, c.From, c.To))) continue;
+            (family.Contains(c.From) || family.Contains(c.To) ? routedOnly : placement).Add(new LayoutEdge(c.From, c.To));
+        }
+        return new GraphInput(MapMode.Loop, nodes, placement, routedOnly, null, _map.GroupMembers);
     }
 
     /// <summary>True for a line of the map's own structure (Radial: centre to section, section to lesson; Loop: the flow

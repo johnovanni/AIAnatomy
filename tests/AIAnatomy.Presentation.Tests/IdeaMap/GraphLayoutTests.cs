@@ -265,6 +265,18 @@ public class GraphLayoutTests
         }
     }
 
+    /// <summary>Not only siblings: a whole row keeps the order of the branches above it, so no two lines cross.</summary>
+    [Theory]
+    [MemberData(nameof(TreeBoxSizes))]
+    public void Tree_EachRowKeepsTheOrderOfTheBranchesAboveIt(double w, double h)
+    {
+        var r = new MsaglGraphLayout().Layout(TreeInput(w, h));
+        var by = r.Nodes.ToDictionary(n => n.Id);
+        foreach (var row in new[] { new[] { "a", "b", "c" }, ["a1", "a2", "b1", "b2", "c1"], ["b2a", "b2b", "b2c", "b2d"] })
+            for (int i = 1; i < row.Length; i++)
+                Assert.True(by[row[i]].X >= by[row[i - 1]].X + by[row[i - 1]].Width, $"{row[i]} is not right of {row[i - 1]}.");
+    }
+
     [Theory]
     [MemberData(nameof(TreeBoxSizes))]
     public void Tree_NoTwoBoxesOverlap(double w, double h)

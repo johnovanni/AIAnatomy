@@ -39,7 +39,7 @@ public sealed partial class MainViewModel : ObservableObject
         _progress = progress ?? throw new ArgumentNullException(nameof(progress));
         _connections = connections ?? throw new ArgumentNullException(nameof(connections));
         _map = map ?? throw new ArgumentNullException(nameof(map));
-        Labs = new LabFactory(models, contentFolder ?? AppPaths.Content, RefreshModelEntries);
+        Labs = new LabFactory(models, contentFolder ?? AppPaths.Content, RefreshModelEntries, lessons);
         TrainLessonTitle = lessons.All.FirstOrDefault(l => l.LabId == TrainLabViewModel.Id)?.Title ?? "Training a model";
 
         Contents = new ContentsTreeViewModel(lessons, progress);

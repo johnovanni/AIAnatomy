@@ -141,7 +141,8 @@ public class LessonCatalogTests
     public void Placeholders_AreMarked()
     {
         var catalog = LessonCatalog.Load(Content);
-        Assert.True(catalog.Get("family-tree").IsPlaceholder);
+        Assert.True(catalog.Get("diffusion-steps").IsPlaceholder);   // a Part B lesson
+        Assert.False(catalog.Get("family-tree").IsPlaceholder);
         Assert.True(catalog.Get("beyond-coming").IsPlaceholder);
         Assert.False(catalog.Get("attention").IsPlaceholder);
     }

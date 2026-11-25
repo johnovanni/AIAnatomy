@@ -492,4 +492,19 @@ public class CheckedQuestionTests : IDisposable
         Assert.Contains($"÷ {N(lab.OurCount)} is about 1.5 million", question.Why);
         Assert.Equal("About 1.5 million times", Correct(nameof(Scale_Gpt3IsAbout1Point5MillionTimesFables)));
     }
+
+    // ---- 4.1 The family tree ----
+
+    [Fact]
+    public void FamilyTree_TransformerIsLearnedFromExamples()
+    {
+        var tree = FamilyTreeData.Load(Path.Combine(TestEnvironment.Content, "family-tree.json"));
+        var lab = new FamilyTreeLabViewModel(tree, Catalog, new AIAnatomy.Presentation.IdeaMap.MsaglGraphLayout());
+        var node = tree.Nodes.Single(n => n.LessonId == "architecture-map");
+        // Walk up the tree, as the lines in the lab go, to the bubble just under the root: one of the three main branches.
+        while (node.Parent != tree.Root.Id) node = tree.Nodes.Single(n => n.Id == node.Parent);
+        Assert.Contains(lab.Bubbles, b => b.Id == node.Id);
+        Assert.Contains(node, tree.ChildrenOf(tree.Root.Id));
+        Assert.Equal(node.Label, Correct(nameof(FamilyTree_TransformerIsLearnedFromExamples)));
+    }
 }

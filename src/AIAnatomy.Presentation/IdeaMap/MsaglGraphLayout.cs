@@ -300,8 +300,9 @@ public sealed class MsaglGraphLayout : IGraphLayout
     }
 
     /// <summary>
-    /// Tree: a top-down layered (Sugiyama) layout of parent → child edges. Each parent's children are passed to
-    /// <c>AddSameLayerNeighbors</c> in the given order, so siblings sit left to right in that order.
+    /// Tree: a top-down layered (Sugiyama) layout of parent → child edges. Each row (the children of the row above, parent
+    /// by parent, each parent's in the given order) is passed to <c>AddSameLayerNeighbors</c>, so siblings sit left to
+    /// right in that order and no two lines cross.
     /// </summary>
     private static Dictionary<string, Point> PlaceTree(GraphInput input)
     {
@@ -317,8 +318,19 @@ public sealed class MsaglGraphLayout : IGraphLayout
             list.Add(e.To);
         }
         var settings = new SugiyamaLayoutSettings { LayerSeparation = TreeLayerSeparation, NodeSeparation = TreeNodeSeparation };
-        foreach (var kids in kidsOf.Values.Where(k => k.Count > 1))
-            settings.AddSameLayerNeighbors(kids.Select(k => nodes[k]).ToList());
+        // Each whole row is given in order, not only each parent's children: with siblings alone, MSAGL kept them
+        // together but could put a later branch's members left of an earlier branch's, so lines crossed. A row's order is
+        // the order of the parents in the row above, then each parent's children in the given order; every tree line
+        // spans one row, so this fixes the order completely and no two lines cross.
+        var hasParent = kidsOf.Values.SelectMany(k => k).ToHashSet(StringComparer.Ordinal);
+        var row = input.Nodes.Select(n => n.Id).Where(id => !hasParent.Contains(id) && kidsOf.ContainsKey(id)).ToList();
+        if (input.CentreId != null && row.Remove(input.CentreId)) row.Insert(0, input.CentreId);
+        var placed = new HashSet<string>(row, StringComparer.Ordinal);
+        while (row.Count > 0)
+        {
+            if (row.Count > 1) settings.AddSameLayerNeighbors(row.Select(id => nodes[id]).ToList());
+            row = row.SelectMany(id => kidsOf.GetValueOrDefault(id) ?? []).Where(placed.Add).ToList();
+        }
         new LayeredLayout(graph, settings).Run();
         return nodes.ToDictionary(kv => kv.Key, kv => kv.Value.Center, StringComparer.Ordinal);
     }

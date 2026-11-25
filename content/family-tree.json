@@ -36,14 +36,14 @@
       "whatItIs": "An expert system. A person writes if-then rules, and the program applies them to the facts it is given.",
       "goodAt": "Clear, checkable reasoning. You can see which rules led to an answer.",
       "badAt": "Anything the rule writers did not think of. Rules are slow to write, and hard to keep right as they pile up.",
-      "example": "MYCIN, built in the 1970s, suggested treatments for blood infections using hundreds of rules."
+      "example": "MYCIN, built in the 1970s, used hundreds of rules to suggest antibiotics for serious blood infections. It was a research system, not used routinely in hospitals."
     },
     {
       "id": "search",
       "label": "Search",
       "parent": "written",
       "lesson": "search",
-      "whatItIs": "The program tries moves ahead in its head and picks the one that leads to the best result.",
+      "whatItIs": "The program looks ahead through possible moves, scores where each one leads, and picks the move that leads to the best score.",
       "goodAt": "Games and puzzles with clear rules, where looking ahead pays off.",
       "badAt": "Problems with too many possibilities to look through, or with no clear way to score a position.",
       "example": "Chess programs look ahead through many possible moves before choosing one."
@@ -76,7 +76,7 @@
       "whatItIs": "The program keeps a score for each action in each situation. It updates the scores from the rewards it receives.",
       "goodAt": "Learning a task by trial and error, when there is a clear reward and many tries are cheap.",
       "badAt": "Slow when there are many situations or the reward comes late. Trying things in the real world can be costly or unsafe.",
-      "example": "Game-playing programs have been trained by reward to play video games and board games."
+      "example": "Learning by reward in general (Q-learning is one method of it) has trained programs to play video games and board games."
     },
     {
       "id": "images",
@@ -96,14 +96,14 @@
       "whatItIs": "Neural networks that read a sequence one step at a time and carry a small memory from step to step.",
       "goodAt": "Short sequences, where what came just before matters.",
       "badAt": "The memory is small and fades, so they lose track of things from far back.",
-      "example": "Early speech and text models read one piece at a time in this way."
+      "example": "Before transformers, networks of this kind (recurrent networks, especially the LSTM kind) were widely used in speech recognition and machine translation."
     },
     {
       "id": "transformer",
       "label": "Transformer",
       "parent": "neural",
       "lesson": "architecture-map",
-      "whatItIs": "A neural network that lets every piece of a text look at the other pieces, using attention. It is the kind inside most large language models.",
+      "whatItIs": "A neural network in which each piece of a text looks at other pieces, using attention. In GPT-style models, like the one in this app, each piece looks back only at the pieces before it. It is the kind inside most large language models.",
       "goodAt": "Long text, and learning from huge amounts of it. It handles many pieces at once.",
       "badAt": "The cost grows quickly as the text gets longer. It can give fluent answers that are wrong.",
       "example": "Large language models, which are built from transformers. The model in this app is a tiny one."
@@ -116,7 +116,7 @@
       "whatItIs": "A neural network trained to remove a little noise from data. To make something new, it starts from pure noise and removes noise step by step.",
       "goodAt": "Making new images that look like the ones it was trained on.",
       "badAt": "It needs many steps for each result, so it is slow. It can make details that look right but are wrong.",
-      "example": "Many image generators work this way."
+      "example": "Image generators such as Stable Diffusion work this way."
     }
   ]
 }
