@@ -600,19 +600,21 @@ public class CheckedQuestionTests : IDisposable
     [Fact]
     public async Task Memory_TheValidationLossesAreAboutTheSame()
     {
-        // Recorded: the transformer 1.711, the shipped memory network 1.678, on the same 32 windows. The gap is under one
-        // and a half standard errors of the transformer's loss over those windows (each window's mean counted as one
-        // sample, since neighbouring characters are correlated), from one seed each: no win either way.
+        // Recorded: the transformer 1.711, the shipped memory network 1.678, on the same 32 windows. Compared window by window
+        // (paired), the memory network is lower there by 0.033 ± 0.012; on all 292 held-back windows the gap is 0.005 ± 0.007,
+        // under two standard errors from zero. Each network was trained once, from one seed: no win either way.
         var lab = await MemoryLab();
         Assert.Equal(1.711, lab.TransformerRecordedLoss);
         Assert.Equal(1.678, Math.Round(lab.RnnRecordedLoss, 3));
-        var fables = Shipped().Current;
-        var windows = AIAnatomy.Models.Recurrent.MemoryTraining.FablesSource(fables.Tokenizer, Fables()).ValidationWindows;
-        var perWindow = windows.Select(w => AIAnatomy.Models.Recurrent.ContextLoss.LossByPosition(fables.Transformer, new[] { w }).Average()).ToArray();
-        double mean = perWindow.Average();
-        double se = Math.Sqrt(perWindow.Sum(v => (v - mean) * (v - mean)) / (perWindow.Length - 1) / perWindow.Length);
-        double gap = Math.Abs(lab.TransformerRecordedLoss - lab.RnnRecordedLoss);
-        Assert.True(gap < 1.5 * se, $"gap {gap:F3}, standard error {se:F3}");
+        var shared = Labs.MemoryMeasurements.MeanAndError(Labs.MemoryMeasurements.PairedGaps(Labs.MemoryMeasurements.Shared));
+        Assert.Equal(lab.TransformerRecordedLoss - lab.RnnRecordedLoss, shared.Mean, 3e-3);   // the curves' means are the losses
+        var held = Labs.MemoryMeasurements.MeanAndError(Labs.MemoryMeasurements.PairedGaps(Labs.MemoryMeasurements.HeldBack));
+        Assert.True(Math.Abs(held.Mean) < 2 * held.Error, $"held-back gap {held.Mean:F4} ± {held.Error:F4}");
+        Assert.True(Math.Abs(held.Mean) < 0.02, $"held-back gap {held.Mean:F4}");
+        static string F3(double v) => v.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
+        string why = QuestionNaming(nameof(Memory_TheValidationLossesAreAboutTheSame)).Why;
+        Assert.Contains($"lower by {F3(shared.Mean)} ± {F3(shared.Error)}", why);
+        Assert.Contains($"all 292 windows of the held-back text the gap is only {F3(held.Mean)} ± {F3(held.Error)}", why);
         Assert.Contains("1.711", QuestionNaming(nameof(Memory_TheValidationLossesAreAboutTheSame)).Prompt);
         Assert.Contains("1.678", QuestionNaming(nameof(Memory_TheValidationLossesAreAboutTheSame)).Prompt);
         Assert.Equal("About the same: the gap is too small to call a win", Correct(nameof(Memory_TheValidationLossesAreAboutTheSame)));

@@ -48,6 +48,7 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
     public const string DefaultText = "The Fox";
     public const string EmptyMessage = "Type some text first.";
     public const string LoadingMessage = "Loading the two networks and measuring them…";
+    public const string LoadFailedMessage = "The two networks could not be loaded because of an unexpected problem. Reinstalling the app may fix it.";
     public const int SampleLength = 200;
     public const double Temperature = 0.8;
 
@@ -61,9 +62,25 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
     public const string RecordedKind = "recorded when it was built";
     public const string LiveKind = "measured just now, on this computer";
 
+    /// <summary>The text box takes at most this many characters, so the memory is worked out at once on every key.</summary>
+    public const int MaxTextLength = 200;
+
+    // Measured with the shipped networks when the lab was built; MemoryNetworkLabTests and CheckedQuestionTests recompute them.
+    // "Paired": each window's mean loss on one network minus the same window's on the other, then the mean and its standard error.
+    /// <summary>The 32 shared windows: transformer minus memory network, paired by window.</summary>
+    public const double SharedLossGap = 0.033, SharedLossGapError = 0.012;
+    /// <summary>All non-overlapping windows of the held-back text (<see cref="MemoryTraining.HeldBackWindows"/>).</summary>
+    public const int HeldBackWindowCount = 292;
+    /// <summary>The held-back windows: transformer minus memory network, paired by window.</summary>
+    public const double HeldBackLossGap = 0.005, HeldBackLossGapError = 0.007;
+    /// <summary>The held-back windows: mean loss with 9 to 16 characters read minus with 33 to 64, per window, for each network.</summary>
+    public const double HeldBackTransformerGain = -0.006, HeldBackTransformerGainError = 0.037;
+    public const double HeldBackMemoryGain = -0.008, HeldBackMemoryGainError = 0.042;
+
     public const string LossNote =
-        "On validation loss the two shipped networks are about the same. The 32 windows hold 2,048 predictions and each network " +
-        "was trained once, from one seed, so a gap of about 0.03 is only about one standard error: too small to call a win either way.";
+        "On validation loss the two shipped networks are about the same. On the 32 windows the memory network's loss is lower by " +
+        "0.033 ± 0.012, but on all 292 windows of the held-back text the gap is only 0.005 ± 0.007 (each window compared on both " +
+        "networks; mean ± standard error). Each network was trained once, from one seed, so this is no win either way.";
 
     public const string SpeedNote =
         "Both recorded speeds are wall-clock times on the PC that built the app, over the whole training loop with a validation " +
@@ -74,12 +91,15 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
         "character after another.";
 
     public const string LiveSpeedNote =
-        "Your run is timed over its training steps only, with no validation checks along the way, and its network is smaller, " +
-        "so its speed is not timed quite the same way as the recorded ones.";
+        "Your run is timed over its training steps only, with no validation checks along the way, so it is not timed the same way " +
+        "as the recorded speeds. Its network is also smaller (hidden size 128), so each step does less arithmetic.";
 
     public const string MemoryNote =
         "Each point is the average loss over the same 32 windows of the fables (the ones both networks were checked on), so " +
-        "single points wobble up and down by a few tenths. The averages over ranges, below, are steadier.";
+        "single points wobble up and down by a few tenths. The averages over ranges, below, are steadier. A check on all 292 windows " +
+        "of the held-back text, with the shipped networks, found no gain past about 8 characters: with 33 to 64 characters read the " +
+        "loss was no lower than with 9 to 16 (differences of −0.006 ± 0.037 for the transformer and −0.008 ± 0.042 for the memory " +
+        "network; mean ± standard error). So the drop of about 0.1 in the later ranges below is within the wobble of 32 windows.";
 
     private static readonly (string Name, int From, int To)[] Bands =
         [("1", 0, 1), ("2 to 4", 1, 4), ("5 to 8", 4, 8), ("9 to 16", 8, 16), ("17 to 32", 16, 32), ("33 to 64", 32, 64)];
@@ -133,8 +153,17 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
     /// <summary>A test hook, called on the worker after each training step with the steps taken.</summary>
     public Action<int>? AfterTrainingStep { get; set; }
 
+    /// <summary>A test hook, called on a worker after a completed run, before its network is measured.</summary>
+    public Action? BeforeMeasuringTrained { get; set; }
+
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(TrainAgainCommand), nameof(GenerateSamplesCommand))]
     private bool isReady;
+
+    /// <summary>True from Train it again until its result is shown (the run and then the measurement of its network).</summary>
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(TrainAgainCommand))]
+    private bool isTraining;
+
+    private bool CanTrain => IsReady && !IsTraining;
 
     /// <summary>While loading, what is happening; if loading failed, why. Null once ready.</summary>
     [ObservableProperty] private string? loadMessage = LoadingMessage;
@@ -159,8 +188,6 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
     [ObservableProperty] private IReadOnlyList<LineSeries> memorySeries = [];
     [ObservableProperty] private IReadOnlyList<MemoryBand> memoryBands = [];
     [ObservableProperty] private string memoryFinding = "";
-    /// <summary>"Measuring…" while a curve is being measured; empty otherwise.</summary>
-    [ObservableProperty] private string memoryStatus = "";
 
     // ---- hidden ----
     /// <summary>The memory after each shown character: [characters, units]; null with no text.</summary>
@@ -190,6 +217,9 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
     /// <summary>What a completed run gave; empty before one.</summary>
     [ObservableProperty] private string trainingResult = "";
 
+    /// <summary>The memory network the lab uses now (the shipped one, or the one trained again); for tests.</summary>
+    internal ElmanRnn? CurrentNetwork => _current;
+
     /// <summary>Which memory network the hidden state, samples and curve use.</summary>
     public string MemoryNetworkName => UsingTrainedNetwork
         ? $"the memory network you trained (hidden size {MemoryTraining.RetrainHidden})"
@@ -208,6 +238,13 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
 
     partial void OnTextChanged(string value)
     {
+        if (value != null && value.Length > MaxTextLength)
+        {
+            // Cut to the cap (never through a surrogate pair); setting it again runs this method once more.
+            int keep = char.IsHighSurrogate(value[MaxTextLength - 1]) ? MaxTextLength - 1 : MaxTextLength;
+            Text = value[..keep];
+            return;
+        }
         if (_quiet) return;
         ClearSamples();
         RefreshHidden();
@@ -264,15 +301,18 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
 
     /// <summary>Trains a fresh memory network (the Retrain size) with the seed. When it completes, its validation loss and
     /// speed are shown beside the recorded ones, and it replaces the shipped network in the lab. The screens light once, at the end.</summary>
-    [RelayCommand(CanExecute = nameof(IsReady), AllowConcurrentExecutions = true)]
+    [RelayCommand(CanExecute = nameof(CanTrain), AllowConcurrentExecutions = true)]
     private async Task TrainAgainAsync()
     {
-        if (!IsReady || Runner.IsRunning) return;
+        if (!CanTrain || Runner.IsRunning) return;
         int generation = ++_trainGeneration;
+        int seed = Seed;
+        _run?.Dispose();   // never leave an older scope open: the screens would stop lighting
         _run = BeginRun();
+        IsTraining = true;
         try
         {
-            await Runner.StartAsync(Seed);
+            await Runner.StartAsync(seed);
             if (generation != _trainGeneration) return;   // Reset, a new seed or leaving the lab ended this run
             var trainer = _trainingTrainer;
             var rnn = _trainingRnn;
@@ -280,13 +320,18 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
             {
                 double seconds = Runner.Elapsed.TotalSeconds;
                 var windows = _source!.ValidationWindows;
-                var (loss, curve) = await Task.Run(() => (trainer.ValidationLoss(), ContextLoss.LossByPosition(rnn, windows)));
+                var hook = BeforeMeasuringTrained;
+                var (loss, curve) = await Task.Run(() =>
+                {
+                    hook?.Invoke();
+                    return (trainer.ValidationLoss(), ContextLoss.LossByPosition(rnn, windows));
+                });
                 if (generation != _trainGeneration) return;
                 _current = rnn;
                 UsingTrainedNetwork = true;
                 RnnLiveLoss = loss;
                 RnnLiveSpeed = seconds > 0 ? trainer.StepsTaken * (double)RnnTrainer.DefaultBatchSize * MemoryTraining.ContextLength / seconds : null;
-                TrainingResult = $"Trained for {N0(trainer.StepsTaken)} steps in {Math.Max(1, (int)Math.Round(seconds))} s. Validation loss on the same 32 windows: " +
+                TrainingResult = $"Trained again with seed {seed}, for {N0(trainer.StepsTaken)} steps in {Math.Max(1, (int)Math.Round(seconds))} s. Validation loss on the same 32 windows: " +
                     $"{NumberText.Short(loss)}. The lab now uses this network for the memory chart, the hidden state and the samples; Reset brings back the shipped one.";
                 ShowCurves(TransformerCurve, curve);
                 UpdateComparison();
@@ -299,6 +344,7 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
         {
             if (generation == _trainGeneration)
             {
+                IsTraining = false;
                 var run = _run;
                 _run = null;
                 run?.Dispose();
@@ -391,6 +437,12 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
             ErrorLog.ReportBackground(e);
             LoadMessage = "The fables text that comes with the app could not be read. Reinstalling the app puts it back.";
         }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // Anything else must not leave "Loading…" on screen for ever.
+            ErrorLog.ReportBackground(e);
+            LoadMessage = LoadFailedMessage;
+        }
     }
 
     private LanguageModel LoadShippedFables()
@@ -421,6 +473,7 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
     private IDisposable? DetachRun()
     {
         _trainGeneration++;
+        IsTraining = false;
         if (Runner.IsRunning)
         {
             Runner.Abandon();

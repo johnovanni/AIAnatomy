@@ -8,7 +8,7 @@ namespace AIAnatomy.App.Controls;
 
 /// <summary>
 /// One or two lines (such as training and validation loss). The first line is solid, the second dashed, the third
-/// dotted, so they differ without colour. The legend gives each line's latest value to 3 decimals; hovering shows the
+/// dotted, so they differ without colour. The legend gives each line's latest value to 3 decimals (see LastValueLabel); hovering shows the
 /// exact values nearest the pointer.
 /// </summary>
 public sealed class LineChart : ChartBase
@@ -25,12 +25,17 @@ public sealed class LineChart : ChartBase
     /// and a span of 20, the axis runs 0 to 20 rather than −1 to 1.</summary>
     public static readonly DependencyProperty MinXSpanProperty = Register(nameof(MinXSpan), 0.0);
 
+    /// <summary>The words before each line's last value in the legend: "latest" for a run over time; a chart whose x axis
+    /// is not time says what its last point is instead (the memory lab: "with 64 read").</summary>
+    public static readonly DependencyProperty LastValueLabelProperty = Register(nameof(LastValueLabel), "latest");
+
     public LineChart() => ToolTipService.SetInitialShowDelay(this, 200);
 
     public IReadOnlyList<LineSeries>? Series { get => (IReadOnlyList<LineSeries>?)GetValue(SeriesProperty); set => SetValue(SeriesProperty, value); }
     public string? XAxisTitle { get => (string?)GetValue(XAxisTitleProperty); set => SetValue(XAxisTitleProperty, value); }
     public string? YAxisTitle { get => (string?)GetValue(YAxisTitleProperty); set => SetValue(YAxisTitleProperty, value); }
     public double MinXSpan { get => (double)GetValue(MinXSpanProperty); set => SetValue(MinXSpanProperty, value); }
+    public string LastValueLabel { get => (string)GetValue(LastValueLabelProperty); set => SetValue(LastValueLabelProperty, value); }
 
     private IEnumerable<(double X, double Y)> AllPoints => (Series ?? []).SelectMany(s => s.Points).Where(p => double.IsFinite(p.X) && double.IsFinite(p.Y));
 
@@ -100,7 +105,7 @@ public sealed class LineChart : ChartBase
         for (int i = 0; i < series.Count; i++)
         {
             string? latest = series[i].LatestText;
-            string name = series[i].Name + (latest != null ? ": latest " : ": no points yet");
+            string name = series[i].Name + (latest != null ? $": {LastValueLabel} " : ": no points yet");
             var nameText = Text(name, LabelSize, Foreground);
             var valueText = latest != null ? Number(latest, LabelSize, Foreground, bold: true) : null;
             double itemWidth = 48 + nameText.WidthIncludingTrailingWhitespace + (valueText?.Width ?? 0) + 28;

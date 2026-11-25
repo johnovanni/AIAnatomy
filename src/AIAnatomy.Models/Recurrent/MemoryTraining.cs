@@ -39,4 +39,20 @@ public static class MemoryTraining
         var tokens = tokenizer.Encode(TextNormalizer.Normalize(fablesText));
         return new CorpusBatchSource(tokens, ContextLength, tokenizer.VocabularySize, ValidationFraction, new SeededRandom(WindowSeed));
     }
+
+    /// <summary>
+    /// Every non-overlapping window of 65 tokens in the held-back last tenth of the fables (where <see cref="FablesSource"/>
+    /// picks its 32 validation windows), in order from the start of that part: 292 windows for the shipped text. Used to
+    /// check that what the 32 windows show also holds on all the held-back text.
+    /// </summary>
+    public static IReadOnlyList<IReadOnlyList<int>> HeldBackWindows(CharTokenizer tokenizer, string fablesText)
+    {
+        ArgumentNullException.ThrowIfNull(tokenizer);
+        ArgumentNullException.ThrowIfNull(fablesText);
+        var tokens = tokenizer.Encode(TextNormalizer.Normalize(fablesText)).ToArray();
+        int window = ContextLength + 1, start = (int)Math.Floor(tokens.Length * (1 - ValidationFraction));
+        var windows = new List<IReadOnlyList<int>>();
+        for (int at = start; at + window <= tokens.Length; at += window) windows.Add(tokens[at..(at + window)]);
+        return windows;
+    }
 }

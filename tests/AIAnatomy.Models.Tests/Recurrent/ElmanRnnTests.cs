@@ -166,6 +166,24 @@ public class ElmanRnnTests
     }
 
     [Fact]
+    public void HeldBackWindows_TileTheValidationPart_AndHoldThe32ValidationWindows()
+    {
+        var fables = Fables.Model;
+        var tokens = fables.Tokenizer.Encode(TextNormalizer.Normalize(Fables.Text)).ToArray();
+        int start = (int)Math.Floor(tokens.Length * 0.9);
+        var windows = MemoryTraining.HeldBackWindows(fables.Tokenizer, Fables.Text);
+
+        Assert.Equal(292, windows.Count);
+        Assert.Equal((tokens.Length - start) / 65, windows.Count);
+        for (int w = 0; w < windows.Count; w++)
+            Assert.Equal(tokens[(start + 65 * w)..(start + 65 * w + 65)], windows[w]);
+        // The 32 validation windows come from the same held-back part (at any offset, so they may straddle two of these).
+        string held = "," + string.Join(",", tokens[start..]) + ",";
+        Assert.All(MemoryTraining.FablesSource(fables.Tokenizer, Fables.Text).ValidationWindows,
+            v => Assert.Contains("," + string.Join(",", v) + ",", held));
+    }
+
+    [Fact]
     public void LossByPosition_BothCurvesHave64Points_AndTheTransformerUsesItsContext()
     {
         var fables = Fables.Model;

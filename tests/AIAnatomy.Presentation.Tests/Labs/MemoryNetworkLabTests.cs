@@ -108,7 +108,6 @@ public sealed class MemoryNetworkLabTests : IDisposable
         Assert.Equal(lab.RnnCurve, lab.MemorySeries[1].Points.Select(p => p.Y));
         // x is the number of characters read: position t predicts character t+1 having read t+1 characters.
         Assert.Equal(Enumerable.Range(1, 64).Select(i => (double)i), lab.MemorySeries[0].Points.Select(p => p.X));
-        Assert.Equal("", lab.MemoryStatus);
     }
 
     [Fact]
@@ -123,6 +122,32 @@ public sealed class MemoryNetworkLabTests : IDisposable
         Assert.Equal(lab.RnnCurve[4..8].Average(), lab.MemoryBands[2].Memory, 1e-12);
         Assert.Contains(NumberText.Short(lab.MemoryBands[0].Transformer), lab.MemoryFinding);
         Assert.Contains(NumberText.Short(last.Memory), lab.MemoryFinding);
+    }
+
+    [Fact]
+    public void MeasuredNotes_MatchARecomputation()
+    {
+        // The paired gap on the 32 shared windows, and on all 292 held-back windows, as LossNote quotes them.
+        var shared = MemoryMeasurements.MeanAndError(MemoryMeasurements.PairedGaps(MemoryMeasurements.Shared));
+        Assert.Equal(MemoryNetworkLabViewModel.SharedLossGap, Math.Round(shared.Mean, 3));
+        Assert.Equal(MemoryNetworkLabViewModel.SharedLossGapError, Math.Round(shared.Error, 3));
+        Assert.Equal(MemoryNetworkLabViewModel.HeldBackWindowCount, MemoryMeasurements.HeldBack.Transformer.Length);
+        var held = MemoryMeasurements.MeanAndError(MemoryMeasurements.PairedGaps(MemoryMeasurements.HeldBack));
+        Assert.Equal(MemoryNetworkLabViewModel.HeldBackLossGap, Math.Round(held.Mean, 3));
+        Assert.Equal(MemoryNetworkLabViewModel.HeldBackLossGapError, Math.Round(held.Error, 3));
+        Assert.Contains("lower by 0.033 ± 0.012", MemoryNetworkLabViewModel.LossNote);
+        Assert.Contains("all 292 windows of the held-back text the gap is only 0.005 ± 0.007", MemoryNetworkLabViewModel.LossNote);
+
+        // The gain from 9-16 to 33-64 characters read on the held-back windows, as MemoryNote quotes it.
+        var transformer = MemoryMeasurements.MeanAndError(MemoryMeasurements.Gains(MemoryMeasurements.HeldBack.Transformer));
+        var memory = MemoryMeasurements.MeanAndError(MemoryMeasurements.Gains(MemoryMeasurements.HeldBack.Memory));
+        Assert.Equal(MemoryNetworkLabViewModel.HeldBackTransformerGain, Math.Round(transformer.Mean, 3));
+        Assert.Equal(MemoryNetworkLabViewModel.HeldBackTransformerGainError, Math.Round(transformer.Error, 3));
+        Assert.Equal(MemoryNetworkLabViewModel.HeldBackMemoryGain, Math.Round(memory.Mean, 3));
+        Assert.Equal(MemoryNetworkLabViewModel.HeldBackMemoryGainError, Math.Round(memory.Error, 3));
+        Assert.Contains("−0.006 ± 0.037 for the transformer and −0.008 ± 0.042 for the memory network", MemoryNetworkLabViewModel.MemoryNote);
+        // "No gain past about 8 characters": neither gain is as much as two standard errors above zero.
+        Assert.True(transformer.Mean < 2 * transformer.Error && memory.Mean < 2 * memory.Error);
     }
 
     // ---- the hidden state ----
@@ -172,6 +197,33 @@ public sealed class MemoryNetworkLabTests : IDisposable
         Assert.Equal(Row(forward.Hidden[^1], 0), Enumerable.Range(0, rnn.Config.Hidden).Select(u => lab.HiddenState[shown - 1, u]));
         Assert.Equal(Row(forward.Hidden[text.Length - shown], 0), Enumerable.Range(0, rnn.Config.Hidden).Select(u => lab.HiddenState[0, u]));
         Assert.Contains($"last {shown}", lab.HiddenCaption);
+    }
+
+    [Fact]
+    public async Task ChangingTheFirstLetter_ChangesEveryLaterRow()
+    {
+        // Try this step 3: the memory carries the first letter on, so every row after it differs.
+        var lab = await NewLab();
+        var before = lab.HiddenState!;
+        lab.Text = "Xhe Fox";
+        var after = lab.HiddenState!;
+        for (int t = 0; t < 7; t++)
+        {
+            double largest = Enumerable.Range(0, before.GetLength(1)).Max(u => Math.Abs(before[t, u] - after[t, u]));
+            Assert.True(largest > 1e-3, $"row {t} changed by at most {largest}");
+        }
+    }
+
+    [Fact]
+    public async Task Text_IsCappedAt200Characters()
+    {
+        var lab = await NewLab();
+        lab.Text = string.Concat(Enumerable.Repeat("The Fox and the Crow. ", 20));   // 440 characters
+        Assert.Equal(MemoryNetworkLabViewModel.MaxTextLength, lab.Text.Length);
+        Assert.Equal(200, MemoryNetworkLabViewModel.MaxTextLength);
+        Assert.Contains("read all 200 characters", lab.HiddenCaption);
+        lab.Text = new string('a', 199) + "\U0001F98A";   // a fox emoji: two chars, so the cut must not split it
+        Assert.Equal(199, lab.Text.Length);
     }
 
     [Fact]
@@ -258,12 +310,55 @@ public sealed class MemoryNetworkLabTests : IDisposable
         Assert.Equal(lab.RnnLiveLoss.Value, lab.RnnCurve.Average(), 1e-9);
         Assert.Equal(MemoryTraining.RetrainHidden, lab.HiddenState!.GetLength(1));
         Assert.Contains("you trained", lab.MemorySeries[1].Name);
+        Assert.StartsWith("Trained again with seed 1, for 3 steps", lab.TrainingResult);
 
         // Each changed screen lights once, at the end of the run.
         Assert.Equal(1, raised.Count(s => s == "training"));
         Assert.Equal(1, raised.Count(s => s == "compare"));
         Assert.Equal(1, raised.Count(s => s == "memory"));
         Assert.False(lab.Runner.IsRunning);
+    }
+
+    [Fact]
+    public async Task SamplesAfterTraining_UseTheTrainedNetwork()
+    {
+        var lab = await NewLab(retrainSteps: 3);
+        lab.Seed = 2;
+        await lab.TrainAgainCommand.ExecuteAsync(null);
+        await lab.GenerateSamplesCommand.ExecuteAsync(null);
+        var trained = lab.CurrentNetwork!;
+        Assert.Equal(MemoryTraining.RetrainHidden, trained.Config.Hidden);
+        var (_, tokenizer, _) = await ShippedMemory();
+        Assert.Equal(RnnSampling.Generate(trained, tokenizer, "The Fox", 200, 0.8, new SeededRandom(2)), lab.RnnSample);
+        Assert.Contains("with seed 2", lab.TrainingResult);
+    }
+
+    [Fact]
+    public async Task ASecondClick_WhileTheTrainedNetworkIsMeasured_IsIgnored_AndScreensStillLight()
+    {
+        var lab = await NewLab(retrainSteps: 2);
+        using var reached = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        lab.BeforeMeasuringTrained = () => { reached.Set(); release.Wait(); };
+        var first = lab.TrainAgainCommand.ExecuteAsync(null);
+        await Task.Run(() => reached.Wait());
+
+        // The run has ended but its network is still being measured: Train it again is off, and a click does nothing.
+        Assert.False(lab.Runner.IsRunning);
+        Assert.True(lab.IsTraining);
+        Assert.False(lab.TrainAgainCommand.CanExecute(null));
+        await lab.TrainAgainCommand.ExecuteAsync(null);
+        release.Set();
+        await first;
+        Assert.False(lab.IsTraining);
+        Assert.True(lab.TrainAgainCommand.CanExecute(null));
+        Assert.NotNull(lab.RnnLiveLoss);
+
+        // No run scope is left open: a direct action lights its screen at once.
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        lab.Text = "The Wolf";
+        Assert.Contains("hidden", raised);
     }
 
     [Fact]
@@ -331,11 +426,24 @@ public sealed class MemoryNetworkLabTests : IDisposable
     }
 
     [Fact]
-    public async Task ASeedChange_MidRun_AbandonsTheRun()
+    public async Task ASeedChange_MidRun_AbandonsTheRun_AndClearsItsProgress()
     {
-        var lab = await NewLab(retrainSteps: 5);
-        await WhileTraining(lab, () => lab.Seed = 7);
+        var lab = await NewLab(retrainSteps: 20);
+        using var reached = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        lab.AfterTrainingStep = step => { if (step == 12) { reached.Set(); release.Wait(); } };   // after the report at step 10
+        var run = lab.TrainAgainCommand.ExecuteAsync(null);
+        await Task.Run(() => reached.Wait());
+        Assert.StartsWith("Step 10 of 20", lab.TrainingStatus);
+        Assert.NotEmpty(lab.TrainingSeries);
+        lab.Seed = 7;
+        Assert.Equal("", lab.TrainingStatus);
+        Assert.Empty(lab.TrainingSeries);
+        release.Set();
+        await run;
         await lab.WorkCompleted;
+        Assert.Equal("", lab.TrainingStatus);
+        Assert.Empty(lab.TrainingSeries);
         Assert.Null(lab.RnnLiveLoss);
         Assert.False(lab.UsingTrainedNetwork);
         Assert.False(lab.Runner.IsRunning);

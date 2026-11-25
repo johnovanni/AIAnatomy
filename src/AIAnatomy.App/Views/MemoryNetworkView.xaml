@@ -71,7 +71,7 @@
                    Text="The loss at each position of the same 32 windows, measured on both networks when the lab opened. At position 1 a network has read one character; at 64 it has read 64. A curve that keeps falling means the network is using older characters." />
         <c:Screen ScreenName="memory" HorizontalAlignment="Stretch">
             <StackPanel>
-                <c:LineChart x:Name="MemoryChart" Series="{Binding MemorySeries}" XAxisTitle="characters read" YAxisTitle="loss" Height="280"
+                <c:LineChart x:Name="MemoryChart" Series="{Binding MemorySeries}" XAxisTitle="characters read" YAxisTitle="loss" Height="280" LastValueLabel="with 64 read"
                              AutomationProperties.Name="Chart of each network's loss against the number of characters read" />
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,6" Text="{x:Static labs:MemoryNetworkLabViewModel.MemoryNote}" />
                 <Grid Margin="0,0,0,2">
@@ -106,8 +106,8 @@
 
         <!-- The hidden state: the memory after each character. -->
         <TextBlock Style="{StaticResource SubheadingText}" Margin="0,12,0,4" Text="The memory, after each character" />
-        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2" Text="Your text (also the start of the samples below)" />
-        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Your text" />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2" Text="Your text, up to 200 characters (also the start of the samples below)" />
+        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MaxLength="{x:Static labs:MemoryNetworkLabViewModel.MaxTextLength}" AutomationProperties.Name="Your text, up to 200 characters" />
         <c:Screen ScreenName="hidden" HorizontalAlignment="Stretch">
             <StackPanel>
                 <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,4,0,0" c:LiveText.IsLive="True" Text="{Binding Message}"
