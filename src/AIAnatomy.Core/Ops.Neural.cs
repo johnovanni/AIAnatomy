@@ -17,6 +17,18 @@ public static partial class Ops
         });
     }
 
+    public static Tensor Tanh(Tensor a)
+    {
+        var data = new double[a.Size];
+        for (int i = 0; i < data.Length; i++) data[i] = Math.Tanh(a.Data[i]);
+        return new Tensor(data, (int[])a.Shape.Clone(), "tanh", new[] { a }, self =>
+        {
+            if (self.Grad is not { } g || !a.RequiresGrad) return;
+            var ga = a.EnsureGrad();
+            for (int i = 0; i < g.Length; i++) ga[i] += (1 - data[i] * data[i]) * g[i];
+        });
+    }
+
     /// <summary>The tanh approximation of GELU used by GPT-2: 0.5x(1 + tanh(sqrt(2/pi)(x + 0.044715x^3))).</summary>
     public static Tensor Gelu(Tensor a)
     {

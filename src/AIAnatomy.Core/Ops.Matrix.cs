@@ -178,6 +178,21 @@ public static partial class Ops
         });
     }
 
+    /// <summary>Same values in the same order under a new shape (any rank). The gradient passes straight through.</summary>
+    public static Tensor Reshape(Tensor a, params int[] shape)
+    {
+        long size = 1;
+        foreach (var d in shape) size *= d;
+        if (shape.Length == 0 || shape.Any(d => d < 1) || size != a.Size)
+            throw new ArgumentException($"reshape: cannot turn shape [{string.Join(", ", a.Shape)}] ({a.Size} values) into [{string.Join(", ", shape)}].");
+        return new Tensor((double[])a.Data.Clone(), (int[])shape.Clone(), "reshape", new[] { a }, self =>
+        {
+            if (self.Grad is not { } g || !a.RequiresGrad) return;
+            var ga = a.EnsureGrad();
+            for (int i = 0; i < g.Length; i++) ga[i] += g[i];
+        });
+    }
+
     private static void Require2D(Tensor t, string op)
     {
         if (t.Shape.Length != 2) throw new ArgumentException($"{op}: needs a 2-D tensor but got shape [{string.Join(", ", t.Shape)}].");
