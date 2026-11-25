@@ -10,15 +10,15 @@ part: rules
 ---
 An **expert system** does one narrow expert job by following if-then rules that people wrote down, usually with the help of human experts. This lab's system names an animal. Its rules say things like "if has hair then mammal" and "if mammal and eats meat then carnivore". Its **facts** start as your yes or no answers to its questions, such as whether the animal has feathers.
 
-It reaches an answer by **forward chaining**. It goes through the rules in order. When every condition of a rule holds, the rule fires and its conclusion becomes a new fact. It goes round the rules again and again until nothing new follows. A conclusion that no other rule builds on, here an animal's name, is an answer. A condition with "not", such as "not flies", holds when you did not answer yes to it.
+It reaches an answer by **forward chaining**. It goes through the rules in order. A rule fires when every condition holds and its conclusion is not known yet; its conclusion then becomes a new fact. It goes round the rules until nothing new follows. A conclusion that no other rule builds on, here an animal's name, is an answer. A condition with "not", such as "not flies", holds when you did not answer yes to it.
 
-The great strength is that **you can read why**. The trace lists each rule that fired, in order, so every step from your answers to the answer can be checked. Nothing here was learned: a person wrote every rule.
+The great strength is that **you can read why**. The trace lists each rule that fired, in order, so every step can be checked. Nothing here was learned: a person wrote every rule.
 
 The great weakness is that the rules know only what someone thought to write. Describe the bat: the rules work out that it is a mammal, then have nothing more to say, because nobody wrote a rule for a flying mammal. This is called **brittleness**. Patching it with a new rule can break a case that used to work, as Try this shows.
 
-Systems like this were built in the 1970s and 1980s for narrow jobs, and some were useful in daily work. MYCIN, described by Shortliffe (1976), used rules written with doctors' help to suggest antibiotics for serious blood infections. It was a research system; it worked backwards from possible conclusions rather than forwards, and weighed each rule by how certain it was, but its knowledge too was written by people. Outside the narrow field their rules covered, such systems had nothing to go on.
+Systems like this were built in the 1970s and 1980s for narrow jobs, and some were useful in daily work. MYCIN, described by Shortliffe (1976), used if-then rules to help doctors choose antibiotics for patients with infections, and gave each rule a measure of how certain it was. Textbooks add that it worked backwards from possible conclusions rather than forwards, and that it stayed a research system. Its knowledge too was written by people. Outside the narrow field their rules covered, such systems had nothing to go on.
 
-*Sources: Shortliffe (1976) for MYCIN; the rest is standard textbook material.*
+*Sources: Shortliffe (1976) for MYCIN's task and its rules with certainty measures; the rest is standard textbook material.*
 
 ## Try this
 1. Read the trace for the tiger: rule 1 makes it a mammal, rule 5 a carnivore and rule 10 a tiger.

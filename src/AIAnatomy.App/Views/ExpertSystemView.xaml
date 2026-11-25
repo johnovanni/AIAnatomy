@@ -105,11 +105,12 @@
                                    VerticalAlignment="Center" TextAlignment="Right" Margin="0,0,8,8" Text="{Binding Number, StringFormat={}{0}.}" />
                         <TextBox x:Name="RuleBox" Grid.Column="1" MaxLength="320" TextWrapping="Wrap" AcceptsReturn="False"
                                  Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=Explicit}"
-                                 AutomationProperties.Name="{Binding Label}"
+                                 AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding StatusText}"
                                  KeyDown="OnRuleKeyDown" LostKeyboardFocus="OnRuleLostFocus" />
                         <Button Grid.Column="2" Margin="6,0,0,8" Content="Delete" ToolTip="{Binding DeleteToolTip}"
                                 AutomationProperties.Name="{Binding DeleteToolTip}"
-                                Command="{Binding DataContext.DeleteRuleCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                                Command="{Binding DataContext.DeleteRuleCommand, ElementName=Root}" CommandParameter="{Binding}"
+                                Click="OnDeleteRuleClick" />
                         <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,4"
                                     Visibility="{Binding UnusedText, Converter={StaticResource VisibleIfSet}}">
                             <TextBlock Style="{StaticResource BodyText}" Margin="0" FontWeight="SemiBold" Text="{Binding UnusedText}" />
@@ -121,7 +122,7 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
         <WrapPanel Margin="0,4,0,0">
-            <Button Content="Add rule" Command="{Binding AddRuleCommand}" Click="OnAddRuleClick"
+            <Button x:Name="AddRuleButton" Content="Add rule" Command="{Binding AddRuleCommand}" Click="OnAddRuleClick"
                     ToolTip="Add an empty rule at the end" />
             <TextBlock Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding RuleLimitText}" />
         </WrapPanel>

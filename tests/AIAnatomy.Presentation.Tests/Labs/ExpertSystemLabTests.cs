@@ -314,6 +314,33 @@ public class ExpertSystemLabTests
     }
 
     [Fact]
+    public void StatusText_GivesNotUsedAndTheError_ForScreenReaders()
+    {
+        var lab = new ExpertSystemLabViewModel();
+        var line = lab.Rules[0];
+        Assert.Null(line.StatusText);
+        lab.CommitRule(line, "if has hair mammal");
+        Assert.Equal("Not used. Put \"then\" before the conclusion.", line.StatusText);
+        lab.CommitRule(line, "");
+        Assert.Equal("Empty, so not used.", line.StatusText);
+        var changed = new List<string?>();
+        line.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        lab.CommitRule(line, "if has hair then mammal");
+        Assert.Null(line.StatusText);
+        Assert.Contains(nameof(RuleLine.StatusText), changed);
+    }
+
+    [Theory]
+    [InlineData(0, 14, 0)]     // the first of 15 deleted: the new first line
+    [InlineData(5, 14, 5)]     // a middle one: the line that moved up into its place
+    [InlineData(14, 14, 13)]   // the last one: the line before it
+    [InlineData(0, 0, null)]   // the only one: none left (the view focuses Add rule)
+    public void FocusAfterDelete_IsTheNextLine_OrThePreviousOne(int deletedIndex, int countAfter, int? expected)
+    {
+        Assert.Equal(expected, ExpertSystemLabViewModel.FocusIndexAfterDelete(deletedIndex, countAfter));
+    }
+
+    [Fact]
     public void IsRegisteredInTheFactory()
     {
         using var env = new TestEnvironment();

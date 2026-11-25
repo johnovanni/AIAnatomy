@@ -21,8 +21,8 @@ public sealed partial class RuleLine : ObservableObject
 
     [ObservableProperty, NotifyPropertyChangedFor(nameof(Label), nameof(DeleteToolTip))] private int number;
     [ObservableProperty] private string text;
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(UnusedText))] private string? error;
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(UnusedText))] private bool isUsed;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(UnusedText), nameof(StatusText))] private string? error;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(UnusedText), nameof(StatusText))] private bool isUsed;
 
     /// <summary>"Rule 3", the box's name for a screen reader.</summary>
     public string Label => $"Rule {Number}";
@@ -32,7 +32,15 @@ public sealed partial class RuleLine : ObservableObject
     /// <summary>"Not used" in words for a line that is left out, or null for a line in use.</summary>
     public string? UnusedText => IsUsed ? null : string.IsNullOrWhiteSpace(Text) ? "Empty, so not used." : "Not used.";
 
-    partial void OnTextChanged(string value) => OnPropertyChanged(nameof(UnusedText));
+    /// <summary>What the view shows under a line that is left out, as one text for screen readers (the box's help text):
+    /// "Not used. Put "then" before the conclusion.", "Empty, so not used.", or null for a line in use.</summary>
+    public string? StatusText => UnusedText is not { } unused ? null : Error is { } error ? $"{unused} {error}" : unused;
+
+    partial void OnTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(UnusedText));
+        OnPropertyChanged(nameof(StatusText));
+    }
 }
 
 /// <summary>One yes/no question: a fact the rules use that no rule concludes. <see cref="Prompt"/> is "Has hair?".</summary>
@@ -143,6 +151,13 @@ public sealed partial class ExpertSystemLabViewModel : LabViewModel
     }
 
     private bool CanAddRule() => Rules.Count < MaxRules;
+
+    /// <summary>
+    /// Where the keyboard focus goes after a delete: the line that moved up into the deleted one's place, or the line
+    /// before it when the last line was deleted, or null when no lines are left (the view then focuses Add rule).
+    /// </summary>
+    public static int? FocusIndexAfterDelete(int deletedIndex, int countAfter) =>
+        countAfter == 0 ? null : Math.Clamp(deletedIndex, 0, countAfter - 1);
 
     /// <summary>Deletes a line; the lines after it move up a number.</summary>
     [RelayCommand]

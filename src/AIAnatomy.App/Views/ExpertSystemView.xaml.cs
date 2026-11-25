@@ -61,13 +61,28 @@ public partial class ExpertSystemView : UserControl
 
     // The new empty rule gets the keyboard focus, ready to type into (the command has run by the time this is called).
     private void OnAddRuleClick(object sender, RoutedEventArgs e) =>
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => FocusRule(RuleList.Items.Count - 1));
+
+    // Click is raised before the button's command runs, so the deleted line's place is read here; once the list has been
+    // laid out again the focus goes to the line now in that place, the one before it, or Add rule when none are left.
+    private void OnDeleteRuleClick(object sender, RoutedEventArgs e)
+    {
+        if (Lab is not { } lab || sender is not FrameworkElement { DataContext: RuleLine line }) return;
+        int index = lab.Rules.IndexOf(line);
+        if (index < 0) return;
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
         {
-            if (RuleList.Items.Count == 0) return;
-            if (RuleList.ItemContainerGenerator.ContainerFromIndex(RuleList.Items.Count - 1) is DependencyObject item
-                && Find<TextBox>(item) is { } box)
-                box.Focus();
+            if (ExpertSystemLabViewModel.FocusIndexAfterDelete(index, lab.Rules.Count) is { } next) FocusRule(next);
+            else AddRuleButton.Focus();
         });
+    }
+
+    private void FocusRule(int index)
+    {
+        if (index < 0 || index >= RuleList.Items.Count) return;
+        if (RuleList.ItemContainerGenerator.ContainerFromIndex(index) is DependencyObject item && Find<TextBox>(item) is { } box)
+            box.Focus();
+    }
 
     private static T? Find<T>(DependencyObject parent) where T : DependencyObject
     {
