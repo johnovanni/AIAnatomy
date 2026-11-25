@@ -22,7 +22,8 @@ public sealed class PlotPlaceEventArgs(double x, double y) : EventArgs
 /// The classic machine learning lab's plot (lesson 4.4): a 0 to 10 square with points of three classes, the regions a
 /// method gives each class shaded faintly in the class colour, and a decision tree's splits as lines. Classes differ in
 /// shape as well as colour: A is a circle, B a square, C a triangle, named in the legend. A click asks for a point at that
-/// place and a right-click asks to remove the nearest (the view passes both to the lab). From the keyboard the arrow keys
+/// place (a click on an existing point only moves the cross onto it) and a right-click asks to remove the nearest (the view
+/// passes both to the lab). From the keyboard the arrow keys
 /// move a cross by 0.5 (0.1 with Shift), Enter or Space adds a point there and Delete removes the nearest.
 /// </summary>
 public sealed class ClassPlot : ChartBase
@@ -74,8 +75,14 @@ public sealed class ClassPlot : ChartBase
     public event EventHandler<PlotPlaceEventArgs>? RemoveRequested;
 
     /// <summary>Where the keyboard cross is, in words (the control's help text for screen readers, and shown under the plot while focused).</summary>
-    public string CrossText =>
-        $"Cross at ({NumberText.Tick(_crossX)}, {NumberText.Tick(_crossY)}). Arrow keys move it (with Shift, in small steps); Enter adds a point there; Delete removes the nearest.";
+    public string CrossText => CrossTextFor(ClassicMlLabViewModel.DeleteText(PointList, _crossX, _crossY));
+
+    // The cross line with the given Delete part: "Cross at (5, 5). Arrow keys … Delete removes the class B point at (6.2, 7)."
+    private string CrossTextFor(string deleteText) =>
+        $"Cross at ({NumberText.Tick(_crossX)}, {NumberText.Tick(_crossY)}). Arrow keys move it (with Shift, in small steps); Enter adds a point there. {deleteText}";
+
+    // The longest the cross line can be, so its room is kept whatever it says.
+    private string LongestCrossText => CrossTextFor("Delete removes the class C point at (10.0, 10.0).");
 
     private List<LabeledPoint> PointList => Points?.OfType<LabeledPoint>().ToList() ?? [];
 
@@ -99,7 +106,7 @@ public sealed class ClassPlot : ChartBase
 
     // Room for the longer of the two lines, so the plot does not move when the keyboard arrives.
     private double ReadoutHeight(double width) =>
-        Math.Max(Text(CrossText, LabelSize, MutedBrush, maxWidth: Math.Max(50, width)).Height,
+        Math.Max(Text(LongestCrossText, LabelSize, MutedBrush, maxWidth: Math.Max(50, width)).Height,
                  Text(HintText, LabelSize, MutedBrush, maxWidth: Math.Max(50, width)).Height) + 6;
 
     private AxisFrame Frame() => Layout().Frame;
@@ -244,7 +251,9 @@ public sealed class ClassPlot : ChartBase
     {
         base.OnMouseLeftButtonDown(e);
         Focus();
-        if (TryPlace(e.GetPosition(this), out double x, out double y))
+        var at = e.GetPosition(this);
+        if (PointAt(at) is { } hit) MoveCross(hit.X, hit.Y);   // a click on a point only puts the cross on it: no second point there
+        else if (TryPlace(at, out double x, out double y))
         {
             MoveCross(x, y);
             AddRequested?.Invoke(this, new PlotPlaceEventArgs(x, y));
@@ -301,9 +310,14 @@ public sealed class ClassPlot : ChartBase
         var plot = (ClassPlot)d;
         if (e.OldValue is INotifyCollectionChanged old) old.CollectionChanged -= plot.OnCollectionChanged;
         if (e.NewValue is INotifyCollectionChanged now) now.CollectionChanged += plot.OnCollectionChanged;
+        AutomationProperties.SetHelpText(plot, plot.CrossText);
     }
 
-    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
+    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AutomationProperties.SetHelpText(this, CrossText);   // what Delete would remove may have changed
+        InvalidateVisual();
+    }
 
     private static DependencyProperty Register<T>(string name, T fallback) =>
         DependencyProperty.Register(name, typeof(T), typeof(ClassPlot), new FrameworkPropertyMetadata(fallback, Relayout));

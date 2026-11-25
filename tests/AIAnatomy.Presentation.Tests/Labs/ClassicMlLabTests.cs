@@ -107,23 +107,35 @@ public class ClassicMlLabTests
         lab.NewPointLabel = 2;
         Assert.True(lab.AddPoint(4, 8));   // class C above the class B points: the right-hand side needs a second question
         lab.Depth = 3;
-        string at = AIAnatomy.Presentation.Visuals.NumberText.Short(6.5);
-        Assert.Equal(["Is x < 3?", "  yes → class A", $"  no: Is y < {at}?", "    yes → class B", "    no → class C"], lab.Questions);
+        Assert.Equal(["Is x < 3?", "  yes → class A", "  no: Is y < 6.5?", "    yes → class B", "    no → class C"], lab.Questions);
         Assert.Equal(2, lab.SplitLines.Count);
         // The second split runs only across the right-hand side of the first: from x = 3 to the plot's edge.
         Assert.Equal((Axis.Y, 6.5, 3.0, 10.0), lab.SplitLines[1]);
     }
 
     [Fact]
-    public void Questions_UseShortNumbers()
+    public void Questions_ShowThresholdsWithoutTrailingZeros()
     {
         var lab = new ClassicMlLabViewModel();
         lab.Clear();
         lab.AddPoint(2.6, 1);
         lab.NewPointLabel = 1;
         lab.AddPoint(3.3, 1);
-        Assert.Equal("Is x < " + AIAnatomy.Presentation.Visuals.NumberText.Short((2.6 + 3.3) / 2) + "?", lab.Questions[0]);
+        Assert.Equal("Is x < 2.95?", lab.Questions[0]);
+        lab.Reset();
+        Assert.Equal("Is x < 5.05?", lab.Questions[0]);
+        Assert.Equal("  yes: Is x < 2.45?", lab.Questions[1]);
     }
+
+    [Theory]
+    [InlineData(3.0, "3")]
+    [InlineData(6.5, "6.5")]
+    [InlineData(2.9499999999999997, "2.95")]
+    [InlineData(2.9500000000000002, "2.95")]
+    [InlineData(1.875, "1.875")]
+    [InlineData(0.05, "0.05")]
+    public void ThresholdText_HasNoTrailingZeros(double value, string text) =>
+        Assert.Equal(text, ClassicMlLabViewModel.ThresholdText(value));
 
     [Fact]
     public void InNeighboursMode_ThereAreNoQuestions_AndTheNoteSaysItComparesDistances()
@@ -213,6 +225,19 @@ public class ClassicMlLabTests
     }
 
     [Fact]
+    public void DeleteText_NamesThePointDeleteWouldRemove()
+    {
+        var lab = FourPoints();
+        Assert.Equal(new LabeledPoint(4, 5, 1), ClassicMlLabViewModel.NearestWithinReach(lab.Points, 4.2, 5.1));
+        Assert.Equal("Delete removes the class B point at (4, 5).", ClassicMlLabViewModel.DeleteText(lab.Points, 4.2, 5.1));
+        Assert.Null(ClassicMlLabViewModel.NearestWithinReach(lab.Points, 3, 3));
+        Assert.Equal("No point is within reach of Delete.", ClassicMlLabViewModel.DeleteText(lab.Points, 3, 3));
+        // What Delete names is what RemoveNearest removes.
+        Assert.True(lab.RemoveNearest(4.2, 5.1));
+        Assert.DoesNotContain(new LabeledPoint(4, 5, 1), lab.Points);
+    }
+
+    [Fact]
     public void RemoveNearest_TakesTheNearestOfSeveral()
     {
         var lab = new ClassicMlLabViewModel();
@@ -272,9 +297,15 @@ public class ClassicMlLabTests
         }
         Assert.Equal(200, lab.Points.Count);
         Assert.Null(lab.Message);
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
         Assert.False(lab.AddPoint(9.9, 9.9));
         Assert.Equal(200, lab.Points.Count);
         Assert.Equal("The plot holds at most 200 points.", lab.Message);
+        Assert.Equal(["regions"], raised);   // the refusal shows on the regions screen, so it lights
+        raised.Clear();
+        Assert.False(lab.AddPoint(9.9, 9.9));
+        Assert.Empty(raised);   // the same refusal again changes nothing on screen
         Assert.True(lab.RemoveNearest(0, 0));   // room again: the message goes
         Assert.Null(lab.Message);
         Assert.True(lab.AddPoint(9.9, 9.9));

@@ -194,10 +194,12 @@ public class GraphLayoutTests
 
         Assert.Equal(map.Bubbles.Select(b => b.Id).Order(), layout.Nodes.Select(n => n.Id).Order());
         var centre = layout.Nodes.Single(n => n.Id == "centre");
-        // Near the middle: within the middle 40% each way. It was the middle third until lesson 4.4 was built (Stage 2A
-        // Task 11), which left the centre at 32.8% of the width at 13 pt (decisions.md, Task 11).
-        Assert.InRange(centre.X + centre.Width / 2, 0.3 * layout.Width, 0.7 * layout.Width);
-        Assert.InRange(centre.Y + centre.Height / 2, 0.3 * layout.Height, 0.7 * layout.Height);
+        // Near the middle: the middle third, except that the left bound is 31% of the width. A built lesson's bubble keeps
+        // room for its widest mark ("✓ checked"), so it is wider than a "later" placeholder's (at 13 pt 150 px against
+        // 115); once lesson 4.4 was built (Stage 2A Task 11) the centre sat at 32.8% of the width, just left of a third.
+        // 31% leaves 1.8 points (about 25 px) of margin (decisions.md, Task 11 review fixes).
+        Assert.InRange(centre.X + centre.Width / 2, 0.31 * layout.Width, 2 * layout.Width / 3);
+        Assert.InRange(centre.Y + centre.Height / 2, layout.Height / 3, 2 * layout.Height / 3);
     }
 
     [Fact]

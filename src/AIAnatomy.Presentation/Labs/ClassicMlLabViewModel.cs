@@ -79,7 +79,7 @@ public sealed partial class ClassicMlLabViewModel : LabViewModel
     [ObservableProperty] private IReadOnlyList<(Axis Axis, double At, double From, double To)> splitLines = [];
 
     /// <summary>The tree's questions, one line each, indented two spaces per level: "Is x < 3?", "  yes → class A",
-    /// "  no: Is y < 6.500?". Empty for nearest neighbours and for an empty plot.</summary>
+    /// "  no: Is y < 6.5?". Empty for nearest neighbours and for an empty plot.</summary>
     [ObservableProperty] private IReadOnlyList<string> questions = [];
 
     /// <summary>The line above the questions: what the tree does, or that nearest neighbours asks none.</summary>
@@ -146,7 +146,7 @@ public sealed partial class ClassicMlLabViewModel : LabViewModel
         if (Points.Count >= MaxPoints)
         {
             _refusal = FullMessage;
-            Message = FullMessage;
+            Recompute();   // shows the message, and lights the regions screen the first time
             return false;
         }
         var point = new LabeledPoint(OnPlot(x), OnPlot(y), NewPointLabel);
@@ -160,13 +160,7 @@ public sealed partial class ClassicMlLabViewModel : LabViewModel
     /// list order. False if none is that near.</summary>
     public bool RemoveNearest(double x, double y)
     {
-        int best = -1;
-        double bestSquared = RemoveRadius * RemoveRadius + 1e-12;   // a point exactly 0.3 away counts
-        for (int i = 0; i < Points.Count; i++)
-        {
-            double dx = Points[i].X - x, dy = Points[i].Y - y, d = dx * dx + dy * dy;
-            if (d < bestSquared) { best = i; bestSquared = d; }
-        }
+        int best = IndexWithinReach(Points, x, y);
         if (best < 0)
         {
             ActionText = $"No point within {NumberText.Tick(RemoveRadius)} of ({NumberText.Tick(Math.Round(x, 2))}, {NumberText.Tick(Math.Round(y, 2))}) to remove.";
@@ -178,6 +172,39 @@ public sealed partial class ClassicMlLabViewModel : LabViewModel
         Recompute();
         return true;
     }
+
+    /// <summary>The point <see cref="RemoveNearest"/> would remove at (x, y), or null when none is within reach.</summary>
+    public static LabeledPoint? NearestWithinReach(IEnumerable<LabeledPoint> points, double x, double y)
+    {
+        ArgumentNullException.ThrowIfNull(points);
+        var list = points as IReadOnlyList<LabeledPoint> ?? points.ToList();
+        int i = IndexWithinReach(list, x, y);
+        return i < 0 ? null : list[i];
+    }
+
+    /// <summary>For the keyboard cross: "Delete removes the class B point at (6.2, 7)." or "No point is within reach of Delete."</summary>
+    public static string DeleteText(IEnumerable<LabeledPoint> points, double x, double y) =>
+        NearestWithinReach(points, x, y) is { } p
+            ? $"Delete removes the class {ClassName(p.Label)} point at ({NumberText.Tick(p.X)}, {NumberText.Tick(p.Y)})."
+            : "No point is within reach of Delete.";
+
+    // The nearest point within RemoveRadius (a point exactly 0.3 away counts); equally near points go in list order.
+    private static int IndexWithinReach(IReadOnlyList<LabeledPoint> points, double x, double y)
+    {
+        int best = -1;
+        double bestSquared = RemoveRadius * RemoveRadius + 1e-12;
+        for (int i = 0; i < points.Count; i++)
+        {
+            double dx = points[i].X - x, dy = points[i].Y - y, d = dx * dx + dy * dy;
+            if (d < bestSquared) { best = i; bestSquared = d; }
+        }
+        return best;
+    }
+
+    /// <summary>A threshold in a question: rounded to three decimals with no trailing zeros ("3", "6.5", "2.95"). The lab's
+    /// own format, since <see cref="NumberText.Short"/> keeps three decimals for chart legends (AA-001).</summary>
+    public static string ThresholdText(double value) =>
+        NumberText.Tick(Math.Round(value, 3, MidpointRounding.AwayFromZero));
 
     [RelayCommand]
     public void Clear()
@@ -295,7 +322,7 @@ public sealed partial class ClassicMlLabViewModel : LabViewModel
             Message = _refusal;
         }
 
-        ReportScreen(RegionsScreen, new[] { Method.ToString(), AccuracyText }
+        ReportScreen(RegionsScreen, new[] { Method.ToString(), AccuracyText, Message ?? "" }
             .Concat(points.Select(p => $"{p.X},{p.Y},{p.Label}"))
             .Concat(SplitLines.Select(l => $"{l.Axis},{l.At},{l.From},{l.To}"))
             .Append(string.Concat(Regions.Select(r => r.Label)))
@@ -340,7 +367,7 @@ public sealed partial class ClassicMlLabViewModel : LabViewModel
         if (t >= hi) { Describe(s.Below, x0, x1, y0, y1, level, answer, lines, questions); return; }
 
         string axis = s.Axis == Axis.X ? "x" : "y";
-        string question = $"Is {axis} < {NumberText.Short(t)}?";
+        string question = $"Is {axis} < {ThresholdText(t)}?";
         questions.Add(answer.Length == 0 ? indent + question : $"{indent}{answer}: {question}");
         if (s.Axis == Axis.X)
         {

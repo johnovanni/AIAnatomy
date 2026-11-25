@@ -8,15 +8,15 @@ sources: breiman1984, coverhart1967, textbook
 idea: Classic machine learning learns from examples without gradients: a tree searches for the questions that best split them, and nearest neighbours keeps them all.
 part: classic
 ---
-Classic machine learning learns from **examples**, as neural networks do, but with no gradients: nothing is nudged little by little. The two methods in this lab are decades old and still widely used. Each point on the plot is one example, a place with its class (A, B or C), and each method learns to give every place on the plot a class.
+Classic machine learning learns from **examples**, as neural networks do, but with no gradients. The two methods in this lab are decades old and still widely used. Each point is one example, a place with its class (A, B or C), and each method learns to give every place a class.
 
-A **decision tree** asks yes-or-no questions such as "Is x < 3?". Its questions are found by **search**: the tree tries every cut on x and on y and keeps the one that leaves the two sides **purest**, measured by the Gini impurity below. It repeats this on each side until a side is pure or the depth limit is reached. This is how CART grows a tree, from Breiman, Friedman, Olshen and Stone (1984). It picks the best question one at a time, so it can miss a pair of questions that would only help together.
+A **decision tree** asks yes-or-no questions such as "Is x < 3?". Its questions are found by **search**: the tree tries every cut on x and on y and keeps the one that leaves the two sides **purest** by the Gini impurity below. It repeats this on each side until a side is pure or the depth limit is reached. This is how CART, from Breiman, Friedman, Olshen and Stone (1984), grows a tree, though CART then prunes the grown tree back; this lab just stops at a depth limit. The tree picks the best question one at a time, so it can miss a pair of questions that would only help together.
 
-**Nearest neighbours** works nothing out in advance: it keeps every example. To classify a place it finds the k stored points nearest to it and takes a vote. Cover and Hart (1967) studied the simplest case, k = 1, and showed that with unlimited examples its error rate is at most twice the lowest error rate any method could reach.
+**Nearest neighbours** works nothing out in advance: it keeps every example. To classify a place it finds the k stored points nearest to it and takes a vote. Cover and Hart (1967) analysed the simplest case, k = 1, and showed that with unlimited examples its error rate is at most twice the lowest error rate any method could reach.
 
-Both can **overfit**. A deep tree, or k = 1, gets every training point right, even odd points that sit in another class's area, by carving small regions round them. That looks perfect, but those regions would probably give new points there the wrong class. A shallower tree or a larger k gets a few training points wrong and draws smoother regions, which usually do better on examples it has not seen. The "Right on" line counts only the training points, so it cannot show this by itself.
+Both can **overfit**. A deep tree, or k = 1, gets every training point right, even odd points in another class's area, by carving small regions round them. That looks perfect, but those regions would probably misclassify new points there. A shallower tree or a larger k gets a few training points wrong and draws smoother regions, which usually do better on examples it has not seen. The "Right on" line counts only training points, so it cannot show this.
 
-*Sources: Breiman, Friedman, Olshen and Stone (1984) for growing a tree by choosing the purest split, measured by Gini impurity; Cover and Hart (1967) for the nearest neighbour rule and its error bound; the k-nearest-neighbour vote and overfitting are standard textbook material.*
+*Sources: Breiman, Friedman, Olshen and Stone (1984) for growing a tree by choosing the purest split, measured by Gini impurity, and then pruning it; Cover and Hart (1967) for analysing the nearest neighbour rule and its error bound; the k-nearest-neighbour vote and overfitting are standard textbook material.*
 
 ## Try this
 1. Move the depth slider from 3 to 10. The tree adds questions until it carves round the three odd points, and the line under the plot says it is right on all 27.
@@ -26,23 +26,23 @@ Both can **overfit**. A deep tree, or k = 1, gets every training point right, ev
 
 ## Check yourself
 ? With the depth at 10, how many of the 27 starting points does the tree get right?
-* All 27 of them
 - About half of them
+* All 27 of them
 - None, because a tree cannot carve round single points
 why: A deep tree keeps asking questions until each region holds points of only one class, so it carves round even the odd points. Set the depth to 10 and read the line under the plot.
 see: lab
 checked-by-code: ClassicMl_ADepth10TreeGetsEveryDefaultPointRight
 
 ? Why is a tree that gets every training point right not always the best tree?
-* It may have carved small regions round odd points, which would probably give new points there the wrong class
-- A deeper tree always takes longer to grow than a shallow one
-- The Gini impurity rewards mistakes on the training points
+- A deeper tree takes longer to grow, so it is too slow to use on new points
+- Gini impurity rewards mistakes, so a perfect training score means it learned badly
+* Its small regions round odd points can give new points the wrong class
 why: That is overfitting: fitting the training points so closely that the odd ones shape the regions. A shallower tree gets a few training points wrong but usually does better on points it has not seen.
 see: explanation
 
 ? How does nearest neighbours decide the class of a place?
-* It finds the k stored points nearest to that place and takes a vote
-- It asks a list of yes-or-no questions about x and y
+* It takes a vote among the k stored points nearest to it
+- It asks yes-or-no questions about x and y, like a tree
 - It adjusts weights with gradients until its loss is small
 why: Nearest neighbours keeps every example and compares distances; it asks no questions and uses no gradients.
 see: explanation
