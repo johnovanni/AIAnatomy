@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AIAnatomy.Core;
+using AIAnatomy.Models.Diffusion;
 using AIAnatomy.Models.Inspection;
 using AIAnatomy.Models.Language;
 using AIAnatomy.Models.Recurrent;
@@ -12,13 +13,15 @@ using AIAnatomy.Models.Transformers;
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- induction --out content/models/induction-demo.aimodel --seed 1 [--steps 1500]
 // Times training steps of a family network (Release, from the repository root), to choose sizes and steps:
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind memory --hidden 128 [--steps 50]
+//   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind diffusion --hidden 128 [--steps 50] [--shape Spiral]
 
 const int WarmUpSteps = 30;   // speed: untimed steps first (see TimeSteps)
 
 const string Usage =
     "Usage: pretrain fables --text <file> --out <file> --steps <n> [--seed <n>]\n" +
     "       pretrain induction --out <file> [--steps <n>] [--seed <n>]\n" +
-    "       pretrain speed --kind memory --hidden <n> [--steps <n>] [--text <file>] [--model <file>]";
+    "       pretrain speed --kind memory --hidden <n> [--steps <n>] [--text <file>] [--model <file>]\n" +
+    "       pretrain speed --kind diffusion --hidden <n> [--steps <n>] [--shape <preset>]";
 
 try
 {
@@ -112,7 +115,8 @@ static async Task<int> SpeedAsync(Dictionary<string, string> o)
     var trainer = kind switch
     {
         "memory" => await MemorySpeedTrainerAsync(o),
-        _ => throw new ArgumentException($"Unknown --kind '{kind}' (use memory).\n{Usage}"),
+        "diffusion" => DiffusionSpeedTrainer(o),
+        _ => throw new ArgumentException($"Unknown --kind '{kind}' (use memory or diffusion).\n{Usage}"),
     };
     TimeSteps(trainer.Trainer, Number(o, "steps", 50), trainer.Plans);
     trainer.AfterTiming?.Invoke();
@@ -134,6 +138,29 @@ static async Task<(ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Ac
     return (trainer,
         new[] { ("retrain", MemoryTraining.RetrainSteps), ("shipped", MemoryTraining.ShippedSteps) },
         () => Console.WriteLine($"validation loss after {trainer.StepsTaken} steps: {trainer.ValidationLoss():F3}"));
+}
+
+static (ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Action? AfterTiming) DiffusionSpeedTrainer(Dictionary<string, string> o)
+{
+    int hidden = Number(o, "hidden", 0);
+    if (hidden < 1) throw new ArgumentException("--hidden must be at least 1.");
+    string shapeName = o.TryGetValue("shape", out var n) ? n : "Spiral";
+    var preset = Shapes.Presets.FirstOrDefault(p => p.Name == shapeName);
+    if (preset.Points is null)
+        throw new ArgumentException($"Unknown --shape '{shapeName}' (use {string.Join(", ", Shapes.Presets.Select(p => p.Name))}).");
+
+    var schedule = new NoiseSchedule();
+    var net = new DiffusionNet(new DiffusionConfig(hidden), new SeededRandom(1));
+    var trainer = new DiffusionTrainer(net, schedule, preset.Points, int.MaxValue, seed: 1);
+    Console.WriteLine($"diffusion network: hidden {hidden}, {net.Config.CountParameters()} parameters, batch 128, {schedule.Steps} noise steps, shape {shapeName}");
+    return (trainer,
+        new[] { ("retrain", DiffusionTraining.RetrainSteps), ("shipped", DiffusionTraining.ShippedSteps) },
+        () =>
+        {
+            var result = DiffusionSampler.Sample(net, schedule, 1000, new SeededRandom(2))[^1];
+            var samples = Enumerable.Range(0, result.GetLength(0)).Select(i => (result[i, 0], result[i, 1])).ToList();
+            Console.WriteLine($"mean distance to the shape of 1,000 samples after {trainer.StepsTaken} steps: {Shapes.MeanDistanceToShape(samples, preset.Points):F3}");
+        });
 }
 
 static void TimeSteps(ISteppedTrainer trainer, int steps, (string Name, int Steps)[] plans)
