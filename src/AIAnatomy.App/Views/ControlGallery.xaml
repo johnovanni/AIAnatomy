@@ -132,6 +132,26 @@
                         <c:FeatureMapGrid x:Name="MapSingle" Limit="1" MapSize="280" />
                     </StackPanel>
                 </Border>
+
+                <Border Grid.Row="7" Grid.Column="0" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="DrawingPad (a sample 2 in two strokes) and the 8 by 8 image it gives" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <c:DrawingPad x:Name="Pad" VerticalAlignment="Top" />
+                            <c:FeatureMapGrid x:Name="PadImage" Grid.Column="1" Limit="1" MapSize="160" Margin="16,0,0,0" VerticalAlignment="Top" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="7" Grid.Column="1" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="DrawingPad (empty)" />
+                        <c:DrawingPad x:Name="PadEmpty" HorizontalAlignment="Left" />
+                    </StackPanel>
+                </Border>
             </Grid>
         </StackPanel>
     </ScrollViewer>

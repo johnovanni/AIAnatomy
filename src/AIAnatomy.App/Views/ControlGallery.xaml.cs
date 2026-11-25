@@ -94,6 +94,18 @@ public partial class ControlGallery : System.Windows.Controls.UserControl
         few.Insert(2, new double[0, 0]);   // an empty map is skipped; the others keep their numbers
         MapsUnlimited.Maps = few;
         MapSingle.Maps = [RingMap28()];
+
+        // A hand-made "2" in pad units: a hook running down into a diagonal, then the base as a second stroke.
+        var hook = Enumerable.Range(0, 15).Select(k =>
+        {
+            double a = Math.PI * (1.05 + 1.2 * k / 14);
+            return new System.Windows.Point(0.5 + 0.2 * Math.Cos(a), 0.33 + 0.17 * Math.Sin(a));
+        }).Append(new System.Windows.Point(0.3, 0.8)).ToArray();
+        Pad.Strokes = [hook, [new System.Windows.Point(0.28, 0.8), new System.Windows.Point(0.72, 0.79)]];
+        var image = AIAnatomy.Models.Vision.DigitImage.FromStrokes(Controls.DrawingPad.ToDigitStrokes(Pad.Strokes), 8)!;
+        var map = new double[8, 8];
+        for (int i = 0; i < 64; i++) map[i / 8, i % 8] = image[i];
+        PadImage.Maps = [map];
     }
 
     /// <summary>The page's content, measured by --render-png gallery to make the picture tall enough.</summary>
