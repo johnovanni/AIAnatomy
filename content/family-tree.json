@@ -1,0 +1,122 @@
+{
+  "nodes": [
+    {
+      "id": "root",
+      "label": "Programs that do tasks we call intelligent",
+      "parent": null,
+      "lesson": null,
+      "whatItIs": "AI is a large family of computer programs. All of them are strict computers doing exact arithmetic. They differ in where their behaviour comes from: written by a person, learned from examples, or learned from reward."
+    },
+    {
+      "id": "written",
+      "label": "Written by a person",
+      "parent": "root",
+      "lesson": null,
+      "whatItIs": "A person works out the behaviour and writes it down. The program does not change itself from data."
+    },
+    {
+      "id": "examples",
+      "label": "Learned from examples",
+      "parent": "root",
+      "lesson": null,
+      "whatItIs": "The program is shown many examples. It adjusts itself until it does well on them, then is used on new cases."
+    },
+    {
+      "id": "reward",
+      "label": "Learned from reward",
+      "parent": "root",
+      "lesson": null,
+      "whatItIs": "The program tries actions and gets a reward or a penalty. Over many tries it learns which actions pay off."
+    },
+    {
+      "id": "rules",
+      "label": "Rules",
+      "parent": "written",
+      "lesson": "expert-system",
+      "whatItIs": "An expert system. A person writes if-then rules, and the program applies them to the facts it is given.",
+      "goodAt": "Clear, checkable reasoning. You can see which rules led to an answer.",
+      "badAt": "Anything the rule writers did not think of. Rules are slow to write, and hard to keep right as they pile up.",
+      "example": "MYCIN, built in the 1970s, suggested treatments for blood infections using hundreds of rules."
+    },
+    {
+      "id": "search",
+      "label": "Search",
+      "parent": "written",
+      "lesson": "search",
+      "whatItIs": "The program tries moves ahead in its head and picks the one that leads to the best result.",
+      "goodAt": "Games and puzzles with clear rules, where looking ahead pays off.",
+      "badAt": "Problems with too many possibilities to look through, or with no clear way to score a position.",
+      "example": "Chess programs look ahead through many possible moves before choosing one."
+    },
+    {
+      "id": "classic",
+      "label": "Classic machine learning",
+      "parent": "examples",
+      "lesson": "classic-ml",
+      "whatItIs": "Simple models, such as decision trees and nearest-neighbour rules, that learn from a table of examples.",
+      "goodAt": "Small, tidy data sets. Their answers are often easy to explain.",
+      "badAt": "Raw images, sound and free text, unless a person first turns them into useful numbers.",
+      "example": "Spam filters and credit scoring have long used models of this kind."
+    },
+    {
+      "id": "neural",
+      "label": "Neural networks",
+      "parent": "examples",
+      "lesson": null,
+      "whatItIs": "Many small units joined by adjustable numbers called weights. Training changes the weights to cut the errors on the examples.",
+      "goodAt": "Patterns in images, sound and text, where it is hard to write rules by hand.",
+      "badAt": "They usually need a lot of examples and computing. It is hard to see why they give an answer.",
+      "example": "Recognising handwritten digits and recognising speech are well-known uses."
+    },
+    {
+      "id": "qlearning",
+      "label": "Q-learning",
+      "parent": "reward",
+      "lesson": "learning-by-reward",
+      "whatItIs": "The program keeps a score for each action in each situation. It updates the scores from the rewards it receives.",
+      "goodAt": "Learning a task by trial and error, when there is a clear reward and many tries are cheap.",
+      "badAt": "Slow when there are many situations or the reward comes late. Trying things in the real world can be costly or unsafe.",
+      "example": "Game-playing programs have been trained by reward to play video games and board games."
+    },
+    {
+      "id": "images",
+      "label": "Image networks",
+      "parent": "neural",
+      "lesson": "image-filters",
+      "whatItIs": "Neural networks that slide small filters over an image to find edges, then shapes, then whole objects.",
+      "goodAt": "Telling what is in a picture, such as which digit was written.",
+      "badAt": "They can fail on pictures unlike the ones they were trained on.",
+      "example": "Reading handwritten digits, as on bank cheques and postal codes."
+    },
+    {
+      "id": "memory",
+      "label": "Memory networks",
+      "parent": "neural",
+      "lesson": "memory-networks",
+      "whatItIs": "Neural networks that read a sequence one step at a time and carry a small memory from step to step.",
+      "goodAt": "Short sequences, where what came just before matters.",
+      "badAt": "The memory is small and fades, so they lose track of things from far back.",
+      "example": "Early speech and text models read one piece at a time in this way."
+    },
+    {
+      "id": "transformer",
+      "label": "Transformer",
+      "parent": "neural",
+      "lesson": "architecture-map",
+      "whatItIs": "A neural network that lets every piece of a text look at the other pieces, using attention. It is the kind inside most large language models.",
+      "goodAt": "Long text, and learning from huge amounts of it. It handles many pieces at once.",
+      "badAt": "The cost grows quickly as the text gets longer. It can give fluent answers that are wrong.",
+      "example": "Large language models, which are built from transformers. The model in this app is a tiny one."
+    },
+    {
+      "id": "diffusion",
+      "label": "Diffusion",
+      "parent": "neural",
+      "lesson": "diffusion-shapes",
+      "whatItIs": "A neural network trained to remove a little noise from data. To make something new, it starts from pure noise and removes noise step by step.",
+      "goodAt": "Making new images that look like the ones it was trained on.",
+      "badAt": "It needs many steps for each result, so it is slow. It can make details that look right but are wrong.",
+      "example": "Many image generators work this way."
+    }
+  ]
+}
