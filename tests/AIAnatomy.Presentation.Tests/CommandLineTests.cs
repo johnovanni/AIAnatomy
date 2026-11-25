@@ -275,13 +275,25 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void DiffusionStepsFive_IsARenderViewThatTakesFullLab()
+    {
+        Assert.Equal("diffusion-steps-five", DiagnosticOptions.DiffusionStepsFive);
+        var o = DiagnosticOptions.Parse(["--render-png", "diffusion-steps," + DiagnosticOptions.DiffusionStepsFive, "t.png", "--full-lab", "--width", "900"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "diffusion-steps", "diffusion-steps-five" }, o.Views);
+        Assert.True(o.FullLab);
+        Assert.Equal(900, o.Width);
+        Assert.Equal(Path.Combine("", "t-diffusion-steps-five.png"), o.OutputFileFor(DiagnosticOptions.DiffusionStepsFive));
+    }
+
+    [Fact]
     public void IsLabRenderView_IsTrueForTheLabRenderViewsOnly()
     {
         foreach (var v in new[] { "rules-vs-learning-trained", "family-tree-chosen", "expert-system-edited", "search-midgame",
                                   "search-won", "classic-ml-neighbours", "reward-trained", "memory-network-measured", "filters-learned", "digit-network-sample",
-                                  "diffusion-shapes-done" })
+                                  "diffusion-shapes-done", "diffusion-steps-five" })
             Assert.True(DiagnosticOptions.IsLabRenderView(v), v);
-        foreach (var v in new[] { "learning-by-reward", "memory-networks", "image-filters", "image-network", "diffusion-shapes", "classic-ml", "gallery", "contents", "ideamap-radial", "check-answered", "" })
+        foreach (var v in new[] { "learning-by-reward", "memory-networks", "image-filters", "image-network", "diffusion-shapes", "diffusion-steps", "classic-ml", "gallery", "contents", "ideamap-radial", "check-answered", "" })
             Assert.False(DiagnosticOptions.IsLabRenderView(v), v);
     }
 

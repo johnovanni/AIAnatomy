@@ -55,7 +55,7 @@
     { "id": "diffusion-shapes", "label": "Diffusion: shapes", "kind": "flow",
       "description": "A cloud of random points becomes a shape step by step, made by a small network that learned to take out noise: presets, your own drawing, and train it again." },
     { "id": "diffusion-steps", "label": "Diffusion: steps", "kind": "flow",
-      "description": "Inside one denoising step of the diffusion toy. Coming in a later part of the app." },
+      "description": "Inside the steps of the diffusion toy: noise added step by step, the network's guess of that noise, and what taking it out in fewer steps costs." },
     { "id": "beyond-coming", "label": "Beyond the model", "kind": "flow",
       "description": "Coming in a later stage of the app." }
   ],

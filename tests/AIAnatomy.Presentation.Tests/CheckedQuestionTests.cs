@@ -709,4 +709,40 @@ public class CheckedQuestionTests : IDisposable
         Assert.Contains("500", QuestionNaming(nameof(DiffusionShapes_ShippedSpiralIsCloseToItsShape)).Prompt);
         Assert.Contains("seed 1", QuestionNaming(nameof(DiffusionShapes_ShippedSpiralIsCloseToItsShape)).Prompt);
     }
+
+    // ---- 4.10 Diffusion: the steps ----
+
+    [Fact]
+    public async Task DiffusionSteps_FewerStepsLandFurtherFromTheShape()
+    {
+        // The shipped spiral network's 500 points with seed 1, taken out of noise in all 100 steps and in 5 (the schedule
+        // respaced, as the lab does): the 5-step points must land further from the spiral on average, by the numbers the
+        // answer quotes and the lab's result line shows.
+        SynchronizationContext.SetSynchronizationContext(null);
+        var (net, schedule, shapeName, _) = await new FamilyModels(TestEnvironment.Content).DiffusionAsync("Spiral");
+        Assert.Equal("Spiral", shapeName);
+        Assert.Equal(100, schedule.Steps);
+        var spiral = Shapes.Presets[0].Points;
+        (double Distance, double Coverage) Measure(NoiseSchedule s)
+        {
+            var last = DiffusionSampler.Sample(net, s, 500, new SeededRandom(1))[^1];
+            var points = Enumerable.Range(0, last.GetLength(0)).Select(i => (last[i, 0], last[i, 1])).ToList();
+            return (Shapes.MeanDistanceToShape(points, spiral), Shapes.Coverage(points, spiral, DiffusionStepsLabViewModel.CoverageRadius));
+        }
+        var hundred = Measure(schedule);
+        var five = Measure(schedule.Respaced(5));
+        Assert.True(five.Distance > hundred.Distance, $"5 steps: {five.Distance}; 100 steps: {hundred.Distance}");
+
+        string F3(double v) => v.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal("0.031", F3(hundred.Distance));   // as lesson 4.9's checked question
+        Assert.Equal($"Further from it: {F3(five.Distance)} on average, against {F3(hundred.Distance)}", Correct(nameof(DiffusionSteps_FewerStepsLandFurtherFromTheShape)));
+        Assert.Contains($"Average distance from the shape: {F3(five.Distance)} (lower is better).", DiffusionStepsLabViewModel.ResultFor(5, five.Distance, five.Coverage));
+        var question = QuestionNaming(nameof(DiffusionSteps_FewerStepsLandFurtherFromTheShape));
+        Assert.Contains("500", question.Prompt);
+        Assert.Contains("seed 1", question.Prompt);
+        Assert.Contains("5 steps", question.Prompt);
+        // The explanation quotes the coverage too (the share of the spiral with a point within 0.05).
+        Assert.Contains($"{Math.Round(hundred.Coverage * 100)}%", question.Why);
+        Assert.Contains($"{Math.Round(five.Coverage * 100)}%", question.Why);
+    }
 }

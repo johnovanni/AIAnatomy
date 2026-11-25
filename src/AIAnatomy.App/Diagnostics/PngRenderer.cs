@@ -117,6 +117,13 @@ public static class PngRenderer
             await diffusion.WorkCompleted;   // the shipped spiral network loaded and its cloud (seed 1) worked out
             diffusion.Step = diffusion.MaxStep;   // the finished spiral, as Play would leave it
         }
+        if (view == DiagnosticOptions.DiffusionStepsFive)
+        {
+            await viewModel.NavigateToLesson("diffusion-steps");
+            if (viewModel.CurrentLab is not DiffusionStepsLabViewModel steps) throw new InvalidOperationException("The diffusion-steps lesson did not open its lab.");
+            await steps.WorkCompleted;   // the shipped spiral network loaded and its 100-step run (seed 1) worked out
+            await steps.ChooseStepsAsync(5);   // then 5 steps, shown at the finished cloud
+        }
         // A lab render view has already opened its lesson and set up its lab above.
         var map = DiagnosticOptions.IsLabRenderView(view) ? null : Show(window, viewModel, services, view);
 

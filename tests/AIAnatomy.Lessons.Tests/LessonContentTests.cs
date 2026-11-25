@@ -20,7 +20,6 @@ public class LessonContentTests
     private static readonly string[] StillComingLater =
     [
         "beyond-coming",
-        "diffusion-steps",
     ];
 
     [Fact]

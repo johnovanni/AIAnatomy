@@ -6,7 +6,7 @@ public enum DiagnosticMode { Normal, RenderPng, SelfTest }
 
 /// <summary>
 /// The app's command line, for checks and diagnostics only:
-/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning|ideamap-radial-progress|rules-vs-learning-trained|family-tree-chosen|expert-system-edited|search-midgame|search-won|classic-ml-neighbours|reward-trained|memory-network-measured|filters-learned|digit-network-sample|diffusion-shapes-done|check-answered|check-skipped|branch-anchor|settings-reset-question&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
+/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning|ideamap-radial-progress|rules-vs-learning-trained|family-tree-chosen|expert-system-edited|search-midgame|search-won|classic-ml-neighbours|reward-trained|memory-network-measured|filters-learned|digit-network-sample|diffusion-shapes-done|diffusion-steps-five|check-answered|check-skipped|branch-anchor|settings-reset-question&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
 /// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 13 pt unless
 /// told otherwise, so pictures do not depend on the user's own settings. Several views may be given as
 /// <c>gallery,sources,settings</c>; each then goes to "file-view.png". <c>--full-lab</c> (lesson ids only) draws the lab
@@ -81,11 +81,14 @@ public sealed record DiagnosticOptions(
     /// <summary>The diffusion lesson with the shipped spiral network's cloud (seed 1) at its last step, so the finished spiral
     /// shows (the lab opens at step 0; a render cannot press Play).</summary>
     public const string DiffusionShapesDone = "diffusion-shapes-done";
+    /// <summary>The diffusion-steps lesson with the shipped spiral taken out of noise in 5 steps (seed 1), shown at the
+    /// finished cloud, after the 100-step run it opens with, so both are listed.</summary>
+    public const string DiffusionStepsFive = "diffusion-steps-five";
     /// <summary>Whether the view is one of the lab render views above, each a lesson whose lab is set up first.</summary>
     public static bool IsLabRenderView(string v) =>
         v is RulesVsLearningTrained or FamilyTreeChosen or ExpertSystemEdited or SearchMidgame or SearchWon
             or ClassicMlNeighbours or RewardTrained or MemoryNetworkMeasured or FiltersLearned or DigitNetworkSample
-            or DiffusionShapesDone;
+            or DiffusionShapesDone or DiffusionStepsFive;
     public const string AllLabsTest = "all-labs";
     public const string TrainTest = "train";
 

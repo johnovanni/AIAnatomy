@@ -51,6 +51,7 @@ public sealed class LabFactory
         Register(FiltersLabViewModel.Id, () => new FiltersLabViewModel(Family));
         Register(DigitNetworkLabViewModel.Id, () => new DigitNetworkLabViewModel(Family));
         Register(DiffusionShapesLabViewModel.Id, () => new DiffusionShapesLabViewModel(Family));
+        Register(DiffusionStepsLabViewModel.Id, () => new DiffusionStepsLabViewModel(Family));
         Register(MemoryNetworkLabViewModel.Id, () => new MemoryNetworkLabViewModel(Family, models, () => fables.Value));
         TrainLabViewModel? train = null;
         Register(TrainLabViewModel.Id, () => train ??= new TrainLabViewModel(models, () => fables.Value, libraryChanged));

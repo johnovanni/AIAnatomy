@@ -103,6 +103,24 @@ public class LiveTextXamlTests
         Assert.False(bound["{Binding Message}"], "The message beside the pad repeats the prediction line, so it should not be live.");
     }
 
+    /// <summary>Lesson 4.10: the lines that follow a slider (the forward step, its prediction error, the frame of a run)
+    /// change at every tick, so they are not live; the result of a run, which changes only when the learner picks a number
+    /// of steps or a seed, is.</summary>
+    [Fact]
+    public void DiffusionStepsView_AnnouncesResults_NotSliderTicks()
+    {
+        var doc = XDocument.Load(Path.Combine(ViewsFolder(), "DiffusionStepsView.xaml"));
+        XName live = XName.Get("LiveText.IsLive", "clr-namespace:AIAnatomy.App.Controls");
+        var bound = doc.Descendants(Wpf + "TextBlock")
+            .Where(t => ((string?)t.Attribute("Text"))?.StartsWith("{Binding", StringComparison.Ordinal) == true)
+            .ToDictionary(t => (string)t.Attribute("Text")!, t => (string?)t.Attribute(live) == "True");
+        Assert.True(bound["{Binding ResultText}"], "The result line should be live.");
+        Assert.False(bound["{Binding ForwardText}"], "The forward step line follows a slider.");
+        Assert.False(bound["{Binding PredictionText}"], "The prediction error follows the forward slider.");
+        Assert.False(bound["{Binding FrameText}"], "The frame line follows a slider.");
+        Assert.False(bound["{Binding MeasuredText}"], "The list of runs repeats the result line's numbers.");
+    }
+
     [Fact]
     public void LiveTextRaisesOnlyWhenTheTextChanges()
     {

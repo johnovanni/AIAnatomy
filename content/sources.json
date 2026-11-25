@@ -163,5 +163,10 @@
     "id": "sohldickstein2015",
     "citation": "Sohl-Dickstein, J., Weiss, E. A., Maheswaranathan, N., and Ganguli, S. (2015). Deep Unsupervised Learning using Nonequilibrium Thermodynamics. Proceedings of the 32nd International Conference on Machine Learning (ICML 2015), PMLR 37, 2256-2265.",
     "url": "https://arxiv.org/abs/1503.03585"
+  },
+  {
+    "id": "nichol2021",
+    "citation": "Nichol, A. Q., and Dhariwal, P. (2021). Improved Denoising Diffusion Probabilistic Models. Proceedings of the 38th International Conference on Machine Learning (ICML 2021), PMLR 139, 8162-8171.",
+    "url": "https://arxiv.org/abs/2102.09672"
   }
 ]

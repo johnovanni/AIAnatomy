@@ -141,7 +141,7 @@ public class LessonCatalogTests
     public void Placeholders_AreMarked()
     {
         var catalog = LessonCatalog.Load(Content);
-        Assert.True(catalog.Get("diffusion-steps").IsPlaceholder);   // a Part B lesson
+        Assert.False(catalog.Get("diffusion-steps").IsPlaceholder);   // the last Part B lesson, built in Stage 2B Task 17
         Assert.False(catalog.Get("family-tree").IsPlaceholder);
         Assert.True(catalog.Get("beyond-coming").IsPlaceholder);
         Assert.False(catalog.Get("attention").IsPlaceholder);
@@ -198,7 +198,7 @@ public class LessonCatalogTests
     {
         var catalog = LessonCatalog.Load(Content);
         var sources = SourceList.Load(Path.Combine(Content, "sources.json"));
-        Assert.Equal(33, sources.All.Count);   // rombach2022 added in the final review (M7), shortliffe1976 in Stage 2A Task 7, shannon1950 in Task 9, breiman1984 and coverhart1967 in Task 11, watkins1992 and schultz1997 in Task 13; elman1990, bengio1994 and hochreiter1997 in Stage 2B Task 15, alpaydin1998 in Task 13, sohldickstein2015 in Task 16
+        Assert.Equal(34, sources.All.Count);   // rombach2022 added in the final review (M7), shortliffe1976 in Stage 2A Task 7, shannon1950 in Task 9, breiman1984 and coverhart1967 in Task 11, watkins1992 and schultz1997 in Task 13; elman1990, bengio1994 and hochreiter1997 in Stage 2B Task 15, alpaydin1998 in Task 13, sohldickstein2015 in Task 16, nichol2021 in Task 17
         foreach (var lesson in catalog.All)
             foreach (var id in lesson.SourceIds)
                 Assert.NotNull(sources.Find(id));

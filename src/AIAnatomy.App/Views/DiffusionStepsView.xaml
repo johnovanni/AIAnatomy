@@ -1,0 +1,132 @@
+<UserControl x:Class="AIAnatomy.App.Views.DiffusionStepsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views"
+             xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation"
+             x:Name="Root">
+    <!-- DataContext: DiffusionStepsLabViewModel. Live lines: the load message, the run's note and its result. The lines
+         that follow a slider (the forward step, the prediction error, the frame) are not live, so a slider moved one tick at
+         a time is not read out at every tick. -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+        <BooleanToVisibilityConverter x:Key="VisibleIfTrue" />
+        <v:PointListConverter x:Key="ToPoints" />
+        <v:ArrowListConverter x:Key="ToArrows" />
+    </UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="Inside the steps of the diffusion toy, with the shipped spiral network from the last lesson: noise added to the spiral step by step, the network's guess of that noise, and taking the noise out again with fewer, bigger steps." />
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,4,0,6" TextWrapping="Wrap"
+                   c:LiveText.IsLive="True" Text="{Binding LoadMessage}"
+                   Visibility="{Binding LoadMessage, Converter={StaticResource VisibleIfSet}}" />
+        <WrapPanel Margin="0,4,0,4">
+            <TextBlock Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="0,0,8,0" Text="Seed (for the noise in all three parts)" />
+            <TextBox MinWidth="110" VerticalAlignment="Center" Text="{Binding Seed, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Seed" />
+        </WrapPanel>
+
+        <!-- 1. Forward: noise added step by step. -->
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,12,0,4" Text="1. Adding noise, step by step" />
+        <!-- The label sits above the slider, so at a large text size in a narrow pane the slider keeps its width; the slider
+             stretches with the pane, up to 520. -->
+        <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,2" Text="Noise step t" />
+        <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="160" MaxWidth="520" />
+            </Grid.ColumnDefinitions>
+            <Slider MinWidth="160" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                    Minimum="0" Maximum="{Binding MaxForwardStep}" SmallChange="1" LargeChange="10" TickFrequency="1" IsSnapToTickEnabled="True"
+                    Value="{Binding ForwardStep, Mode=TwoWay}" AutomationProperties.Name="Noise step t, from 0 (the shape itself) to 100 (almost pure noise)"
+                    ToolTip="How many steps of noise to add: the arrow keys move one step, Page Up and Page Down ten" />
+        </Grid>
+        <c:Screen ScreenName="forward" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,0,0,6" TextWrapping="Wrap" Text="{Binding ForwardText}" />
+                <c:PointCloudPlot MaxWidth="600" PreferredPlotSide="600" AxisLimit="2" HorizontalAlignment="Stretch"
+                                  Points="{Binding ForwardPoints, Converter={StaticResource ToPoints}}"
+                                  TargetPoints="{Binding TargetPoints, Converter={StaticResource ToPoints}}"
+                                  PointsLabel="points after t steps of noise" TargetLabel="the spiral"
+                                  AutomationProperties.Name="The spiral's points after t steps of noise" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,8"
+                           Text="The spiral's 1,000 points after t steps of noise, made in one jump with the lesson's formula. Each point keeps the same noise at every step; only its share grows. The plot runs from −2 to 2 each way and stays the same at every step; points beyond it are counted in the line under the plot." />
+                <c:LineChart Series="{Binding ScheduleSeries}" XAxisTitle="step t" YAxisTitle="value" LastValueLabel="ends at"
+                             AutomationProperties.Name="Chart of the noise schedule: alpha bar, how much of the shape is left, and beta, the noise each step adds, with the step shown marked" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0"
+                           Text="ᾱ (alpha bar) falls from 1, all of the shape, to 0.006 at step 100. β (beta), the noise each step adds, rises in a straight line from 0.0001 to 0.1. The dotted line, t, marks the step shown and rises from the axis to ᾱ there; the legend gives the value each line ends at." />
+            </StackPanel>
+        </c:Screen>
+
+        <!-- 2. Prediction: the network's guess of the noise, at the same step. -->
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,16,0,4" Text="2. The network's guess of the noise" />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6"
+                   Text="At the same step t, the network is shown each noisy point and t, and guesses the noise that was added. For 20 marked points (large circles), two arrows start at the point and show the noise as it is, its x and y, not scaled: solid with open heads for the noise really added, dashed with filled heads for the network's guess. The closer the two arrows, the better the guess." />
+        <c:Screen ScreenName="prediction" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <c:PointCloudPlot MaxWidth="600" PreferredPlotSide="600" AxisLimit="2" HorizontalAlignment="Stretch"
+                                  Points="{Binding ForwardPoints, Converter={StaticResource ToPoints}}"
+                                  TargetPoints="{Binding TargetPoints, Converter={StaticResource ToPoints}}"
+                                  HighlightIndices="{Binding MarkedIndices}"
+                                  Arrows="{Binding TrueNoiseArrows, Converter={StaticResource ToArrows}}"
+                                  SecondaryArrows="{Binding PredictedNoiseArrows, Converter={StaticResource ToArrows}}"
+                                  PointsLabel="noisy points" TargetLabel="the spiral" HighlightLabel="marked points"
+                                  ArrowsLabel="noise really added" SecondaryArrowsLabel="the network's guess"
+                                  AutomationProperties.Name="The noisy points with arrows for the true and the guessed noise of 20 marked points" />
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,6,0,0" TextWrapping="Wrap" Text="{Binding PredictionText}" />
+            </StackPanel>
+        </c:Screen>
+
+        <!-- 3. Reverse: taking the noise out, with 100 steps or fewer. -->
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,16,0,4" Text="3. Taking the noise out, with fewer steps" />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6"
+                   Text="Starting from 500 random points, each step takes away a share of the guessed noise and, at every step but the last, adds some fresh randomness. Fewer steps means bigger jumps through the same schedule, with the same network." />
+        <WrapPanel Margin="0,0,0,4">
+            <TextBlock Style="{StaticResource BodyText}" VerticalAlignment="Center" Margin="0,0,8,6" Text="Take the noise out in" />
+            <ItemsControl ItemsSource="{x:Static labs:DiffusionStepsLabViewModel.StepChoices}" Focusable="False" AutomationProperties.Name="Numbers of steps">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource Chip}" Content="{Binding StringFormat='{}{0} steps'}"
+                                Command="{Binding DataContext.ChooseStepsCommand, ElementName=Root}" CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding StringFormat='Take the noise out in {0} steps'}"
+                                ToolTip="{Binding StringFormat='Make 500 points from pure noise in {0} steps, and measure them'}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </WrapPanel>
+        <c:Screen ScreenName="reverse" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,0,0,6" TextWrapping="Wrap"
+                           c:LiveText.IsLive="True" Text="{Binding ReverseNote}"
+                           Visibility="{Binding ReverseNote, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,4" Text="{Binding JumpText}" />
+                <StackPanel Visibility="{Binding HasRun, Converter={StaticResource VisibleIfTrue}}">
+                    <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,2" Text="Step of this run" />
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="160" MaxWidth="520" />
+                        </Grid.ColumnDefinitions>
+                        <Slider MinWidth="160" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                Minimum="0" Maximum="{Binding MaxFrame}" SmallChange="1" LargeChange="10" TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding Frame, Mode=TwoWay}" AutomationProperties.Name="Step of this run, from 0 (pure noise) to the last (the finished cloud)"
+                                ToolTip="Which step of the run to show: the arrow keys move one step, Page Up and Page Down ten" />
+                    </Grid>
+                    <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,0,0,6" TextWrapping="Wrap" Text="{Binding FrameText}" />
+                </StackPanel>
+                <c:PointCloudPlot MaxWidth="600" PreferredPlotSide="600" AxisLimit="2" HorizontalAlignment="Stretch"
+                                  Points="{Binding CurrentPoints, Converter={StaticResource ToPoints}}"
+                                  TargetPoints="{Binding TargetPoints, Converter={StaticResource ToPoints}}"
+                                  PointsLabel="points of the cloud" TargetLabel="the spiral"
+                                  AutomationProperties.Name="The cloud of points at the step of the run shown, and the spiral" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0"
+                           Text="The plot runs from −2 to 2 each way at every step; the starting noise spreads wider, and the line under the plot counts the points beyond it." />
+                <TextBlock Style="{StaticResource SubheadingText}" Margin="0,8,0,2" TextWrapping="Wrap" c:LiveText.IsLive="True" Text="{Binding ResultText}"
+                           Visibility="{Binding ResultText, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6"
+                           Text="Average distance: for every point of the finished cloud, the distance to the nearest point of the spiral, averaged over all 500. Shape covered: the share of the spiral's points that have a cloud point within 0.05, so points bunched on part of the spiral score low here even when they are close to it."
+                           Visibility="{Binding ResultText, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,2,0,0" Text="{Binding MeasuredText}"
+                           Visibility="{Binding MeasuredText, Converter={StaticResource VisibleIfSet}}" />
+            </StackPanel>
+        </c:Screen>
+    </StackPanel>
+</UserControl>
