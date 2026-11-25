@@ -20,6 +20,29 @@ public partial class DigitNetworkView : UserControl
         InitializeComponent();
         Pad.StrokesChanged += OnStrokesChanged;
         DataContextChanged += OnDataContextChanged;
+        PadRow.SizeChanged += (_, _) => PlacePadText();
+        Pad.SizeChanged += (_, _) => PlacePadText();
+    }
+
+    /// <summary>The narrowest the text beside the pad may be, in font sizes (about 30 characters a line).</summary>
+    internal const double MinTextWidthInFonts = 16;
+
+    /// <summary>
+    /// Puts the pad's text beside the pad when the column left over is at least <see cref="MinTextWidthInFonts"/> font sizes
+    /// wide, and otherwise below it at the full width, so a large text size in a narrow pane never leaves a sliver of text.
+    /// The width is set explicitly because a WrapPanel gives its children unlimited width, so text would never wrap.
+    /// </summary>
+    private void PlacePadText()
+    {
+        double room = PadRow.ActualWidth;
+        if (!(room > 0)) return;
+        const double gap = 16;
+        double beside = Math.Floor(room - Pad.ActualWidth - gap - 1);
+        bool fits = beside >= MinTextWidthInFonts * FontSize;
+        double width = fits ? beside : Math.Floor(room - 1);
+        var margin = fits ? new Thickness(gap, 0, 0, 0) : new Thickness(0, 8, 0, 0);
+        if (!PadText.Width.Equals(width)) PadText.Width = width;
+        if (PadText.Margin != margin) PadText.Margin = margin;
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)

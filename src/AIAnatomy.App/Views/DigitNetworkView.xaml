@@ -35,23 +35,21 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </WrapPanel>
-        <Grid Margin="0,2,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <!-- The text sits beside the pad when there is room for a readable column (code-behind), otherwise below it. -->
+        <WrapPanel x:Name="PadRow" Margin="0,2,0,0">
             <c:DrawingPad x:Name="Pad" VerticalAlignment="Top" />
-            <StackPanel Grid.Column="1" Margin="16,0,0,0">
+            <StackPanel x:Name="PadText" Margin="16,0,0,0">
                 <TextBlock Style="{StaticResource BodyText}"
                            Text="Or draw a digit on the pad with the mouse or a pen. The network only knows the coarse 8 by 8 digits it was trained on, so your drawing is first made into the same kind of 8 by 8 picture, then read as soon as each stroke ends." />
                 <Button Style="{StaticResource Chip}" Content="Clear the pad" Click="OnClearPad" HorizontalAlignment="Left" Margin="0,8,0,6"
                         ToolTip="Empty the pad" />
-                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" c:LiveText.IsLive="True" Text="{Binding Message}"
+                <!-- Not live: the prediction line below carries the same words and is the one announced. -->
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Message}"
                            Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,6,0,0"
                            Text="It makes mistakes, most of all on drawings unlike the training digits, such as a strongly slanted digit, extra marks, or a digit written in an unusual way." />
             </StackPanel>
-        </Grid>
+        </WrapPanel>
 
         <!-- What it reads: the prediction and the ten probabilities. -->
         <TextBlock Style="{StaticResource SubheadingText}" Margin="0,12,0,4" Text="What it reads" />

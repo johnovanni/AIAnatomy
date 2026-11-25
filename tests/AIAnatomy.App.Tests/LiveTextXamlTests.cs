@@ -88,6 +88,21 @@ public class LiveTextXamlTests
             $"{file} should have {expected} c:LiveText.IsLive=\"True\" result lines.");
     }
 
+    /// <summary>Lesson 4.7: with an empty pad or a dot, the lab's Message and PredictionText hold the same words, so only the
+    /// prediction line may be live; the copy next to the pad is shown but not announced, so a screen reader says it once.</summary>
+    [Fact]
+    public void DigitNetworkView_AnnouncesTheNotADigitMessageOnce()
+    {
+        var doc = XDocument.Load(Path.Combine(ViewsFolder(), "DigitNetworkView.xaml"));
+        XName live = XName.Get("LiveText.IsLive", "clr-namespace:AIAnatomy.App.Controls");
+        var bound = doc.Descendants(Wpf + "TextBlock")
+            .Where(t => (string?)t.Attribute("Text") is "{Binding Message}" or "{Binding PredictionText}")
+            .ToDictionary(t => (string)t.Attribute("Text")!, t => (string?)t.Attribute(live) == "True");
+        Assert.Equal(2, bound.Count);
+        Assert.True(bound["{Binding PredictionText}"], "The prediction line should be live.");
+        Assert.False(bound["{Binding Message}"], "The message beside the pad repeats the prediction line, so it should not be live.");
+    }
+
     [Fact]
     public void LiveTextRaisesOnlyWhenTheTextChanges()
     {

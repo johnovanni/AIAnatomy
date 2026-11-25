@@ -183,6 +183,19 @@ public class LessonContentTests
         }
     }
 
+    /// <summary>Lesson 4.7 (review fix): LeCun et al. (1998, section II.B) describe each subsampling unit as adding its four
+    /// inputs and multiplying by a trained coefficient (then a bias and a sigmoid), so the lesson says that, and says nothing about averaging.</summary>
+    [Fact]
+    public void ImageNetwork_DescribesLeNetsShrinkingStepAsAddedAndScaled()
+    {
+        var lesson = Catalog.Get("image-network");
+        string text = AllText(lesson);
+        Assert.Contains("LeCun's network added up each 2 by 2 block and scaled it by a learned number", text);
+        Assert.DoesNotContain("averaging", text, StringComparison.OrdinalIgnoreCase);
+        var why = lesson.Questions.Select(q => q.Why ?? "").ToList();
+        Assert.DoesNotContain(why, w => w.Contains("averaging", StringComparison.OrdinalIgnoreCase));   // "the average" of the distractor is fine
+    }
+
     private static string Describe(Lesson l) => $"{l.Id} ({WordCount(l.Explanation)})";
 
     private static string FirstAuthor(string citation)

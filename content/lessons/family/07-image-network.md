@@ -10,11 +10,11 @@ part: vision
 ---
 The lab's network reads a digit in stages, following the pattern LeCun and colleagues (1998) described for reading handwritten digits: layers of learned filters, each followed by a step that shrinks the maps, then fully connected layers.
 
-**Layer 1** has 16 learned 3 by 3 filters, like those in the last lesson. Each makes its own **feature map** of the 8 by 8 picture; its bias is added and every number below zero is set to 0. **Max pooling** then keeps only the largest number in each 2 by 2 block, so each map becomes 4 by 4: the network keeps how strongly a pattern was found and loses a little of exactly where. (LeCun's network shrank its maps by averaging; keeping the largest is a common later choice.)
+**Layer 1** has 16 learned 3 by 3 filters, like those in the last lesson. Each makes its own **feature map** of the 8 by 8 picture; its bias is added and every number below zero is set to 0. **Max pooling** then keeps only the largest number in each 2 by 2 block, so each map becomes 4 by 4: the network keeps how strongly a pattern was found and loses a little of exactly where. (LeCun's network added up each 2 by 2 block and scaled it by a learned number instead.)
 
 **Layer 2** has 32 filters, each reading all 16 pooled maps at once, so it can respond to combinations of the first layer's patterns. Pooling again leaves 32 maps of 2 by 2: 128 numbers. A **fully connected layer** mixes all 128 into 128 new numbers, and a last layer gives one score for each digit from 0 to 9. **Softmax** turns the scores into probabilities, as it does for a transformer's next character. Training on 3,760 digits set all 22,602 numbers; nobody chose them by hand.
 
-The digits come from Alpaydin and Kaynak (1998). They are coarse: each pixel is the ink counted in a 4 by 4 block of a 32 by 32 picture. The network has only ever seen pictures like these, which is why your drawing is first made into the same kind of 8 by 8 picture, scaled and centred like the training digits. It is right on about 98 of every 100 test digits, but it still makes mistakes, and more of them on drawings unlike the ones it learned from.
+The digits come from Alpaydin and Kaynak (1998). They are coarse: each pixel is the ink counted in a 4 by 4 block of a 32 by 32 picture. The network has only ever seen pictures like these, which is why your drawing is first made into the same kind of 8 by 8 picture, scaled and centred like the training digits. It is right on about 98% of the test digits, but it still makes mistakes, and more of them on drawings unlike the ones it learned from.
 
 *Sources: LeCun et al. (1998) for networks of learned filters, shrinking steps and fully connected layers that read handwritten digits; Alpaydin and Kaynak (1998) for the digits (the UCI optical digits). Max pooling, fully connected layers and softmax are standard textbook material.*
 
@@ -37,7 +37,7 @@ checked-by-code: DigitNetwork_ShippedAccuracyOnTheTestDigits
 - 0.475, the average of the four numbers
 - 1.9, the sum of all four of the numbers
 * 1.2, the largest of the four numbers
-why: Max pooling keeps only the largest number in each 2 by 2 block, so an 8 by 8 map becomes 4 by 4. Averaging is another way to shrink a map, but it is not what this network does.
+why: Max pooling keeps only the largest number in each 2 by 2 block, so an 8 by 8 map becomes 4 by 4. The average and the sum use all four numbers; max pooling keeps just one of them.
 see: explanation
 
 ? Why is your drawing made into a coarse 8 by 8 picture before the network reads it?
