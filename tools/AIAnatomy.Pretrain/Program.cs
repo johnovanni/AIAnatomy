@@ -6,6 +6,7 @@ using AIAnatomy.Models.Language;
 using AIAnatomy.Models.Recurrent;
 using AIAnatomy.Models.Tokenization;
 using AIAnatomy.Models.Training;
+using AIAnatomy.Models.Vision;
 using AIAnatomy.Models.Transformers;
 
 // Builds the two models that ship with the app. Run in Release (about 120 ms per step):
@@ -14,6 +15,9 @@ using AIAnatomy.Models.Transformers;
 // Builds the family networks that ship in content/models/family (Release; the memory network takes about 5 minutes, each diffusion network about 4):
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- memory --text content/texts/aesop-fables.txt --model content/models/fables-small.aimodel --out content/models/family/memory.aimodel --seed 1
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- diffusion --shape Spiral --out content/models/family/diffusion-spiral.aimodel --seed 1
+// Builds the handwritten-digits subsets in content/data/digits from the UCI optdigits files (kept outside the repository):
+//   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- digits-subset --uci <optdigits.tra> --out content/data/digits/digits-train.bin.gz
+//   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- digits-subset --uci <optdigits.tes> --out content/data/digits/digits-test.bin.gz
 // Times training steps of a family network (Release, from the repository root), to choose sizes and steps:
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind memory --hidden 128 [--steps 50]
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind diffusion --hidden 128 [--steps 50] [--shape Spiral]
@@ -25,6 +29,7 @@ const string Usage =
     "       pretrain induction --out <file> [--steps <n>] [--seed <n>]\n" +
     "       pretrain memory --text <file> --model <fables file> --out <file> [--steps <n>] [--seed <n>]\n" +
     "       pretrain diffusion --shape <preset> --out <file> [--steps <n>] [--seed <n>]\n" +
+    "       pretrain digits-subset --uci <optdigits.tra or .tes> --out <file>\n" +
     "       pretrain speed --kind memory --hidden <n> [--steps <n>] [--text <file>] [--model <file>]\n" +
     "       pretrain speed --kind diffusion --hidden <n> [--steps <n>] [--shape <preset>]";
 
@@ -38,6 +43,7 @@ try
         "induction" => await TrainInductionAsync(options),
         "memory" => await TrainMemoryAsync(options),
         "diffusion" => TrainDiffusion(options),
+        "digits-subset" => DigitsSubset(options),
         "speed" => await SpeedAsync(options),
         _ => Fail(Usage),
     };
@@ -69,6 +75,45 @@ static string Required(Dictionary<string, string> o, string key)
 
 static int Number(Dictionary<string, string> o, string key, int fallback)
     => o.TryGetValue(key, out var v) ? int.Parse(v) : fallback;
+
+// UCI "Optical Recognition of Handwritten Digits" (optdigits.tra / optdigits.tes): one row per image, 64 comma-separated
+// values 0-16 (8x8, row by row) then the label 0-9. Takes the first N images of each digit in file order, where N is the
+// smallest per-digit count in the file, so the subset is exactly balanced and deterministic. Values are scaled to 0-255
+// as round(v * 255 / 16).
+static int DigitsSubset(Dictionary<string, string> o)
+{
+    string input = Required(o, "uci");
+    string outPath = Required(o, "out");
+    const int Size = 8, Pixels = Size * Size;
+    var perDigit = Enumerable.Range(0, 10).Select(_ => new List<byte[]>()).ToArray();
+    int lineNumber = 0;
+    foreach (string line in File.ReadLines(input))
+    {
+        lineNumber++;
+        if (line.Trim().Length == 0) continue;
+        var parts = line.Split(',');
+        if (parts.Length != Pixels + 1) throw new InvalidDataException($"'{Path.GetFileName(input)}' line {lineNumber}: expected {Pixels + 1} values, found {parts.Length}.");
+        int label = int.Parse(parts[Pixels]);
+        if (label is < 0 or > 9) throw new InvalidDataException($"'{Path.GetFileName(input)}' line {lineNumber}: label {label} is outside 0-9.");
+        var pixels = new byte[Pixels];
+        for (int i = 0; i < Pixels; i++)
+        {
+            int v = int.Parse(parts[i]);
+            if (v is < 0 or > 16) throw new InvalidDataException($"'{Path.GetFileName(input)}' line {lineNumber}: value {v} is outside 0-16.");
+            pixels[i] = (byte)((v * 255 + 8) / 16);   // round(v * 255 / 16), integer arithmetic
+        }
+        perDigit[label].Add(pixels);
+    }
+    int n = perDigit.Min(l => l.Count);
+    if (n == 0) throw new InvalidDataException($"'{Path.GetFileName(input)}' has no images for some digit.");
+    Console.WriteLine("per digit in file: " + string.Join(", ", perDigit.Select((l, d) => $"{d}:{l.Count}")));
+    var images = new List<(byte Label, byte[] Pixels)>();
+    for (int d = 0; d < 10; d++)
+        foreach (var px in perDigit[d].Take(n)) images.Add(((byte)d, px));
+    DigitSet.Save(outPath, Size, images);
+    Console.WriteLine($"kept the first {n} of each digit: {images.Count} images, saved {outPath} ({new FileInfo(outPath).Length} bytes)");
+    return 0;
+}
 
 static async Task<int> TrainFablesAsync(Dictionary<string, string> o)
 {
