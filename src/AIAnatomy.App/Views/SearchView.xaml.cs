@@ -57,15 +57,6 @@ public partial class SearchView : UserControl
         WinLine.Visibility = Visibility.Visible;
     }
 
-    // The status or the count changed: tell screen readers (a live region's changed Text alone is not announced). The
-    // text block is read with its own text, so it has no AutomationProperties.Name of its own.
-    private void OnLiveTextUpdated(object? sender, DataTransferEventArgs e)
-    {
-        if (sender is TextBlock { Text.Length: > 0 } text && AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
-            (UIElementAutomationPeer.FromElement(text) ?? UIElementAutomationPeer.CreatePeerForElement(text))
-                ?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
-    }
-
     private void Arrange(bool stacked)
     {
         Gap.Width = new GridLength(stacked ? 0 : 16);

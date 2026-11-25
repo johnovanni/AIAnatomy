@@ -116,8 +116,8 @@
             <c:Screen x:Name="BoardPanel" Grid.Column="0" ScreenName="board" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <StackPanel>
                     <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="The board" />
-                    <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="{Binding StatusText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
-                               MaxWidth="354" HorizontalAlignment="Left" AutomationProperties.LiveSetting="Polite" />
+                    <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" c:LiveText.IsLive="True" Text="{Binding StatusText}"
+                               MaxWidth="354" HorizontalAlignment="Left" />
                     <!-- Three squares of 112 plus their 3 px margins each way: 354 a side. A fixed size, so the line overlay
                          below cannot stretch the board. -->
                     <Grid HorizontalAlignment="Left" Width="354" Height="354">
@@ -145,8 +145,7 @@
             <c:Screen x:Name="LookAheadPanel" Grid.Column="2" ScreenName="lookahead" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <StackPanel>
                     <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="Look-ahead: the options the computer weighed for its latest move" />
-                    <TextBlock x:Name="CountLine" Style="{StaticResource BodyText}" Margin="0,0,0,6" Text="{Binding CountText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated" FontWeight="SemiBold"
-                               AutomationProperties.LiveSetting="Polite" />
+                    <TextBlock x:Name="CountLine" Style="{StaticResource BodyText}" Margin="0,0,0,6" c:LiveText.IsLive="True" Text="{Binding CountText}" FontWeight="SemiBold" />
                     <TextBlock x:Name="Waiting" Style="{StaticResource BodyText}" Margin="0,0,0,6"
                                Text="Nothing yet: the computer has not moved." />
                     <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,6" Foreground="{DynamicResource ScreenTextBrush}" Opacity="0.85"

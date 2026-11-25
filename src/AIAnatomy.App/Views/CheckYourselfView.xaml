@@ -1,6 +1,7 @@
 <UserControl x:Class="AIAnatomy.App.Views.CheckYourselfView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
              xmlns:v="clr-namespace:AIAnatomy.App.Views">
     <!-- DataContext: CheckYourselfViewModel. Answers are buttons (keyboard: Tab and Enter or Space). Right or wrong is said in
          words ("Right." / "Not quite."), never by colour alone, and the feedback is a polite live region. No sound, no score. -->
@@ -67,8 +68,8 @@
                             </ItemsControl>
                             <!-- "Right." or "Not quite." and why, as words on the page. The text block is the live region (read out politely). -->
                             <StackPanel Visibility="{Binding Feedback, Converter={StaticResource VisibleIfSet}}">
-                                <TextBlock Style="{StaticResource BodyText}" Margin="0,2,0,4" AutomationProperties.LiveSetting="Polite"
-                                           Text="{Binding Feedback, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnFeedbackUpdated" />
+                                <TextBlock Style="{StaticResource BodyText}" Margin="0,2,0,4"
+                                           c:LiveText.IsLive="True" Text="{Binding Feedback}" />
                                 <Button HorizontalAlignment="Left" Content="See in the lesson" Command="{Binding SeeCommand}"
                                         AutomationProperties.Name="See in the lesson where this is explained" />
                             </StackPanel>

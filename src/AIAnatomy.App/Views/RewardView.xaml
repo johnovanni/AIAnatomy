@@ -85,8 +85,8 @@
                 <StackPanel>
                     <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="The maze: each square's value and the move the agent prefers" />
                     <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,6" TextWrapping="Wrap"
-                               Text="{Binding Message, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
-                               Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" AutomationProperties.LiveSetting="Polite" />
+                               c:LiveText.IsLive="True" Text="{Binding Message}"
+                               Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
                     <c:GridWorldView x:Name="Maze" Squares="{Binding Squares}" AutomationProperties.Name="Maze" HorizontalAlignment="Left" />
                     <TextBlock x:Name="Readout" Style="{StaticResource BodyText}" Margin="0,6,0,0" FontWeight="SemiBold"
                                Text="{Binding ReadoutText, ElementName=Maze, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnReadoutUpdated"
@@ -94,8 +94,8 @@
                     <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0"
                                Text="S is the start and G the goal; the ring is the agent, and each arrow is the move it prefers there (no arrow while no single move is best). Darker squares are worth more. Squares are numbered column, then row, from the top left." />
                     <TextBlock Style="{StaticResource BodyText}" Margin="0,4,0,0"
-                               Text="{Binding LastStepText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
-                               Visibility="{Binding LastStepText, Converter={StaticResource VisibleIfSet}}" AutomationProperties.LiveSetting="Polite" />
+                               c:LiveText.IsLive="True" Text="{Binding LastStepText}"
+                               Visibility="{Binding LastStepText, Converter={StaticResource VisibleIfSet}}" />
                 </StackPanel>
             </c:Screen>
 

@@ -12,15 +12,6 @@ public partial class CheckYourselfView : UserControl
 {
     public CheckYourselfView() => InitializeComponent();
 
-    // The feedback text changed: tell screen readers (the live region's text is not announced by a changed Text alone).
-    private void OnFeedbackUpdated(object? sender, DataTransferEventArgs e)
-    {
-        // The peer may not exist yet the first time (its panel has only just become visible), so create it.
-        if (sender is TextBlock { Text.Length: > 0 } text && AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
-            (UIElementAutomationPeer.FromElement(text) ?? UIElementAutomationPeer.CreatePeerForElement(text))
-                ?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
-    }
-
     // Skip and Show again hide the button that was pressed, so keyboard focus moves to the control that takes its place.
     private void OnSkipClicked(object sender, RoutedEventArgs e) =>
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () => { UpdateLayout(); ShowAgainButton.Focus(); });

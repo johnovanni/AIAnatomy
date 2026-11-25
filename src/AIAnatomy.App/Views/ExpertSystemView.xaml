@@ -81,8 +81,7 @@
                     <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="Answer" />
                     <!-- Read with its own text ("Answer: tiger."), and read out when it changes. -->
                     <TextBlock Style="{StaticResource SubheadingText}" TextWrapping="Wrap"
-                               Text="{Binding AnswerText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
-                               AutomationProperties.LiveSetting="Polite" />
+                               c:LiveText.IsLive="True" Text="{Binding AnswerText}" />
                 </StackPanel>
             </c:Screen>
         </Grid>

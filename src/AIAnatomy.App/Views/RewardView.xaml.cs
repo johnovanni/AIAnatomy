@@ -35,9 +35,6 @@ public partial class RewardView : UserControl
 
     private void OnApplyRequested(object? sender, MazeSquareEventArgs e) => Lab?.Apply(e.Cell);
 
-    // The message or the last step changed: tell screen readers (a live region's changed Text alone is not announced).
-    private void OnLiveTextUpdated(object? sender, DataTransferEventArgs e) => Announce(sender as TextBlock);
-
     // The square line is read out when the keyboard moves the square, not on every pointer movement.
     private void OnReadoutUpdated(object? sender, DataTransferEventArgs e)
     {

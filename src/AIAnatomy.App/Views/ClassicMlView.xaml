@@ -88,13 +88,12 @@
                 <StackPanel>
                     <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="The plot: the points, and the region each class gets" />
                     <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,6" TextWrapping="Wrap"
-                               Text="{Binding Message, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
-                               Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" AutomationProperties.LiveSetting="Polite" />
+                               c:LiveText.IsLive="True" Text="{Binding Message}"
+                               Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
                     <c:ClassPlot x:Name="Plot" Points="{Binding Points}" Regions="{Binding Regions}" SplitLines="{Binding SplitLines}"
                                  AutomationProperties.Name="Plot of the points and regions" />
                     <TextBlock Style="{StaticResource BodyText}" Margin="0,6,0,0" FontWeight="SemiBold"
-                               Text="{Binding AccuracyText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
-                               AutomationProperties.LiveSetting="Polite" />
+                               c:LiveText.IsLive="True" Text="{Binding AccuracyText}" />
                     <TextBlock x:Name="ActionLine" Style="{StaticResource BodyText}" Margin="0,2,0,0" Text="{Binding ActionText}"
                                AutomationProperties.LiveSetting="Polite" />
                 </StackPanel>

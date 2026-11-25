@@ -45,14 +45,6 @@ public partial class ClassicMlView : UserControl
                 ?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 
-    // The message or the accuracy changed: tell screen readers (a live region's changed Text alone is not announced).
-    private void OnLiveTextUpdated(object? sender, DataTransferEventArgs e)
-    {
-        if (sender is TextBlock { Text.Length: > 0 } text && AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
-            (UIElementAutomationPeer.FromElement(text) ?? UIElementAutomationPeer.CreatePeerForElement(text))
-                ?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
-    }
-
     protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);

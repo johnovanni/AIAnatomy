@@ -32,15 +32,6 @@ public partial class ExpertSystemView : UserControl
         Grid.SetRow(AnswerPanel, stacked ? 2 : 0);
     }
 
-    // The answer is a polite live region: say it again whenever it changes. The text block is read with its own text,
-    // so it has no AutomationProperties.Name of its own.
-    private void OnLiveTextUpdated(object? sender, DataTransferEventArgs e)
-    {
-        if (sender is TextBlock { Text.Length: > 0 } text && AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
-            (UIElementAutomationPeer.FromElement(text) ?? UIElementAutomationPeer.CreatePeerForElement(text))
-                ?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
-    }
-
     // A rule edit is applied on Enter or when the box loses focus; Escape puts back the rule as it was.
     private void OnRuleKeyDown(object sender, KeyEventArgs e)
     {

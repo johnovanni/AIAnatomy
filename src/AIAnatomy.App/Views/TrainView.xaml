@@ -22,7 +22,7 @@
         <DataTemplate x:Key="SampleBox" DataType="{x:Type labs:TrainingSample}">
             <StackPanel Margin="0,0,0,8">
                 <TextBlock Style="{StaticResource PaneTitle}" Text="{Binding Title}" />
-                <TextBlock TextWrapping="Wrap" FontFamily="{StaticResource NumberFont}" Text="{Binding Text}" AutomationProperties.Name="{Binding Title}" />
+                <TextBlock TextWrapping="Wrap" FontFamily="{StaticResource NumberFont}" Text="{Binding Text}" AutomationProperties.HelpText="{Binding Title}" />
             </StackPanel>
         </DataTemplate>
     </UserControl.Resources>

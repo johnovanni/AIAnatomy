@@ -40,14 +40,14 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="What the rules write" />
                         <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Text="{Binding RuleOutput}"
-                                   Foreground="{DynamicResource TextBrush}" AutomationProperties.Name="Rule output" />
+                                   Foreground="{DynamicResource TextBrush}" AutomationProperties.HelpText="What the rules write" />
                     </StackPanel>
                 </c:Screen>
             </StackPanel>
 
             <StackPanel x:Name="LearnedPanel" Grid.Column="2">
                 <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,2" Text="Learned from examples" />
-                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6" Text="{Binding HistoryHeading}" AutomationProperties.Name="History heading" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6" Text="{Binding HistoryHeading}" />
                 <c:Screen ScreenName="learned" HorizontalAlignment="Stretch">
                     <StackPanel>
                         <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="After each press of Learn (newest first)" />

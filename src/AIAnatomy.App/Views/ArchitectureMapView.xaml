@@ -29,7 +29,7 @@
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2" Text="What the model reads (␣ is a space, ↵ a new line, � a character it has never seen)"
                            Visibility="{Binding ShownText, Converter={StaticResource VisibleIfSet}}" />
                 <TextBlock FontFamily="{StaticResource NumberFont}" TextWrapping="Wrap" Margin="0,0,0,8" Text="{Binding ShownText}"
-                           AutomationProperties.Name="What the model reads" />
+                           AutomationProperties.HelpText="The text the model reads, with a space shown as a symbol" />
                 <c:ProbabilityBars Items="{Binding Top10}" AutomationProperties.Name="Top 10 next characters" />
             </StackPanel>
         </c:Screen>
