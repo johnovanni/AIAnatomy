@@ -51,10 +51,20 @@ public class FamilyTreeLabTests
     [Fact]
     public void Bubbles_ForPlaceholderLessons_AreLater()
     {
-        var lab = NewLab();
-        // The first tree node whose lesson is still a placeholder (found from the catalog, so building lessons does not break this).
-        var node = Tree.Nodes.First(n => n.LessonId != null && Catalog.Get(n.LessonId).IsPlaceholder);
-        var later = Bubble(lab, node.LessonId!);
+        // The first tree node whose lesson is still a placeholder (found from the catalog, so building lessons does not break
+        // this). Since lesson 4.9 was built (Stage 2B Task 16) no node of the shipped tree links to a placeholder, so then the
+        // shipped tree is used with its last lesson node pointed at the first lesson the catalog still marks as a placeholder.
+        var tree = Tree;
+        var node = Tree.Nodes.FirstOrDefault(n => n.LessonId != null && Catalog.Get(n.LessonId).IsPlaceholder);
+        if (node == null)
+        {
+            var placeholder = Catalog.All.First(l => l.IsPlaceholder);
+            var last = Tree.Nodes.Last(n => n.LessonId != null);
+            node = last with { LessonId = placeholder.Id };
+            tree = FamilyTreeData.Create(Tree.Nodes.Select(n => n.Id == last.Id ? node : n));
+        }
+        var lab = new FamilyTreeLabViewModel(tree, Catalog, new CountingLayout());
+        var later = lab.Bubbles.Single(b => b.Id == node.Id);
         string number = Catalog.NumberOf(Catalog.Get(node.LessonId!));
         Assert.True(later.IsLater);
         Assert.Equal($"{number} {node.Label}, not built yet", later.AutomationName);
@@ -69,6 +79,9 @@ public class FamilyTreeLabTests
         Assert.Equal("family", lab.Bubbles.Single(b => b.Id == "neural").Part);
         Assert.False(Bubble(lab, "architecture-map").IsLater);
         Assert.False(lab.Bubbles.Single(b => b.Id == "neural").IsLater);
+        // In the shipped tree, diffusion's bubble (lesson 4.9, built in Stage 2B Task 16) is not later.
+        Assert.False(Catalog.Get("diffusion-shapes").IsPlaceholder);
+        Assert.False(Bubble(NewLab(), "diffusion-shapes").IsLater);
     }
 
     [Fact]

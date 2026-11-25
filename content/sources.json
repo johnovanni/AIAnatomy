@@ -158,5 +158,10 @@
     "id": "alpaydin1998",
     "citation": "Alpaydin, E., and Kaynak, C. (1998). Optical Recognition of Handwritten Digits [Dataset]. UCI Machine Learning Repository.",
     "url": "https://doi.org/10.24432/C50P49"
+  },
+  {
+    "id": "sohldickstein2015",
+    "citation": "Sohl-Dickstein, J., Weiss, E. A., Maheswaranathan, N., and Ganguli, S. (2015). Deep Unsupervised Learning using Nonequilibrium Thermodynamics. Proceedings of the 32nd International Conference on Machine Learning (ICML 2015), PMLR 37, 2256-2265.",
+    "url": "https://arxiv.org/abs/1503.03585"
   }
 ]

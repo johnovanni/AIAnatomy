@@ -1,0 +1,120 @@
+<UserControl x:Class="AIAnatomy.App.Views.DiffusionShapesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views"
+             xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation"
+             x:Name="Root">
+    <!-- DataContext: DiffusionShapesLabViewModel. -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+        <BooleanToVisibilityConverter x:Key="VisibleIfTrue" />
+        <v:PointListConverter x:Key="ToPoints" />
+    </UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="A small network learned to say what noise was added to the points of a shape. Starting from 500 random points, it takes some noise out at each of 100 steps, and the cloud gathers onto the shape." />
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,4,0,6" TextWrapping="Wrap"
+                   c:LiveText.IsLive="True" Text="{Binding LoadMessage}"
+                   Visibility="{Binding LoadMessage, Converter={StaticResource VisibleIfSet}}" />
+
+        <!-- The shape: a preset (each with a shipped network) or the learner's own line. -->
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,8,0,4" Text="The shape" />
+        <WrapPanel Margin="0,0,0,4">
+            <TextBlock Style="{StaticResource BodyText}" VerticalAlignment="Center" Margin="0,0,8,6" Text="Show" />
+            <ItemsControl ItemsSource="{x:Static labs:DiffusionShapesLabViewModel.PresetNames}" Focusable="False" AutomationProperties.Name="Preset shapes">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource Chip}" Content="{Binding}"
+                                Command="{Binding DataContext.ChoosePresetCommand, ElementName=Root}" CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding StringFormat='Show the {0}, made by its shipped network'}"
+                                ToolTip="{Binding StringFormat='The {0}, with the network that shipped already trained on it'}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </WrapPanel>
+        <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,8">
+            <Run Text="The shape now: " /><Run Text="{Binding ShapeName, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="." />
+        </TextBlock>
+
+        <!-- The text sits beside the pad when there is room for a readable column (code-behind), otherwise below it. -->
+        <WrapPanel x:Name="PadRow" Margin="0,2,0,0">
+            <c:DrawingPad x:Name="Pad" VerticalAlignment="Top"
+                          AutomationProperties.HelpText="Draw one line here with the mouse or a pen. From the keyboard, choose one of the preset shapes instead." />
+            <StackPanel x:Name="PadText" Margin="16,0,0,0">
+                <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="Draw your own" />
+                <TextBlock Style="{StaticResource BodyText}"
+                           Text="Draw a line on the pad with the mouse or a pen, in one stroke. Only your last line is used. A drawn shape has no network yet: press Train it again, below, to teach one, then press Play." />
+                <Button Style="{StaticResource Chip}" Content="Clear the pad" Click="OnClearPad" HorizontalAlignment="Left" Margin="0,8,0,6"
+                        ToolTip="Empty the pad (the shape stays until you draw a new line)" />
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" c:LiveText.IsLive="True" Text="{Binding DrawingMessage}"
+                           Visibility="{Binding DrawingMessage, Converter={StaticResource VisibleIfSet}}" />
+            </StackPanel>
+        </WrapPanel>
+
+        <!-- The cloud, step by step. -->
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,12,0,4" Text="From noise to the shape" />
+        <WrapPanel Margin="0,0,0,8">
+            <TextBlock Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="0,0,8,0" Text="Seed (for the noise and for training)" />
+            <TextBox MinWidth="110" VerticalAlignment="Center" Text="{Binding Seed, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Seed" />
+        </WrapPanel>
+        <c:Screen ScreenName="cloud" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,0,0,6" Text="{Binding CloudNote}"
+                           Visibility="{Binding CloudNote, Converter={StaticResource VisibleIfSet}}" />
+                <StackPanel Visibility="{Binding HasCloud, Converter={StaticResource VisibleIfTrue}}">
+                    <WrapPanel Margin="0,0,0,4">
+                        <Button Content="{Binding PlayButtonText}" Command="{Binding TogglePlayCommand}" MinWidth="90" Margin="0,0,12,6" VerticalAlignment="Center"
+                                ToolTip="Step through all 100 steps, one about every twentieth of a second; press again to pause" />
+                        <TextBlock Style="{StaticResource BodyText}" VerticalAlignment="Center" Margin="0,0,8,6" Text="Step" />
+                        <Slider Width="320" VerticalAlignment="Center" Margin="0,0,0,6"
+                                Minimum="0" Maximum="{Binding MaxStep}" SmallChange="1" LargeChange="10" TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding Step, Mode=TwoWay}" AutomationProperties.Name="Step, from 0 (pure noise) to 100 (the finished cloud)"
+                                ToolTip="Which step to show: the arrow keys move one step, Page Up and Page Down ten" />
+                    </WrapPanel>
+                    <!-- Live only while Play is not running (IsStepLineLive), so it is not announced at every step of Play;
+                         Play stops before it shows the last step, so that step is announced. -->
+                    <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,0,0,6" TextWrapping="Wrap"
+                               c:LiveText.IsLive="{Binding IsStepLineLive}" Text="{Binding StepText}" />
+                </StackPanel>
+                <!-- The axes run from −3 to 3 to hold the starting noise, so the plot asks to be as wide as it may (up to 640) for the
+                     finished shape, which spans −1 to 1, to be large enough to see. -->
+                <c:PointCloudPlot x:Name="Cloud" MaxWidth="640" PreferredPlotSide="640" HorizontalAlignment="Stretch"
+                                  Points="{Binding CurrentPoints, Converter={StaticResource ToPoints}}"
+                                  TargetPoints="{Binding TargetPoints, Converter={StaticResource ToPoints}}"
+                                  PointsLabel="points of the cloud" TargetLabel="shape being made"
+                                  AutomationProperties.Name="The cloud of points and the shape it is becoming" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0"
+                           Text="At each step the network predicts the noise in every point; a share of that prediction is taken away, and a little fresh randomness is added back at every step but the last. The shapes sit in the square from −1 to 1, 2 across." />
+                <TextBlock Style="{StaticResource SubheadingText}" Margin="0,8,0,2" TextWrapping="Wrap" c:LiveText.IsLive="True" Text="{Binding QualityText}"
+                           Visibility="{Binding QualityText, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2"
+                           Text="For every point of the finished cloud, the distance to the nearest point of the shape, averaged over all 500. It says how close the points land, not whether they cover the whole shape."
+                           Visibility="{Binding QualityText, Converter={StaticResource VisibleIfSet}}" />
+                <TextBlock Style="{StaticResource BodyText}" Margin="0,4,0,0" Text="{Binding NetworkText}"
+                           Visibility="{Binding NetworkText, Converter={StaticResource VisibleIfSet}}" />
+            </StackPanel>
+        </c:Screen>
+
+        <!-- Train it again. -->
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,12,0,4" Text="Train it again" />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6" Text="{Binding TrainingNote}" />
+        <c:Screen ScreenName="training" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <WrapPanel Margin="0,0,0,6">
+                    <Button Content="Train it again" Command="{Binding TrainAgainCommand}" Margin="0,0,8,0"
+                            ToolTip="Train a new network on the shape shown, from random starting numbers, with the seed" />
+                    <Button Content="Stop" Command="{Binding StopTrainingCommand}" ToolTip="End the run early; nothing it trained is used" />
+                </WrapPanel>
+                <TextBlock Style="{StaticResource BodyText}" Text="{Binding TrainingStatus}"
+                           Visibility="{Binding TrainingStatus, Converter={StaticResource VisibleIfSet}}" />
+                <c:LineChart Series="{Binding TrainingSeries}" XAxisTitle="training step" YAxisTitle="loss" Height="220"
+                             Visibility="{Binding HasTrainingSeries, Converter={StaticResource VisibleIfTrue}}"
+                             AutomationProperties.Name="Chart of the training loss of your run" />
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,6,0,0" c:LiveText.IsLive="True" Text="{Binding TrainingResult}"
+                           Visibility="{Binding TrainingResult, Converter={StaticResource VisibleIfSet}}" />
+            </StackPanel>
+        </c:Screen>
+    </StackPanel>
+</UserControl>

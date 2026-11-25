@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
+using AIAnatomy.Core;
 using AIAnatomy.Lessons;
+using AIAnatomy.Models.Diffusion;
 using AIAnatomy.Models.Transformers;
 using AIAnatomy.Models.Vision;
 using AIAnatomy.Presentation.Labs;
@@ -677,5 +679,34 @@ public class CheckedQuestionTests : IDisposable
         Assert.Contains("1.711", QuestionNaming(nameof(Memory_TheValidationLossesAreAboutTheSame)).Prompt);
         Assert.Contains("1.678", QuestionNaming(nameof(Memory_TheValidationLossesAreAboutTheSame)).Prompt);
         Assert.Equal("About the same: the gap is too small to call a win", Correct(nameof(Memory_TheValidationLossesAreAboutTheSame)));
+    }
+
+    // ---- 4.9 Diffusion: from noise to a shape ----
+
+    [Fact]
+    public async Task DiffusionShapes_ShippedSpiralIsCloseToItsShape()
+    {
+        // The shipped spiral network's 500 points (seed 1, all 100 steps), worked out again here: their average distance from
+        // the spiral must be the one recorded in its model file, the one the lab shows, and the one the answer quotes.
+        SynchronizationContext.SetSynchronizationContext(null);
+        var family = new FamilyModels(TestEnvironment.Content);
+        var (net, schedule, shapeName, info) = await family.DiffusionAsync("Spiral");
+        Assert.Equal("Spiral", shapeName);
+        Assert.Equal(100, schedule.Steps);
+        var last = DiffusionSampler.Sample(net, schedule, 500, new SeededRandom(1))[^1];
+        var samples = Enumerable.Range(0, last.GetLength(0)).Select(i => (last[i, 0], last[i, 1])).ToList();
+        double distance = Shapes.MeanDistanceToShape(samples, Shapes.Presets[0].Points);
+        Assert.Equal(info.Results!["meanDistance"], distance, 1e-12);
+        string text = distance.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal("0.031", text);
+
+        var lab = new DiffusionShapesLabViewModel(family);
+        await lab.WorkCompleted;
+        Assert.True(lab.IsReady, lab.LoadMessage);
+        Assert.Equal($"Average distance from the shape after all 100 steps: {text} (lower is better).", lab.QualityText);
+        Assert.True(distance / 2 < 0.02, "under 2% of the square's width (the square runs from -1 to 1)");
+        Assert.Equal($"About {text}, under 2% of the square's width", Correct(nameof(DiffusionShapes_ShippedSpiralIsCloseToItsShape)));
+        Assert.Contains("500", QuestionNaming(nameof(DiffusionShapes_ShippedSpiralIsCloseToItsShape)).Prompt);
+        Assert.Contains("seed 1", QuestionNaming(nameof(DiffusionShapes_ShippedSpiralIsCloseToItsShape)).Prompt);
     }
 }

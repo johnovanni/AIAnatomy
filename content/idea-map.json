@@ -53,7 +53,7 @@
     { "id": "memory-networks", "label": "Memory networks", "kind": "flow",
       "description": "A recurrent network carries one memory vector from character to character: compare its loss, speed and how far back it remembers with the transformer's." },
     { "id": "diffusion-shapes", "label": "Diffusion: shapes", "kind": "flow",
-      "description": "A toy that learns to turn random noise into a shape. Coming in a later part of the app." },
+      "description": "A cloud of random points becomes a shape step by step, made by a small network that learned to take out noise: presets, your own drawing, and train it again." },
     { "id": "diffusion-steps", "label": "Diffusion: steps", "kind": "flow",
       "description": "Inside one denoising step of the diffusion toy. Coming in a later part of the app." },
     { "id": "beyond-coming", "label": "Beyond the model", "kind": "flow",

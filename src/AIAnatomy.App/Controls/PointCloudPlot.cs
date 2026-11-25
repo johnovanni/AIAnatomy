@@ -36,6 +36,7 @@ public sealed class PointCloudPlot : ChartBase
     public static readonly DependencyProperty HighlightLabelProperty = Register(nameof(HighlightLabel), "highlighted points");
     public static readonly DependencyProperty AxisLimitProperty = Register(nameof(AxisLimit), 3.0);
     public static readonly DependencyProperty FitToDataProperty = Register(nameof(FitToData), false);
+    public static readonly DependencyProperty PreferredPlotSideProperty = Register(nameof(PreferredPlotSide), UnboundedSide);
 
     public PointCloudPlot()
     {
@@ -68,6 +69,9 @@ public sealed class PointCloudPlot : ChartBase
     public string HighlightLabel { get => (string)GetValue(HighlightLabelProperty); set => SetValue(HighlightLabelProperty, value); }
     /// <summary>The axes run from −AxisLimit to +AxisLimit on both sides (3 by default) unless <see cref="FitToData"/>.</summary>
     public double AxisLimit { get => (double)GetValue(AxisLimitProperty); set => SetValue(AxisLimitProperty, value); }
+    /// <summary>The side the square plot (with its axis labels) asks for, at most the width it is given: 420 by default, or
+    /// 18 font sizes when that is more. A lab whose finished shape is small on axes from −3 to 3 asks for more.</summary>
+    public double PreferredPlotSide { get => (double)GetValue(PreferredPlotSideProperty); set => SetValue(PreferredPlotSideProperty, value); }
     /// <summary>Fit the axes to everything shown instead (the same range on both, so the shape is not stretched).</summary>
     public bool FitToData { get => (bool)GetValue(FitToDataProperty); set => SetValue(FitToDataProperty, value); }
 
@@ -111,6 +115,24 @@ public sealed class PointCloudPlot : ChartBase
         return (min, max);
     }
 
+    /// <summary>
+    /// The height asked for the axes and the square plot inside them, at <paramref name="width"/>. The square's side is the
+    /// preferred side (at most the width) less the room the y labels take across, and the height adds the room the titles
+    /// and x labels take down, so the square really is that wide; at a large text size the labels' room no longer shrinks
+    /// the square to a fraction of the width.
+    /// </summary>
+    private double PlotHeightFor(double width)
+    {
+        double side = Math.Min(width, Math.Max(FiniteOr(PreferredPlotSide, UnboundedSide), FontSize * 18));
+        var (min, max) = Range();
+        var frame = LayoutAxes(new Rect(0, 0, width, side), min, max, min, max, "x", "y");
+        double across = width - frame.Plot.Width, down = side - frame.Plot.Height;
+        return Math.Max(60, side - across + down);
+    }
+
+    /// <summary>The square plot area at the control's current size (for checks of the layout).</summary>
+    public Rect PlotArea => ComputeLayout(DrawLegend(null, ActualWidth), Readout(ActualWidth).Height).Frame.Plot;
+
     // The main way the numbers reach the learner, so at the full text size.
     private FormattedText Readout(double width) => Text(SummaryText(), FontSize, Foreground, maxWidth: Math.Max(50, FiniteOr(width, 600)));
 
@@ -118,7 +140,7 @@ public sealed class PointCloudPlot : ChartBase
     {
         if (!HasData) return NoDataSize(available);
         double width = FiniteOr(available.Width, UnboundedSide + 80);
-        double natural = DrawLegend(null, width) + Gap + Math.Min(width, Math.Max(UnboundedSide, FontSize * 18)) + Gap + Readout(width).Height;
+        double natural = DrawLegend(null, width) + Gap + PlotHeightFor(width) + Gap + Readout(width).Height;
         return new Size(width, double.IsFinite(available.Height) && available.Height > 0 ? Math.Min(available.Height, natural) : natural);
     }
 
@@ -249,9 +271,21 @@ public sealed class PointCloudPlot : ChartBase
         else dc.DrawGeometry(SurfaceBrush, new Pen(brush, 1.8) { LineJoin = PenLineJoin.Miter }, heads);   // open head: outlined, hollow
     }
 
-    /// <summary>Draws the legend (when <paramref name="dc"/> is not null) and returns its height. Only what is shown is named.</summary>
-    private double DrawLegend(DrawingContext? dc, double width)
+    /// <summary>The legend's size when laid out in <paramref name="width"/>: the right edge of its widest row and its height.</summary>
+    public Size LegendSize(double width)
     {
+        double height = DrawLegend(null, width, out double right);
+        return new Size(right, height);
+    }
+
+    private double DrawLegend(DrawingContext? dc, double width) => DrawLegend(dc, width, out _);
+
+    /// <summary>Draws the legend (when <paramref name="dc"/> is not null) and returns its height. Only what is shown is named.
+    /// Entries go side by side while they fit; an entry's words wrap when the width is too narrow for them on one line, so
+    /// at a large text size in a narrow pane nothing runs past the plot's edge.</summary>
+    private double DrawLegend(DrawingContext? dc, double width, out double right)
+    {
+        right = 0;
         double x = 0, y = 0, line = Text("Ag", LabelSize, Foreground).Height, r = Math.Max(MarkerRadius, line * 0.2);
         var items = new List<(string Text, Action<DrawingContext, Point> Key)>();
         if (TargetPoints is { Count: > 0 })
@@ -276,19 +310,22 @@ public sealed class PointCloudPlot : ChartBase
         if (SecondaryArrows is { Count: > 0 })
             items.Add(($"{SecondaryArrowsLabel} (dashed arrows, filled heads)", (d, at) =>
                 DrawArrows(d, [(at with { X = at.X - 18 }, at with { X = at.X + 18 })], r, secondary: true)));
+        double row = line;   // the height of the row being laid out (an entry that wraps makes it taller)
         foreach (var (label, key) in items)
         {
-            var text = Text(label, LabelSize, Foreground);
+            var text = Text(label, LabelSize, Foreground, maxWidth: Math.Max(50, FiniteOr(width, 600) - 48 - 1));
             double itemWidth = 40 + 8 + text.Width + 24;
-            if (x > 0 && x + itemWidth > width) { x = 0; y += line + 4; }
+            if (x > 0 && x + itemWidth > width) { x = 0; y += row + 4; row = line; }
             if (dc != null)
             {
                 key(dc, new Point(x + 20, y + line / 2));
                 dc.DrawText(text, new Point(x + 48, y));
             }
+            right = Math.Max(right, x + 48 + text.Width);
+            row = Math.Max(row, text.Height);
             x += itemWidth;
         }
-        return items.Count == 0 ? 0 : y + line;
+        return items.Count == 0 ? 0 : y + row;
     }
 
     protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)

@@ -110,6 +110,13 @@ public static class PngRenderer
             if (viewModel.CurrentLab is not DigitNetworkLabViewModel digits) throw new InvalidOperationException("The image-network lesson did not open its lab.");
             await digits.WorkCompleted;   // the digits and the shipped network loaded; the lab reads test digit 1 (sample 0)
         }
+        if (view == DiagnosticOptions.DiffusionShapesDone)
+        {
+            await viewModel.NavigateToLesson("diffusion-shapes");
+            if (viewModel.CurrentLab is not DiffusionShapesLabViewModel diffusion) throw new InvalidOperationException("The diffusion-shapes lesson did not open its lab.");
+            await diffusion.WorkCompleted;   // the shipped spiral network loaded and its cloud (seed 1) worked out
+            diffusion.Step = diffusion.MaxStep;   // the finished spiral, as Play would leave it
+        }
         // A lab render view has already opened its lesson and set up its lab above.
         var map = DiagnosticOptions.IsLabRenderView(view) ? null : Show(window, viewModel, services, view);
 
