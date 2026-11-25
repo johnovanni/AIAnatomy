@@ -216,6 +216,7 @@ public sealed partial class RewardLabViewModel : LabViewModel
         int before = _agent.StepsThisEpisode;
         var result = _agent.Step();
         if (result.EpisodeEnded) Record(before + 1, result.To == _agent.World.Goal);
+        LastStepText = "";   // cleared first, so two identical step lines in a row are both read out
         LastStepText = StepText(result);
         Refresh();
     }
@@ -380,6 +381,7 @@ public sealed partial class RewardLabViewModel : LabViewModel
     private void Refuse(string why)
     {
         _refusal = why;
+        Message = "";   // cleared first, so the same refusal twice in a row is a change and is read out again
         UpdateMessage();
         ReportScreens();
     }

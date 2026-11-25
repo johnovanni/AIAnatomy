@@ -107,7 +107,8 @@
         <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="0,0,0,1" Padding="16,6"
                 Visibility="{Binding BackgroundStatus, Converter={StaticResource VisibleIfSet}}">
-            <TextBlock Text="{Binding BackgroundStatus}" TextWrapping="Wrap" AutomationProperties.Name="Background training" />
+            <TextBlock Text="{Binding BackgroundStatus}" TextWrapping="Wrap" c:LiveText.IsLive="True"
+                       AutomationProperties.HelpText="Background training" />
         </Border>
 
         <!-- Left: the Contents | Idea map switch and the contents tree, always there. Right: the lesson page, the idea map, or the

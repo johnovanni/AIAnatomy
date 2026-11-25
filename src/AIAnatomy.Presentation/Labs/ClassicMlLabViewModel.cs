@@ -146,6 +146,7 @@ public sealed partial class ClassicMlLabViewModel : LabViewModel
         if (Points.Count >= MaxPoints)
         {
             _refusal = FullMessage;
+            Message = "";   // cleared first, so the same refusal twice in a row is a change and is read out again
             Recompute();   // shows the message, and lights the regions screen the first time
             return false;
         }

@@ -104,13 +104,13 @@
             <Button Content="Stop" Command="{Binding StopCommand}" Margin="0,0,8,4" ToolTip="End training; the model can still be saved" />
         </WrapPanel>
         <Border Style="{StaticResource Pane}" Padding="12" Margin="0,0,0,4" Visibility="{Binding Settings.StartProblem, Converter={StaticResource VisibleIfSet}}">
-            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Settings.StartProblem}" AutomationProperties.LiveSetting="Polite" />
+            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" c:LiveText.IsLive="True" Text="{Binding Settings.StartProblem}" />
         </Border>
         <c:Screen ScreenName="training" Margin="0,4,0,0" HorizontalAlignment="Stretch">
             <StackPanel>
                 <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" AutomationProperties.LiveSetting="Assertive"
                            Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
-                <TextBlock Style="{StaticResource BodyText}" Text="{Binding Status}" AutomationProperties.LiveSetting="Polite"
+                <TextBlock Style="{StaticResource BodyText}" c:LiveText.IsLive="True" Text="{Binding Status}"
                            Visibility="{Binding Status, Converter={StaticResource VisibleIfSet}}" />
                 <StackPanel Visibility="{Binding ProgressText, Converter={StaticResource VisibleIfSet}}">
                     <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress, Mode=OneWay}" Height="16" Margin="0,4,0,4" AutomationProperties.Name="Training progress" />
@@ -151,7 +151,7 @@
             </WrapPanel>
         </Border>
         <c:Screen ScreenName="saved" Margin="0,0,0,4" HorizontalAlignment="Stretch" Visibility="{Binding SaveStatus, Converter={StaticResource VisibleIfSet}}">
-            <TextBlock Style="{StaticResource BodyText}" Text="{Binding SaveStatus}" AutomationProperties.LiveSetting="Polite" />
+            <TextBlock Style="{StaticResource BodyText}" c:LiveText.IsLive="True" Text="{Binding SaveStatus}" />
         </c:Screen>
         <TextBlock Style="{StaticResource MutedText}" Text="A model whose training ran away (the loss became too large) can't be saved." />
     </StackPanel>

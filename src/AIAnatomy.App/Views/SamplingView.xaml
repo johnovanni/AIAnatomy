@@ -106,7 +106,7 @@
         <TextBlock Style="{StaticResource MutedText}" Text="{Binding WritingHint}" Visibility="{Binding WritingHint, Converter={StaticResource VisibleIfSet}}" />
         <c:Screen ScreenName="writing" HorizontalAlignment="Stretch" Visibility="{Binding GenerateStatus, Converter={StaticResource VisibleIfSet}}">
             <StackPanel>
-                <TextBlock Style="{StaticResource MutedText}" Text="{Binding GenerateStatus}" AutomationProperties.LiveSetting="Polite" />
+                <TextBlock Style="{StaticResource MutedText}" c:LiveText.IsLive="True" Text="{Binding GenerateStatus}" />
                 <TextBlock TextWrapping="Wrap" Text="{Binding Generated}" Visibility="{Binding Generated, Converter={StaticResource VisibleIfSet}}" AutomationProperties.HelpText="The 200 characters the model wrote" />
             </StackPanel>
         </c:Screen>

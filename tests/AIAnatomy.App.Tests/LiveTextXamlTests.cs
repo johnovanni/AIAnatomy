@@ -10,6 +10,27 @@ public class LiveTextXamlTests
 {
     private static readonly XNamespace Wpf = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
+    private static string AppFolder() => Path.Combine(RepoRoot(), "src", "AIAnatomy.App");
+
+    /// <summary>Every XAML file of the App (views, controls, themes, the main window), not the build output.</summary>
+    private static string[] AllXaml()
+    {
+        string sep = Path.DirectorySeparatorChar.ToString();
+        var files = Directory.GetFiles(AppFolder(), "*.xaml", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(sep + "bin" + sep) && !f.Contains(sep + "obj" + sep)).ToArray();
+        Assert.True(files.Length > 20, "The App's XAML files were not found.");
+        Assert.Contains(files, f => f.EndsWith("MainWindow.xaml"));
+        return files;
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "AIAnatomy.slnx"))) dir = dir.Parent;
+        Assert.NotNull(dir);
+        return dir!.FullName;
+    }
+
     private static string ViewsFolder()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -23,7 +44,7 @@ public class LiveTextXamlTests
     public void NoTextBlockHidesItsBoundText()
     {
         var bad = new List<string>();
-        foreach (var file in Directory.GetFiles(ViewsFolder(), "*.xaml"))
+        foreach (var file in AllXaml())
         {
             var doc = XDocument.Load(file, LoadOptions.SetLineInfo);
             foreach (var tb in doc.Descendants(Wpf + "TextBlock"))
@@ -45,6 +66,26 @@ public class LiveTextXamlTests
             .Where(f => Regex.IsMatch(File.ReadAllText(f), @"OnLiveTextUpdated|OnFeedbackUpdated"))
             .Select(Path.GetFileName);
         Assert.True(!bad.Any(), "Hand-written live text handlers in: " + string.Join(", ", bad));
+    }
+
+    /// <summary>The result lines converted to the shared behaviour (so a renamed copy of the old handler cannot pass): the number of
+    /// <c>c:LiveText.IsLive="True"</c> each file must carry.</summary>
+    [Theory]
+    [InlineData("MainWindow.xaml", 1)]
+    [InlineData("Views/CheckYourselfView.xaml", 1)]
+    [InlineData("Views/ClassicMlView.xaml", 2)]
+    [InlineData("Views/ExpertSystemView.xaml", 1)]
+    [InlineData("Views/RewardView.xaml", 2)]
+    [InlineData("Views/SearchView.xaml", 2)]
+    [InlineData("Views/SamplingView.xaml", 1)]
+    [InlineData("Views/LearningView.xaml", 1)]
+    [InlineData("Views/TrainView.xaml", 3)]
+    [InlineData("Views/TokensView.xaml", 1)]
+    public void ConvertedResultLinesCarryLiveText(string file, int expected)
+    {
+        string text = File.ReadAllText(Path.Combine(AppFolder(), file));
+        Assert.True(Regex.Matches(text, @"c:LiveText\.IsLive=""True""").Count >= expected,
+            $"{file} should have {expected} c:LiveText.IsLive=\"True\" result lines.");
     }
 
     [Fact]

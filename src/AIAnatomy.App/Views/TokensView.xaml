@@ -56,7 +56,7 @@
                     Value="{Binding Merges, Mode=TwoWay}" AutomationProperties.Name="Merges" Margin="0,0,12,12" />
             <TextBlock VerticalAlignment="Center" Margin="0,0,0,12" Text="{Binding Merges}" FontWeight="SemiBold" />
         </StackPanel>
-        <TextBlock Style="{StaticResource MutedText}" Text="{Binding BpeStatus}" AutomationProperties.LiveSetting="Polite"
+        <TextBlock Style="{StaticResource MutedText}" c:LiveText.IsLive="True" Text="{Binding BpeStatus}"
                    Visibility="{Binding BpeStatus, Converter={StaticResource VisibleIfSet}}" />
         <c:Screen ScreenName="pieces" HorizontalAlignment="Stretch">
             <StackPanel>

@@ -61,7 +61,7 @@
             <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:PerceptronPanelViewModel.RateNote}" />
             <c:Screen ScreenName="neuron" Margin="0,4,0,0" HorizontalAlignment="Stretch">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Status}" AutomationProperties.LiveSetting="Polite" />
+                    <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" c:LiveText.IsLive="True" Text="{Binding Status}" />
                     <TextBlock Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}" Text="{Binding LineText}" />
                     <TextBlock Style="{StaticResource BodyText}" Text="{Binding WrongPoints}" />
                     <c:ScatterPlot Points="{Binding Points}" Lines="{Binding Lines}" XAxisTitle="x1" YAxisTitle="x2" Height="{DynamicResource DiagramHeight}"
