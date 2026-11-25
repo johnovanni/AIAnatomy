@@ -518,4 +518,17 @@ public class CheckedQuestionTests : IDisposable
         Assert.Equal("No animal fits these answers.", lab.AnswerText);
         Assert.Equal(lab.AnswerText.TrimEnd('.'), Correct(nameof(ExpertSystem_BatGetsNoAnswerFromTheDefaultRules)));
     }
+
+    // ---- 4.3 Search: looking ahead ----
+
+    [Fact]
+    public async Task Search_TheComputerLooksAt549946PositionsForItsFirstMove()
+    {
+        var lab = new SearchLabViewModel();
+        await lab.NewGameAsync(AIAnatomy.Models.Search.Mark.O);   // the computer opens on the empty board
+        var count = Regex.Match(lab.CountText, @"^The computer looked at ([\d,]+) positions to choose its move\.$");
+        Assert.True(count.Success, lab.CountText);
+        Assert.Equal(N(549_946), count.Groups[1].Value);
+        Assert.Equal(count.Groups[1].Value, Correct(nameof(Search_TheComputerLooksAt549946PositionsForItsFirstMove)));
+    }
 }

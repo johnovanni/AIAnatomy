@@ -36,6 +36,7 @@
         <DataTemplate DataType="{x:Type labs:ScaleLabViewModel}"><v:ScaleView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:FamilyTreeLabViewModel}"><v:FamilyTreeView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:ExpertSystemLabViewModel}"><v:ExpertSystemView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:SearchLabViewModel}"><v:SearchView /></DataTemplate>
 
         <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">
             <TextBlock TextTrimming="CharacterEllipsis">
