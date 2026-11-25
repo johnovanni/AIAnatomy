@@ -16,7 +16,7 @@ public static class MemoryTraining
     public const double ValidationFraction = 0.1;
     public const int WindowSeed = 1;
 
-    /// <summary>Train it again: about 35 ms a step in Release on the build PC, so about 90 s.</summary>
+    /// <summary>Train it again: 21 to 35 ms a step in Release on the build PC (training steps only), so about 53 to 87 s.</summary>
     public const int RetrainHidden = 128;
     public const int RetrainSteps = 2500;
 

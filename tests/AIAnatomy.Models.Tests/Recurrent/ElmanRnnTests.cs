@@ -183,6 +183,29 @@ public class ElmanRnnTests
     }
 
     [Fact]
+    public void LossByPosition_TransformerCurveAveragesToTheShippedValidationLoss()
+    {
+        // Same 32 windows and equal-length means, so the mean of the curve is the trainer's validation loss.
+        var fables = Fables.Model;
+        var windows = MemoryTraining.FablesSource(fables.Tokenizer, Fables.Text).ValidationWindows;
+        double mean = ContextLoss.LossByPosition(fables.Transformer, windows).Average();
+        Assert.NotNull(fables.Info.ValidationLoss);
+        Assert.Equal(fables.Info.ValidationLoss.Value, mean, 1e-9);
+    }
+
+    [Fact]
+    public void LossByPosition_RnnCurveAveragesToTheTrainersValidationLoss()
+    {
+        var tokenizer = CharTokenizer.FromText(TestTexts.Fable);
+        var source = new CorpusBatchSource(tokenizer.Encode(TestTexts.Fable), 16, tokenizer.VocabularySize, 0.1, new SeededRandom(1));
+        var rnn = new ElmanRnn(new RnnConfig(tokenizer.VocabularySize, 8), new SeededRandom(3));
+        Randomise(rnn, 9);
+        var trainer = new RnnTrainer(rnn, source, 10, seed: 1);
+        double mean = ContextLoss.LossByPosition(rnn, source.ValidationWindows).Average();
+        Assert.Equal(trainer.ValidationLoss(), mean, 1e-12);
+    }
+
+    [Fact]
     public void LossByPosition_AveragesTheCrossEntropyAtEachPosition()
     {
         var rnn = Make(5, 3);

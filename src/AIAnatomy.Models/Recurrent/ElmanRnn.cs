@@ -38,8 +38,10 @@ public sealed class ElmanRnn : Module
 
     /// <summary>
     /// Starting weights: the input rows have standard deviation 1 (a one-hot input has a fan-in of 1), the recurrent and
-    /// output weights 1/sqrt(H) (fan-in H), biases 0. A random H by H matrix with that spread has its eigenvalues spread
-    /// over a disc of radius about 1, so the memory neither dies away nor blows up at the start.
+    /// output weights 1/sqrt(H) (fan-in H), biases 0. tanh already keeps the memory within [-1, 1]; what the recurrent
+    /// matrix decides is how a signal, and its gradient, change as they pass from step to step. A random H by H matrix with
+    /// std 1/sqrt(H) has a spectral radius of about 1 (the circular law), so at the start signals and gradients passed back
+    /// through time neither shrink nor grow quickly.
     /// </summary>
     public ElmanRnn(RnnConfig config, SeededRandom rng)
     {

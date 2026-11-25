@@ -13,6 +13,8 @@ using AIAnatomy.Models.Transformers;
 // Times training steps of a family network (Release, from the repository root), to choose sizes and steps:
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind memory --hidden 128 [--steps 50]
 
+const int WarmUpSteps = 30;   // speed: untimed steps first (see TimeSteps)
+
 const string Usage =
     "Usage: pretrain fables --text <file> --out <file> --steps <n> [--seed <n>]\n" +
     "       pretrain induction --out <file> [--steps <n>] [--seed <n>]\n" +
@@ -137,13 +139,18 @@ static async Task<(ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Ac
 static void TimeSteps(ISteppedTrainer trainer, int steps, (string Name, int Steps)[] plans)
 {
     if (steps < 1) throw new ArgumentException("--steps must be at least 1.");
-    for (int i = 0; i < 3; i++) trainer.Step();   // warm up (JIT, caches)
+    var debuggable = typeof(ISteppedTrainer).Assembly.GetCustomAttributes(typeof(DebuggableAttribute), false)
+        .OfType<DebuggableAttribute>().FirstOrDefault();
+    if (debuggable?.IsJITOptimizerDisabled ?? false)
+        Console.WriteLine("WARNING: this is not an optimised (Release) build, so these times are not the app's. Do not log them; run with -c Release.");
+    // Warm up past .NET's tiered compilation: a method called about 30 times is recompiled with full optimisation.
+    for (int i = 0; i < WarmUpSteps; i++) trainer.Step();
     var watch = Stopwatch.StartNew();
     double loss = double.NaN;
     for (int i = 0; i < steps; i++) loss = trainer.Step();
     watch.Stop();
     double ms = watch.Elapsed.TotalMilliseconds / steps;
-    Console.WriteLine($"{steps} steps in {watch.Elapsed.TotalSeconds:F2} s: {ms:F2} ms per step (last train loss {loss:F3})");
+    Console.WriteLine($"{WarmUpSteps} warm-up steps, then {steps} steps in {watch.Elapsed.TotalSeconds:F2} s: {ms:F2} ms per step (last train loss {loss:F3})");
     foreach (var (name, planned) in plans)
         Console.WriteLine($"  {name}: {planned} steps would take about {ms * planned / 1000:F0} s at this size");
 }
