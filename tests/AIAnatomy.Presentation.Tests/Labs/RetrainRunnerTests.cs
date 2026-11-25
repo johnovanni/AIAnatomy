@@ -1,5 +1,6 @@
 using AIAnatomy.Models.Training;
 using AIAnatomy.Presentation.Labs;
+using AIAnatomy.Presentation.Services;
 
 namespace AIAnatomy.Presentation.Tests.Labs;
 
@@ -163,5 +164,145 @@ public class RetrainRunnerTests
         public int TotalSteps => 50;
         public int StepsTaken { get; private set; }
         public double Step() { StepsTaken++; return double.NaN; }
+    }
+
+    // ---- the real UI path: a context that queues posts until the test pumps them ----
+
+    private sealed class QueueContext : SynchronizationContext
+    {
+        private readonly Queue<(SendOrPostCallback Callback, object? State)> _queue = new();
+        public override void Post(SendOrPostCallback d, object? state) { lock (_queue) _queue.Enqueue((d, state)); }
+        public int Count { get { lock (_queue) return _queue.Count; } }
+        public void Pump()
+        {
+            while (true)
+            {
+                (SendOrPostCallback Callback, object? State) item;
+                lock (_queue) { if (_queue.Count == 0) return; item = _queue.Dequeue(); }
+                item.Callback(item.State);
+            }
+        }
+    }
+
+    private static Task StartOn(QueueContext ui, RetrainRunner runner, int seed)
+    {
+        SynchronizationContext.SetSynchronizationContext(ui);
+        try { return runner.StartAsync(seed); }
+        finally { SynchronizationContext.SetSynchronizationContext(null); }
+    }
+
+    private static async Task WaitUntil(Func<bool> condition)
+    {
+        // Waits on the worker's progress, not on time: yields until the condition holds.
+        while (!condition()) await Task.Yield();
+    }
+
+    [Fact]
+    public async Task QueuedReports_ThenAbandon_ThenPump_ChangeNothing()
+    {
+        var ui = new QueueContext();
+        var runner = Runner(_ => new Gated(100));
+        var run = StartOn(ui, runner, 1);
+        await WaitUntil(() => ui.Count >= 11);   // ten reports and the end of the run are queued
+        string status = runner.StatusText;
+        var series = runner.LossSeries;
+        runner.Abandon();
+        ui.Pump();
+        await run;
+        Assert.Equal(status, runner.StatusText);
+        Assert.Same(series, runner.LossSeries);
+        Assert.Null(runner.Finished);
+        Assert.False(runner.IsRunning);
+    }
+
+    [Fact]
+    public async Task Completed_IsRaisedOnThePumpingThread_AfterTheFinalReport()
+    {
+        var ui = new QueueContext();
+        var runner = Runner(_ => new Gated(30));
+        int completedOn = -1;
+        string? statusAtCompleted = null;
+        ISteppedTrainer? finishedAtCompleted = null;
+        runner.Completed += (_, _) =>
+        {
+            completedOn = Environment.CurrentManagedThreadId;
+            statusAtCompleted = runner.StatusText;
+            finishedAtCompleted = runner.Finished;
+        };
+        var run = StartOn(ui, runner, 1);
+        await WaitUntil(() => ui.Count >= 4);   // three reports and the continuation
+        int pumpThread = Environment.CurrentManagedThreadId;   // after the waiting, which may have moved threads
+        ui.Pump();
+        await run;
+        Assert.Equal(pumpThread, completedOn);
+        Assert.StartsWith("Step 30 of 30", statusAtCompleted);   // the final report was applied first
+        Assert.NotNull(finishedAtCompleted);
+    }
+
+    [Fact]
+    public async Task ATrainerThatThrows_ShowsAPlainSentenceAndStopsRunning()
+    {
+        Exception? logged = null;
+        var before = ErrorLog.BackgroundFailed;
+        ErrorLog.BackgroundFailed = e => logged = e;
+        try
+        {
+            var runner = Runner(_ => new Throwing());
+            await Start(runner, 1);
+            Assert.Equal("Training stopped because of an unexpected problem.", runner.StatusText);
+            Assert.DoesNotContain("secret", runner.StatusText);
+            Assert.False(runner.IsRunning);
+            Assert.Null(runner.Finished);
+            Assert.Contains("secret", logged?.Message);
+        }
+        finally { ErrorLog.BackgroundFailed = before; }
+    }
+
+    private sealed class Throwing : ISteppedTrainer
+    {
+        public int TotalSteps => 10;
+        public int StepsTaken => 0;
+        public double Step() => throw new InvalidOperationException("secret detail");
+    }
+
+    [Fact]
+    public async Task ATrainerThatCannotBeCreated_LeavesTheRunnerUntouched()
+    {
+        bool fail = true;
+        var runner = Runner(_ => fail ? throw new InvalidOperationException("no") : new Gated(20));
+        SynchronizationContext.SetSynchronizationContext(null);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.StartAsync(1));
+        Assert.False(runner.IsRunning);
+        fail = false;
+        await Start(runner, 1);
+        Assert.NotNull(runner.Finished);
+    }
+
+    [Fact]
+    public async Task AStopAfterTheLastStep_CountsAsCompleted()
+    {
+        RetrainRunner? runner = null;
+        var trainer = new Gated(20) { OnStep = s => { if (s == 20) runner!.Stop(); } };
+        runner = Runner(_ => trainer);
+        await Start(runner, 1);
+        Assert.NotNull(runner.Finished);
+        Assert.StartsWith("Step 20 of 20", runner.StatusText);
+    }
+
+    [Fact]
+    public async Task StopThenStartAgain_RunsAFreshTrainer()
+    {
+        var first = new Gated(100, gateAfter: 30);
+        int made = 0;
+        var runner = Runner(_ => made++ == 0 ? first : new Gated(20));
+        var run = Start(runner, 1);
+        first.InStep.Wait();
+        runner.Stop();
+        first.Release.Set();
+        await run;
+        Assert.Null(runner.Finished);
+        await Start(runner, 2);
+        Assert.Equal(20, runner.Finished!.StepsTaken);
+        Assert.StartsWith("Step 20 of 20", runner.StatusText);
     }
 }

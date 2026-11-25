@@ -74,4 +74,13 @@ public class SteppedTrainingTests
         Assert.Equal(SteppedTraining.DivergedMessage, result);
         Assert.Equal(3, trainer.StepsTaken);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void ReportEveryBelowOne_Throws(int every) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        {
+            _ = SteppedTraining.RunAsync(new Fake(5), new Collect(), CancellationToken.None, every);
+        });
 }

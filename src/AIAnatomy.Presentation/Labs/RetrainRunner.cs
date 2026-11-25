@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AIAnatomy.Models.Training;
+using AIAnatomy.Presentation.Services;
 using AIAnatomy.Presentation.Visuals;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -13,17 +14,16 @@ namespace AIAnatomy.Presentation.Labs;
 public sealed partial class RetrainRunner : ObservableObject
 {
     public const string LossName = "training loss";
+    public const string UnexpectedMessage = "Training stopped because of an unexpected problem.";
     public static readonly TimeSpan DefaultUpdateInterval = TimeSpan.FromMilliseconds(50);
     private const int MaxPoints = 400;
 
     private readonly Func<int, ISteppedTrainer> _createTrainer;
     private readonly Func<TimeSpan> _now;
-    private readonly object _gate = new();
     private List<(double X, double Y)> _points = [];
     private CancellationTokenSource? _cts;
     private int _generation;
-    private TimeSpan _startedAt, _lastApplied, _frozen;
-    private bool _hasApplied;
+    private TimeSpan _startedAt, _frozen;
     private int _stride = 1, _seen;
 
     public RetrainRunner(Func<int, ISteppedTrainer> createTrainer) : this(createTrainer, null) { }
@@ -44,21 +44,29 @@ public sealed partial class RetrainRunner : ObservableObject
     [ObservableProperty] private IReadOnlyList<LineSeries> lossSeries = [];
     [ObservableProperty] private ISteppedTrainer? finished;
 
+    /// <summary>Raised after <see cref="Finished"/> is set, once per completed run (see <see cref="StartAsync"/> for the thread).</summary>
     public event EventHandler? Completed;
 
     /// <summary>Time spent on the current (or last) run.</summary>
     public TimeSpan Elapsed => IsRunning ? _now() - _startedAt : _frozen;
 
+    /// <summary>
+    /// Starts a run (ignored while one is running). With a UI SynchronizationContext (the app) every update and
+    /// <see cref="Completed"/> happen on that thread. With none (a self-test or unit test, a thread-pool caller) they happen
+    /// on the thread that produced them: the worker for updates, a thread-pool thread for Completed. That is deliberate, so
+    /// labs and the self-test can run without a window.
+    /// </summary>
     public async Task StartAsync(int seed)
     {
         if (IsRunning) return;
+        var trainer = _createTrainer(seed);   // before any state changes: if it throws, nothing is half-set
         int generation = Interlocked.Increment(ref _generation);
         var cts = new CancellationTokenSource();
         _cts = cts;
         var ui = SynchronizationContext.Current;
-        var trainer = _createTrainer(seed);
+        var throttle = new Throttle();
         _points = [];
-        _stride = 1; _seen = 0; _hasApplied = false;
+        _stride = 1; _seen = 0;
         _startedAt = _now(); _frozen = TimeSpan.Zero;
         Finished = null;
         LossSeries = [];
@@ -71,21 +79,23 @@ public sealed partial class RetrainRunner : ObservableObject
             if (generation != Volatile.Read(ref _generation)) return;
             var now = _now();
             bool last = p.Step >= p.TotalSteps;
-            lock (_gate)
-            {
-                if (!last && _hasApplied && now - _lastApplied < UpdateInterval) return;
-                _hasApplied = true; _lastApplied = now;
-            }
+            if (!throttle.TryAccept(now, last ? TimeSpan.Zero : UpdateInterval)) return;
             Post(ui, generation, () => Apply(p, now));
         });
 
         string? problem;
         try { problem = await SteppedTraining.RunAsync(trainer, reporter, cts.Token); }
-        catch (Exception e) when (e is not OutOfMemoryException) { problem = "The training went wrong: " + e.Message; }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            ErrorLog.ReportBackground(e);
+            problem = UnexpectedMessage;
+        }
 
-        if (generation != Volatile.Read(ref _generation)) return;   // abandoned: show nothing more
+        bool current = generation == Volatile.Read(ref _generation);
+        if (current && _cts == cts) _cts = null;
+        cts.Dispose();
+        if (!current) return;   // abandoned: show nothing more
         _frozen = _now() - _startedAt;
-        if (_cts == cts) _cts = null;
         IsRunning = false;
         if (problem != null) StatusText = problem;
         else if (trainer.StepsTaken >= trainer.TotalSteps)
@@ -97,14 +107,18 @@ public sealed partial class RetrainRunner : ObservableObject
     }
 
     /// <summary>Ends the run early, keeping what was trained so far; <see cref="Finished"/> stays null.</summary>
-    public void Stop() => _cts?.Cancel();
+    public void Stop()
+    {
+        try { _cts?.Cancel(); } catch (ObjectDisposedException) { }
+    }
 
     /// <summary>Cancels the run and drops every report still to come (Reset, leaving the lab, a new seed).</summary>
     public void Abandon()
     {
         Interlocked.Increment(ref _generation);
-        _cts?.Cancel();
+        var cts = _cts;
         _cts = null;
+        try { cts?.Cancel(); } catch (ObjectDisposedException) { }   // the run disposes it when its task ends
         if (IsRunning) { _frozen = _now() - _startedAt; IsRunning = false; }
     }
 
@@ -129,6 +143,20 @@ public sealed partial class RetrainRunner : ObservableObject
         }
         int seconds = (int)Math.Max(0, (now - _startedAt).TotalSeconds);
         StatusText = $"Step {NumberText.Short(p.Step)} of {NumberText.Short(p.TotalSteps)} · loss {NumberText.Short(p.Loss)} · {seconds} s";
+    }
+
+    /// <summary>One run's update throttle, so an old run can never hold back a new run's first report.</summary>
+    private sealed class Throttle
+    {
+        private TimeSpan _last;
+        private bool _any;
+
+        public bool TryAccept(TimeSpan now, TimeSpan interval)
+        {
+            if (_any && now - _last < interval) return false;
+            _any = true; _last = now;
+            return true;
+        }
     }
 
     private sealed class Progress(Action<TrainingProgress> report) : IProgress<TrainingProgress>
