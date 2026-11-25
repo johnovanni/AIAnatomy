@@ -76,6 +76,9 @@ public sealed class Trainer
             throw new ArgumentException("The validation fraction must be from 0 up to (not including) 1.", nameof(settings));
     }
 
+    /// <summary>The fixed windows validation loss is measured on (from the batch source).</summary>
+    public IReadOnlyList<IReadOnlyList<int>> ValidationWindows => _source.ValidationWindows;
+
     public bool HasDiverged { get; private set; }
     public int StepsTaken { get; private set; }
 

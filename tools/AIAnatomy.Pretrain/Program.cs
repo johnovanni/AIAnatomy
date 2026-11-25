@@ -2,6 +2,7 @@ using System.Diagnostics;
 using AIAnatomy.Core;
 using AIAnatomy.Models.Inspection;
 using AIAnatomy.Models.Language;
+using AIAnatomy.Models.Recurrent;
 using AIAnatomy.Models.Tokenization;
 using AIAnatomy.Models.Training;
 using AIAnatomy.Models.Transformers;
@@ -9,10 +10,13 @@ using AIAnatomy.Models.Transformers;
 // Builds the two models that ship with the app. Run in Release (about 120 ms per step):
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- fables --text content/texts/aesop-fables.txt --out content/models/fables-small.aimodel --steps 3000 --seed 1
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- induction --out content/models/induction-demo.aimodel --seed 1 [--steps 1500]
+// Times training steps of a family network (Release, from the repository root), to choose sizes and steps:
+//   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind memory --hidden 128 [--steps 50]
 
 const string Usage =
     "Usage: pretrain fables --text <file> --out <file> --steps <n> [--seed <n>]\n" +
-    "       pretrain induction --out <file> [--steps <n>] [--seed <n>]";
+    "       pretrain induction --out <file> [--steps <n>] [--seed <n>]\n" +
+    "       pretrain speed --kind memory --hidden <n> [--steps <n>] [--text <file>] [--model <file>]";
 
 try
 {
@@ -22,6 +26,7 @@ try
     {
         "fables" => await TrainFablesAsync(options),
         "induction" => await TrainInductionAsync(options),
+        "speed" => await SpeedAsync(options),
         _ => Fail(Usage),
     };
 }
@@ -96,6 +101,51 @@ static async Task<int> TrainInductionAsync(Dictionary<string, string> o)
     var info = new ModelInfo("Induction demo", "Repeated letter sequences", steps, null, seed, IsShipped: true);
     Save(new LanguageModel(transformer, InductionExperiment.Tokenizer, info), outPath);
     return 0;
+}
+
+// Each kind of network builds its own stepped trainer; the timing is shared.
+static async Task<int> SpeedAsync(Dictionary<string, string> o)
+{
+    string kind = Required(o, "kind");
+    var trainer = kind switch
+    {
+        "memory" => await MemorySpeedTrainerAsync(o),
+        _ => throw new ArgumentException($"Unknown --kind '{kind}' (use memory).\n{Usage}"),
+    };
+    TimeSteps(trainer.Trainer, Number(o, "steps", 50), trainer.Plans);
+    trainer.AfterTiming?.Invoke();
+    return 0;
+}
+
+static async Task<(ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Action? AfterTiming)> MemorySpeedTrainerAsync(Dictionary<string, string> o)
+{
+    int hidden = Number(o, "hidden", 0);
+    if (hidden < 1) throw new ArgumentException("--hidden must be at least 1.");
+    string text = await File.ReadAllTextAsync(o.TryGetValue("text", out var t) ? t : "content/texts/aesop-fables.txt");
+    LanguageModel fables;
+    using (var stream = File.OpenRead(o.TryGetValue("model", out var m) ? m : "content/models/fables-small.aimodel")) fables = ModelFile.Load(stream);
+
+    var source = MemoryTraining.FablesSource(fables.Tokenizer, text);
+    var rnn = new ElmanRnn(new RnnConfig(fables.Tokenizer.VocabularySize, hidden), new SeededRandom(1));
+    var trainer = new RnnTrainer(rnn, source, int.MaxValue, seed: 1);
+    Console.WriteLine($"memory network: hidden {hidden}, {rnn.Config.CountParameters()} parameters, batch 8, context {MemoryTraining.ContextLength}");
+    return (trainer,
+        new[] { ("retrain", MemoryTraining.RetrainSteps), ("shipped", MemoryTraining.ShippedSteps) },
+        () => Console.WriteLine($"validation loss after {trainer.StepsTaken} steps: {trainer.ValidationLoss():F3}"));
+}
+
+static void TimeSteps(ISteppedTrainer trainer, int steps, (string Name, int Steps)[] plans)
+{
+    if (steps < 1) throw new ArgumentException("--steps must be at least 1.");
+    for (int i = 0; i < 3; i++) trainer.Step();   // warm up (JIT, caches)
+    var watch = Stopwatch.StartNew();
+    double loss = double.NaN;
+    for (int i = 0; i < steps; i++) loss = trainer.Step();
+    watch.Stop();
+    double ms = watch.Elapsed.TotalMilliseconds / steps;
+    Console.WriteLine($"{steps} steps in {watch.Elapsed.TotalSeconds:F2} s: {ms:F2} ms per step (last train loss {loss:F3})");
+    foreach (var (name, planned) in plans)
+        Console.WriteLine($"  {name}: {planned} steps would take about {ms * planned / 1000:F0} s at this size");
 }
 
 static async Task<TrainingStepReport> RunAsync(Trainer trainer, int steps)
