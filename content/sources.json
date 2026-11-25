@@ -118,5 +118,15 @@
     "id": "shannon1950",
     "citation": "Shannon, C. E. (1950). Programming a Computer for Playing Chess. Philosophical Magazine, Series 7, 41(314), 256-275.",
     "url": "https://doi.org/10.1080/14786445008521796"
+  },
+  {
+    "id": "breiman1984",
+    "citation": "Breiman, L., Friedman, J. H., Olshen, R. A., and Stone, C. J. (1984). Classification and Regression Trees. Belmont, California: Wadsworth.",
+    "url": "https://doi.org/10.1201/9781315139470"
+  },
+  {
+    "id": "coverhart1967",
+    "citation": "Cover, T. M., and Hart, P. E. (1967). Nearest Neighbor Pattern Classification. IEEE Transactions on Information Theory, 13(1), 21-27.",
+    "url": "https://doi.org/10.1109/TIT.1967.1053964"
   }
 ]

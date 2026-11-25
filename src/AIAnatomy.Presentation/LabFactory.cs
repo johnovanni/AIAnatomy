@@ -43,6 +43,7 @@ public sealed class LabFactory
         Register(FamilyTreeLabViewModel.Id, () => new FamilyTreeLabViewModel(familyTree.Value, catalog.Value, new MsaglGraphLayout()));
         Register(ExpertSystemLabViewModel.Id, () => new ExpertSystemLabViewModel());
         Register(SearchLabViewModel.Id, () => new SearchLabViewModel());
+        Register(ClassicMlLabViewModel.Id, () => new ClassicMlLabViewModel());
         TrainLabViewModel? train = null;
         Register(TrainLabViewModel.Id, () => train ??= new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }

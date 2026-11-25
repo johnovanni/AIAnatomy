@@ -209,6 +209,17 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void ClassicMlNeighbours_IsARenderViewThatTakesFullLab()
+    {
+        Assert.Equal("classic-ml-neighbours", DiagnosticOptions.ClassicMlNeighbours);
+        var o = DiagnosticOptions.Parse(["--render-png", "classic-ml," + DiagnosticOptions.ClassicMlNeighbours, "t.png", "--full-lab"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "classic-ml", "classic-ml-neighbours" }, o.Views);
+        Assert.True(o.FullLab);
+        Assert.Equal(Path.Combine("", "t-classic-ml-neighbours.png"), o.OutputFileFor(DiagnosticOptions.ClassicMlNeighbours));
+    }
+
+    [Fact]
     public void ContentsView_IsAKnownView_ButNotForFullLab()
     {
         var ok = DiagnosticOptions.Parse(["--render-png", "contents,tokens", "c.png"]);

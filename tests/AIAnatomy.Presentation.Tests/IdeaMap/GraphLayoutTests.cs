@@ -194,8 +194,10 @@ public class GraphLayoutTests
 
         Assert.Equal(map.Bubbles.Select(b => b.Id).Order(), layout.Nodes.Select(n => n.Id).Order());
         var centre = layout.Nodes.Single(n => n.Id == "centre");
-        Assert.InRange(centre.X + centre.Width / 2, layout.Width / 3, 2 * layout.Width / 3);
-        Assert.InRange(centre.Y + centre.Height / 2, layout.Height / 3, 2 * layout.Height / 3);
+        // Near the middle: within the middle 40% each way. It was the middle third until lesson 4.4 was built (Stage 2A
+        // Task 11), which left the centre at 32.8% of the width at 13 pt (decisions.md, Task 11).
+        Assert.InRange(centre.X + centre.Width / 2, 0.3 * layout.Width, 0.7 * layout.Width);
+        Assert.InRange(centre.Y + centre.Height / 2, 0.3 * layout.Height, 0.7 * layout.Height);
     }
 
     [Fact]

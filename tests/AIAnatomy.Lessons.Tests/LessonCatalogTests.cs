@@ -198,7 +198,7 @@ public class LessonCatalogTests
     {
         var catalog = LessonCatalog.Load(Content);
         var sources = SourceList.Load(Path.Combine(Content, "sources.json"));
-        Assert.Equal(24, sources.All.Count);   // rombach2022 added in the final review (M7), shortliffe1976 in Stage 2A Task 7, shannon1950 in Task 9
+        Assert.Equal(26, sources.All.Count);   // rombach2022 added in the final review (M7), shortliffe1976 in Stage 2A Task 7, shannon1950 in Task 9, breiman1984 and coverhart1967 in Task 11
         foreach (var lesson in catalog.All)
             foreach (var id in lesson.SourceIds)
                 Assert.NotNull(sources.Find(id));

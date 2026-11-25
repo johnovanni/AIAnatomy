@@ -54,4 +54,13 @@ public class NearestNeighboursTests
         Assert.All(odd, p => Assert.Equal(p.Label, NearestNeighbours.Classify(odd, p.X, p.Y, 1)));
         Assert.Contains(odd, p => NearestNeighbours.Classify(odd, p.X, p.Y, 9) != p.Label);
     }
+
+    [Fact]
+    public void Two_labels_at_the_same_place_k2_the_first_listed_wins()
+    {
+        // Both points are at the same distance (and the vote is tied 1 to 1), so the stable order decides: the first listed.
+        Assert.Equal(1, NearestNeighbours.Classify([P(2, 2, 1), P(2, 2, 0)], 2, 2, 2));
+        Assert.Equal(0, NearestNeighbours.Classify([P(2, 2, 0), P(2, 2, 1)], 2, 2, 2));
+        Assert.Equal(1, NearestNeighbours.Classify([P(2, 2, 1), P(2, 2, 0)], 5, 5, 2));
+    }
 }

@@ -531,4 +531,18 @@ public class CheckedQuestionTests : IDisposable
         Assert.Equal(N(549_946), count.Groups[1].Value);
         Assert.Equal(count.Groups[1].Value, Correct(nameof(Search_TheComputerLooksAt549946PositionsForItsFirstMove)));
     }
+
+    // ---- 4.4 Classic machine learning ----
+
+    [Fact]
+    public void ClassicMl_ADepth10TreeGetsEveryDefaultPointRight()
+    {
+        var lab = new ClassicMlLabViewModel { Depth = ClassicMlLabViewModel.MaxDepth };   // the lab opens on the default set
+        Assert.Equal(10, lab.Depth);
+        var right = Regex.Match(lab.AccuracyText, @"^Right on (\d+) of (\d+) training points \((\d+)%\)\.$");
+        Assert.True(right.Success, lab.AccuracyText);
+        Assert.Equal(right.Groups[2].Value, right.Groups[1].Value);   // every point right
+        Assert.Equal("100", right.Groups[3].Value);
+        Assert.Equal($"All {right.Groups[2].Value} of them", Correct(nameof(ClassicMl_ADepth10TreeGetsEveryDefaultPointRight)));
+    }
 }

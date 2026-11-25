@@ -1,0 +1,119 @@
+<UserControl x:Class="AIAnatomy.App.Views.ClassicMlView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views"
+             xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation"
+             x:Name="Root">
+    <!-- DataContext: ClassicMlLabViewModel. -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+        <BooleanToVisibilityConverter x:Key="VisibleIfTrue" />
+    </UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="Click the plot to add a point of the chosen class, and right-click a point to remove it. From the keyboard, Tab to the plot: the arrow keys move a cross, Enter adds a point and Delete removes the nearest. Everything is worked out again at once." />
+
+        <!-- Method, its slider, the class of new points, and the starting sets. -->
+        <Grid Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Style="{StaticResource BodyText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,6" Text="Method:" />
+            <WrapPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
+                <RadioButton GroupName="Method" Content="Decision tree" IsChecked="{Binding IsDecisionTree}" Margin="0,0,18,0" />
+                <RadioButton GroupName="Method" Content="Nearest neighbours" IsChecked="{Binding IsNearestNeighbours}" />
+            </WrapPanel>
+
+            <TextBlock Grid.Row="1" Style="{StaticResource BodyText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,6"
+                       Text="{Binding DepthText}" Visibility="{Binding IsDecisionTree, Converter={StaticResource VisibleIfTrue}}" />
+            <Slider Grid.Row="1" Grid.Column="1" Margin="0,0,0,6" MaxWidth="520" HorizontalAlignment="Left" MinWidth="240"
+                    Minimum="1" Maximum="{Binding Source={x:Static labs:ClassicMlLabViewModel.MaxDepth}}" SmallChange="1" LargeChange="1" TickFrequency="1" IsSnapToTickEnabled="True"
+                    Value="{Binding Depth, Mode=TwoWay}" AutomationProperties.Name="Tree depth: how many questions deep the tree may go"
+                    ToolTip="How many questions deep the tree may go"
+                    Visibility="{Binding IsDecisionTree, Converter={StaticResource VisibleIfTrue}}" />
+            <TextBlock Grid.Row="1" Style="{StaticResource BodyText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,6"
+                       Text="{Binding KText}" Visibility="{Binding IsNearestNeighbours, Converter={StaticResource VisibleIfTrue}}" />
+            <Slider Grid.Row="1" Grid.Column="1" Margin="0,0,0,6" MaxWidth="520" HorizontalAlignment="Left" MinWidth="240"
+                    Minimum="1" Maximum="{Binding Source={x:Static labs:ClassicMlLabViewModel.MaxK}}" SmallChange="1" LargeChange="2" TickFrequency="1" IsSnapToTickEnabled="True"
+                    Value="{Binding K, Mode=TwoWay}" AutomationProperties.Name="k: how many nearest points vote"
+                    ToolTip="How many nearest points vote"
+                    Visibility="{Binding IsNearestNeighbours, Converter={StaticResource VisibleIfTrue}}" />
+
+            <TextBlock Grid.Row="2" Style="{StaticResource BodyText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,6" Text="New points:" />
+            <WrapPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,6">
+                <RadioButton GroupName="NewClass" Content="Class A (circle)" IsChecked="{Binding IsClassA}" Margin="0,0,18,0" />
+                <RadioButton GroupName="NewClass" Content="Class B (square)" IsChecked="{Binding IsClassB}" Margin="0,0,18,0" />
+                <RadioButton GroupName="NewClass" Content="Class C (triangle)" IsChecked="{Binding IsClassC}" />
+            </WrapPanel>
+
+            <TextBlock Grid.Row="3" Style="{StaticResource BodyText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,6" Text="Start from:" />
+            <WrapPanel Grid.Row="3" Grid.Column="1">
+                <ItemsControl ItemsSource="{Binding StarterNames}" Focusable="False" AutomationProperties.Name="Starting sets">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource Chip}" Content="{Binding}"
+                                    Command="{Binding DataContext.LoadStarterCommand, ElementName=Root}" CommandParameter="{Binding}"
+                                    ToolTip="Replace the points with this set" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Style="{StaticResource Chip}" Content="Clear" Command="{Binding ClearCommand}" ToolTip="Remove every point" />
+            </WrapPanel>
+        </Grid>
+
+        <!-- The two screens: side by side, one above the other when the pane is narrow (see the code-behind). -->
+        <Grid x:Name="Screens" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="FirstColumn" Width="3*" />
+                <ColumnDefinition x:Name="Gap" Width="16" />
+                <ColumnDefinition x:Name="SecondColumn" Width="2*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition x:Name="GapRow" Height="0" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <c:Screen x:Name="RegionsPanel" Grid.Column="0" ScreenName="regions" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="The plot: the points, and the region each class gets" />
+                    <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,6" TextWrapping="Wrap"
+                               Text="{Binding Message, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
+                               Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" AutomationProperties.LiveSetting="Polite" />
+                    <c:ClassPlot x:Name="Plot" Points="{Binding Points}" Regions="{Binding Regions}" SplitLines="{Binding SplitLines}"
+                                 AutomationProperties.Name="Plot of the points and regions" />
+                    <TextBlock Style="{StaticResource BodyText}" Margin="0,6,0,0" FontWeight="SemiBold"
+                               Text="{Binding AccuracyText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
+                               AutomationProperties.LiveSetting="Polite" />
+                    <TextBlock x:Name="ActionLine" Style="{StaticResource BodyText}" Margin="0,2,0,0" Text="{Binding ActionText}"
+                               AutomationProperties.LiveSetting="Polite" />
+                </StackPanel>
+            </c:Screen>
+
+            <c:Screen x:Name="QuestionsPanel" Grid.Column="2" ScreenName="questions" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="Questions" />
+                    <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,6" Text="{Binding QuestionsNote}" />
+                    <ItemsControl ItemsSource="{Binding Questions}" Focusable="False" AutomationProperties.Name="The tree's questions">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,2" FontFamily="{StaticResource NumberFont}"
+                                           TextWrapping="Wrap" Text="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </c:Screen>
+        </Grid>
+    </StackPanel>
+</UserControl>

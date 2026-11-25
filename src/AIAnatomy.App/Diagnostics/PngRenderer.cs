@@ -76,8 +76,15 @@ public static class PngRenderer
             if (viewModel.CurrentLab is not SearchLabViewModel search) throw new InvalidOperationException("The search lesson did not open its lab.");
             while (!search.Board.IsOver) await search.PlayAsync(search.Board.EmptyCells[0]);   // you take the lowest free square
         }
+        if (view == DiagnosticOptions.ClassicMlNeighbours)
+        {
+            await viewModel.NavigateToLesson("classic-ml");
+            if (viewModel.CurrentLab is not ClassicMlLabViewModel classic) throw new InvalidOperationException("The classic-ml lesson did not open its lab.");
+            classic.Method = ClassicMethod.NearestNeighbours;   // on the default set
+            classic.K = 1;
+        }
         var map = view is DiagnosticOptions.RulesVsLearningTrained or DiagnosticOptions.FamilyTreeChosen or DiagnosticOptions.ExpertSystemEdited
-            or DiagnosticOptions.SearchMidgame or DiagnosticOptions.SearchWon ? null : Show(window, viewModel, services, view);
+            or DiagnosticOptions.SearchMidgame or DiagnosticOptions.SearchWon or DiagnosticOptions.ClassicMlNeighbours ? null : Show(window, viewModel, services, view);
 
         if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
 

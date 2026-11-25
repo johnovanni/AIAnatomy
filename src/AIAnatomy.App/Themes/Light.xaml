@@ -48,6 +48,10 @@
     <SolidColorBrush x:Key="PartSearchBrush" Color="#042895" />
     <SolidColorBrush x:Key="PartClassicBrush" Color="#46931F" />
     <SolidColorBrush x:Key="PartRewardBrush" Color="#AC3999" />
+    <!-- The classic machine learning lab's classes A, B and C (Okabe-Ito blue, orange and reddish purple; each at least 3:1 on Surface and Screen and, among themselves, at least 15 CIE76 DeltaE apart, 8 under protanopia and deuteranopia). Points also differ in shape: circle, square, triangle. -->
+    <SolidColorBrush x:Key="ClassABrush" Color="#0072B2" />
+    <SolidColorBrush x:Key="ClassBBrush" Color="#C04F00" />
+    <SolidColorBrush x:Key="ClassCBrush" Color="#A0357A" />
     <sys:Double x:Key="ScreenGlowOpacity">0</sys:Double>
     <!-- Single-hue sequential ramp for heat maps, light (small) to dark (large). -->
     <Color x:Key="RampLowColor">#F1F6FB</Color>

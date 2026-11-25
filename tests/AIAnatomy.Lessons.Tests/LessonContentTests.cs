@@ -19,7 +19,7 @@ public class LessonContentTests
     /// <summary>The lessons still "coming later". Each lab task removes its own id when it turns its lesson into a built one.</summary>
     private static readonly string[] StillComingLater =
     [
-        "beyond-coming", "classic-ml", "learning-by-reward",
+        "beyond-coming", "learning-by-reward",
         "image-filters", "image-network", "memory-networks", "diffusion-shapes", "diffusion-steps",
     ];
 

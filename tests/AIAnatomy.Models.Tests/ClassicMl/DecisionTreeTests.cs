@@ -198,4 +198,12 @@ public class DecisionTreeTests
         Assert.Equal(1.0, Accuracy(DecisionTree.Grow(odd, 20), odd));
         Assert.True(Accuracy(DecisionTree.Grow(odd, 1), odd) < 1.0);
     }
+
+    /// <summary>Guards lesson 4.4's claim that a depth-10 tree gets every point of the default set right (the lab's maximum depth).</summary>
+    [Fact]
+    public void Default_set_a_depth_10_tree_fits_every_point()
+    {
+        var odd = StarterSets.All.Single(s => s.Name == "Two groups with odd points").Points;
+        Assert.Equal(1.0, Accuracy(DecisionTree.Grow(odd, 10), odd));
+    }
 }

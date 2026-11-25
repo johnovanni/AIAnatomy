@@ -154,11 +154,30 @@ public class ThemeContrastTests
     {
         var map = Brushes(theme);
         // The distance rule is per group: parts may share a hue family across sections (spec 5), since the icon and label tell them apart.
-        AssertDistinguishable(theme, Parts.Transformer);
-        AssertDistinguishable(theme, Parts.Family.Append("later").ToArray());
+        AssertDistinguishable(theme, Parts.Transformer.Select(PartBrush).ToArray());
+        AssertDistinguishable(theme, Parts.Family.Append("later").Select(PartBrush).ToArray());
     }
 
-    private static void AssertDistinguishable(string theme, IReadOnlyList<string> keys)
+    /// <summary>The classic machine learning lab's three classes (lesson 4.4): points, and regions shaded in them.</summary>
+    private static readonly string[] ClassBrushes = ["ClassABrush", "ClassBBrush", "ClassCBrush"];
+
+    [Theory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public void ClassBrushes_MeetThree_OnSurfaceAndScreen(string theme)
+    {
+        foreach (var name in ClassBrushes)
+            foreach (var bg in new[] { "SurfaceBrush", "ScreenBrush" })
+                Assert.True(Contrast(theme, name, bg) >= 3.0, $"{theme} {name} on {bg}: {Contrast(theme, name, bg):F2}");
+    }
+
+    [Theory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public void ClassBrushes_AreDistinguishable_ForColourBlindViewers(string theme) => AssertDistinguishable(theme, ClassBrushes);
+
+    /// <summary>Every pair of the named brushes is far enough apart in normal vision and under protanopia and deuteranopia.</summary>
+    private static void AssertDistinguishable(string theme, IReadOnlyList<string> brushes)
     {
         var map = Brushes(theme);
         (string Name, double Min, Func<double[], double[]> View)[] views =
@@ -167,15 +186,16 @@ public class ThemeContrastTests
             ("protanopia", 8, c => Simulate(Protan, c)),
             ("deuteranopia", 8, c => Simulate(Deutan, c)),
         ];
-        for (var i = 0; i < keys.Count; i++)
+        for (var i = 0; i < brushes.Count; i++)
             for (var j = 0; j < i; j++)
             {
-                var a = LinearRgb(map[PartBrush(keys[i])]);
-                var b = LinearRgb(map[PartBrush(keys[j])]);
+                Assert.True(map.ContainsKey(brushes[i]), $"{theme} is missing {brushes[i]}");
+                var a = LinearRgb(map[brushes[i]]);
+                var b = LinearRgb(map[brushes[j]]);
                 foreach (var (name, min, view) in views)
                 {
                     var de = DeltaE(Lab(view(a)), Lab(view(b)));
-                    Assert.True(de >= min, $"{theme} {keys[j]} vs {keys[i]} under {name}: DeltaE {de:F1} < {min}");
+                    Assert.True(de >= min, $"{theme} {brushes[j]} vs {brushes[i]} under {name}: DeltaE {de:F1} < {min}");
                 }
             }
     }
