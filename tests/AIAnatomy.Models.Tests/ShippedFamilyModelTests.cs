@@ -38,6 +38,9 @@ public class ShippedFamilyModelTests
         Assert.True(info.Results!.ContainsKey("trainSeconds"));
         Assert.True(info.Results.ContainsKey("charactersPerSecond"));
         Assert.True(new FileInfo(FamilyPath("memory.aimodel")).Length < OneMegabyte);
+        double expected = info.StepsTrained * (double)RnnTrainer.DefaultBatchSize * MemoryTraining.ContextLength / info.Results["trainSeconds"];
+        Assert.True(Math.Abs(info.Results["charactersPerSecond"] - expected) <= 1e-9 * expected,
+            $"recorded {info.Results["charactersPerSecond"]}, from the steps and seconds {expected}");
     }
 
     [Fact]
@@ -49,7 +52,7 @@ public class ShippedFamilyModelTests
 
         double loss = trainer.ValidationLoss();
 
-        Assert.Equal(info.Results!["validationLoss"], loss, 6);
+        Assert.True(Math.Abs(info.Results!["validationLoss"] - loss) < 1e-6, $"recorded {info.Results["validationLoss"]}, measured {loss}");
         Assert.True(loss < 2.3, $"validation loss {loss}");
     }
 
@@ -88,7 +91,9 @@ public class ShippedFamilyModelTests
         var samples = Enumerable.Range(0, result.GetLength(0)).Select(i => (result[i, 0], result[i, 1])).ToList();
         double distance = Shapes.MeanDistanceToShape(samples, shape);
 
-        Assert.Equal(info.Results["meanDistance"], distance, 9);
+        Assert.True(Math.Abs(info.Results["meanDistance"] - distance) < 1e-9, $"recorded {info.Results["meanDistance"]}, measured {distance}");
+        double coverage = Shapes.Coverage(samples, shape, 0.05);
+        Assert.True(Math.Abs(info.Results["coverage"] - coverage) < 1e-9, $"recorded {info.Results["coverage"]}, measured {coverage}");
         Assert.True(distance < 0.05, $"mean distance {distance}");
     }
 }

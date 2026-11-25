@@ -10,6 +10,8 @@ namespace AIAnatomy.Models.Recurrent;
 /// </summary>
 public sealed class RnnTrainer : ISteppedTrainer
 {
+    /// <summary>Windows per step unless told otherwise (the Fables run's batch too).</summary>
+    public const int DefaultBatchSize = 8;
     private const double MaxGradientNorm = 1.0;
 
     private readonly ElmanRnn _rnn;
@@ -20,7 +22,7 @@ public sealed class RnnTrainer : ISteppedTrainer
     private readonly int _batchSize;
 
     /// <param name="seed">Seeds the drawing of training windows only; the network's starting weights come from its own seed.</param>
-    public RnnTrainer(ElmanRnn rnn, IBatchSource source, int totalSteps, int seed, int batchSize = 8, double learningRate = 3e-3)
+    public RnnTrainer(ElmanRnn rnn, IBatchSource source, int totalSteps, int seed, int batchSize = DefaultBatchSize, double learningRate = 3e-3)
     {
         ArgumentNullException.ThrowIfNull(rnn);
         ArgumentNullException.ThrowIfNull(source);

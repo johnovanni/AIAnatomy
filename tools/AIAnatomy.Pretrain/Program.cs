@@ -11,7 +11,7 @@ using AIAnatomy.Models.Transformers;
 // Builds the two models that ship with the app. Run in Release (about 120 ms per step):
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- fables --text content/texts/aesop-fables.txt --out content/models/fables-small.aimodel --steps 3000 --seed 1
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- induction --out content/models/induction-demo.aimodel --seed 1 [--steps 1500]
-// Builds the family networks that ship in content/models/family (Release; the memory network takes about 10 minutes, each diffusion network about 4):
+// Builds the family networks that ship in content/models/family (Release; the memory network takes about 5 minutes, each diffusion network about 4):
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- memory --text content/texts/aesop-fables.txt --model content/models/fables-small.aimodel --out content/models/family/memory.aimodel --seed 1
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- diffusion --shape Spiral --out content/models/family/diffusion-spiral.aimodel --seed 1
 // Times training steps of a family network (Release, from the repository root), to choose sizes and steps:
@@ -123,14 +123,15 @@ static async Task<int> TrainMemoryAsync(Dictionary<string, string> o)
     string outPath = Required(o, "out");
     int steps = Number(o, "steps", MemoryTraining.ShippedSteps);
     int seed = Number(o, "seed", 1);
-    if (steps < 25) throw new ArgumentException("--steps must be at least 25 (validation runs every 25 steps).");
+    if (steps < 25 || steps % 25 != 0) throw new ArgumentException("--steps must be a multiple of 25 (validation runs every 25 steps, and the last step must be one).");
+    RequireRelease();
     LanguageModel fables;
     using (var stream = File.OpenRead(Required(o, "model"))) fables = ModelFile.Load(stream);
 
     var source = MemoryTraining.FablesSource(fables.Tokenizer, text);
     var rnn = new ElmanRnn(MemoryTraining.Shipped(fables.Tokenizer.VocabularySize), new SeededRandom(seed));
     var trainer = new RnnTrainer(rnn, source, steps, seed);
-    Console.WriteLine($"memory network: hidden {rnn.Config.Hidden}, {rnn.Config.CountParameters()} parameters, {steps} steps, batch 8, context {MemoryTraining.ContextLength}");
+    Console.WriteLine($"memory network: hidden {rnn.Config.Hidden}, {rnn.Config.CountParameters()} parameters, {steps} steps, batch {RnnTrainer.DefaultBatchSize}, context {MemoryTraining.ContextLength}");
 
     double validation = double.NaN;
     var watch = Stopwatch.StartNew();
@@ -142,7 +143,7 @@ static async Task<int> TrainMemoryAsync(Dictionary<string, string> o)
         if (step % 100 == 0) Console.WriteLine($"step {step}: train {loss:F3}, validation {validation:F3}, {watch.Elapsed.TotalSeconds:F0} s");
     }
     double seconds = watch.Elapsed.TotalSeconds;
-    double charactersPerSecond = (double)steps * 8 * MemoryTraining.ContextLength / seconds;
+    double charactersPerSecond = (double)steps * RnnTrainer.DefaultBatchSize * MemoryTraining.ContextLength / seconds;
     Console.WriteLine($"done: {steps} steps in {seconds:F0} s ({charactersPerSecond:F0} characters per second), final validation loss {validation:F3}");
 
     var info = new ModelInfo("Memory network", "Aesop's Fables (Townsend)", steps, validation, seed, IsShipped: true,
@@ -164,6 +165,7 @@ static int TrainDiffusion(Dictionary<string, string> o)
     string outPath = Required(o, "out");
     int steps = Number(o, "steps", DiffusionTraining.ShippedSteps);
     int seed = Number(o, "seed", 1);
+    RequireRelease();
     var preset = Shapes.Presets.FirstOrDefault(p => p.Name == shapeName);
     if (preset.Points is null)
         throw new ArgumentException($"Unknown --shape '{shapeName}' (use {string.Join(", ", Shapes.Presets.Select(p => p.Name))}).");
@@ -222,7 +224,7 @@ static async Task<(ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Ac
     var source = MemoryTraining.FablesSource(fables.Tokenizer, text);
     var rnn = new ElmanRnn(new RnnConfig(fables.Tokenizer.VocabularySize, hidden), new SeededRandom(1));
     var trainer = new RnnTrainer(rnn, source, int.MaxValue, seed: 1);
-    Console.WriteLine($"memory network: hidden {hidden}, {rnn.Config.CountParameters()} parameters, batch 8, context {MemoryTraining.ContextLength}");
+    Console.WriteLine($"memory network: hidden {hidden}, {rnn.Config.CountParameters()} parameters, batch {RnnTrainer.DefaultBatchSize}, context {MemoryTraining.ContextLength}");
     return (trainer,
         new[] { ("retrain", MemoryTraining.RetrainSteps), ("shipped", MemoryTraining.ShippedSteps) },
         () => Console.WriteLine($"validation loss after {trainer.StepsTaken} steps: {trainer.ValidationLoss():F3}"));
@@ -251,12 +253,23 @@ static (ISteppedTrainer Trainer, (string Name, int Steps)[] Plans, Action? After
         });
 }
 
+static bool IsOptimised()
+{
+    var debuggable = typeof(ISteppedTrainer).Assembly.GetCustomAttributes(typeof(DebuggableAttribute), false)
+        .OfType<DebuggableAttribute>().FirstOrDefault();
+    return !(debuggable?.IsJITOptimizerDisabled ?? false);
+}
+
+// A shipped file records its training time, so a Debug run must not write one.
+static void RequireRelease()
+{
+    if (!IsOptimised()) throw new ArgumentException("This is not an optimised (Release) build: its times would be wrong in a shipped file. Run with -c Release.");
+}
+
 static void TimeSteps(ISteppedTrainer trainer, int steps, (string Name, int Steps)[] plans)
 {
     if (steps < 1) throw new ArgumentException("--steps must be at least 1.");
-    var debuggable = typeof(ISteppedTrainer).Assembly.GetCustomAttributes(typeof(DebuggableAttribute), false)
-        .OfType<DebuggableAttribute>().FirstOrDefault();
-    if (debuggable?.IsJITOptimizerDisabled ?? false)
+    if (!IsOptimised())
         Console.WriteLine("WARNING: this is not an optimised (Release) build, so these times are not the app's. Do not log them; run with -c Release.");
     // Warm up past .NET's tiered compilation: a method called about 30 times is recompiled with full optimisation.
     for (int i = 0; i < WarmUpSteps; i++) trainer.Step();
