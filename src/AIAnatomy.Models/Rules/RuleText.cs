@@ -10,7 +10,7 @@ public static class RuleText
 
     /// <summary>Trim, lower-case (invariant) and collapse inner whitespace to one space.</summary>
     public static string Normalize(string fact) =>
-        string.Join(' ', fact.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
+        string.Join(' ', fact.Replace('’', '\'').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
 
     /// <summary>Never throws. Keywords if, and, not, then are accepted in any case.</summary>
     public static RuleParse Parse(string? text)
@@ -42,8 +42,14 @@ public static class RuleText
         if (conclusion.Length == 0) return Fail("The conclusion is empty.");
         if (conditions.Count > MaxConditions) return Fail($"A rule can have at most {MaxConditions} conditions.");
 
+        var conclusionWords = words.Skip(then + 1).ToArray();
+        if (conclusionWords.Any(w => Is(w, "and"))) return Fail("A conclusion is one fact. Write a separate rule for each conclusion.");
+        if (Is(conclusionWords[0], "not")) return Fail("A conclusion can't start with \"not\": a rule can only conclude that something is true.");
+
         foreach (var fact in conditions.Select(c => c.Fact).Append(conclusion))
         {
+            if (fact.Split(' ').Any(w => Keywords.Any(k => Is(w, k))))
+                return Fail("The words \"if\", \"then\", \"and\" and \"not\" can't be part of a fact.");
             var error = CheckFact(Normalize(fact));
             if (error != null) return Fail(error);
         }
@@ -59,6 +65,8 @@ public static class RuleText
         if (fact.Length > MaxFactLength) return $"\"{fact}\" is too long ({MaxFactLength} characters at most).";
         return null;
     }
+
+    private static readonly string[] Keywords = { "if", "then", "and", "not" };
 
     private static bool Is(string word, string keyword) => word.Equals(keyword, StringComparison.OrdinalIgnoreCase);
     private static RuleParse Fail(string error) => new(null, error);
