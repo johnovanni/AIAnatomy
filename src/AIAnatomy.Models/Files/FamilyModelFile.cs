@@ -9,6 +9,18 @@ namespace AIAnatomy.Models.Files;
 public static class FamilyKinds
 {
     public const string Digits = "digit-network", Memory = "memory-network", Diffusion = "diffusion-network";
+
+    /// <summary>
+    /// Plain words for a kind, with its article, for messages a learner reads ("an image network"). Any kind not listed
+    /// here, including odd or very long stored text, gives "a different kind of network", so a file's own text is never shown.
+    /// </summary>
+    public static string FriendlyName(string kind) => kind switch
+    {
+        Digits => "an image network",
+        Memory => "a memory network",
+        Diffusion => "a diffusion network",
+        _ => "a different kind of network",
+    };
 }
 
 /// <summary>

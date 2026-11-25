@@ -73,7 +73,7 @@ public static class ModelFile
         var preamble = ReadPreamble(line);
         // A version 2 header without a kind is not a family file either, so it gets the plain version message.
         if (preamble.Version == FamilyVersion && !string.IsNullOrWhiteSpace(preamble.Kind))
-            throw new InvalidDataException($"This file holds a {preamble.Kind}, not a language model.");
+            throw new InvalidDataException($"This file holds {FamilyKinds.FriendlyName(preamble.Kind)}, not a language model.");
         if (preamble.Version != Version) throw new InvalidDataException(VersionMessage(preamble.Version, Version));
         var header = ReadHeader<Header>(line);
         if (header.Config is null || header.Vocabulary is null || header.Info is null || header.Parameters is null || header.Info.Name is null || header.Info.TrainingTextName is null)

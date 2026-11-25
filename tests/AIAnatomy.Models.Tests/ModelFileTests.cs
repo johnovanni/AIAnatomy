@@ -349,6 +349,36 @@ public class ModelLibraryTests : IDisposable
     }
 
     [Fact]
+    public void Library_FamilyFileInTopLevelFolders_ListedUnreadableWithWrongKindMessage()
+    {
+        static void WriteFamily(string folder, string name, string kind)
+        {
+            Directory.CreateDirectory(folder);
+            using var stream = File.Create(Path.Combine(folder, name + ".aimodel"));
+            AIAnatomy.Models.Files.FamilyModelFile.Save(stream, kind, new { width = 2 }, null,
+                new ModelInfo(name, "t", 1, null, 1, false), new[] { new Parameter("w", Tensor.FromArray(new[] { 1.0, 2.0 }, 2)) });
+        }
+
+        var library = Library();
+        library.Save(SamplingTests.MakeModel(), "good");
+        WriteFamily(User, "memory", AIAnatomy.Models.Files.FamilyKinds.Memory);
+        WriteFamily(Shipped, "digits", AIAnatomy.Models.Files.FamilyKinds.Digits);
+
+        var list = library.List(); // must not throw
+        Assert.Equal(3, list.Count);
+        var digits = list.Single(e => e.IsShipped);
+        Assert.False(digits.IsReadable);
+        Assert.Equal("digits", digits.Name); // the file name, since an unreadable file's own name is not read
+        Assert.Equal("This file holds an image network, not a language model.", digits.Problem);
+        var memory = list.Single(e => e.Name == "memory");
+        Assert.False(memory.IsReadable);
+        Assert.Equal("This file holds a memory network, not a language model.", memory.Problem);
+        Assert.True(list.Single(e => e.Name == "good").IsReadable);
+        var thrown = Assert.Throws<InvalidDataException>(() => library.Load(memory));
+        Assert.Equal(memory.Problem, thrown.Message);
+    }
+
+    [Fact]
     public void Library_Delete_RemovesUserFile()
     {
         var library = Library();

@@ -118,7 +118,23 @@ public class FamilyModelFileTests
     public void ModelFile_GivenFamilyFile_SaysWhatItHolds()
     {
         var e = Assert.Throws<InvalidDataException>(() => ModelFile.Load(new MemoryStream(Saved(FamilyKinds.Diffusion))));
-        Assert.Equal("This file holds a diffusion-network, not a language model.", e.Message);
+        Assert.Equal("This file holds a diffusion network, not a language model.", e.Message);
+        var digits = Assert.Throws<InvalidDataException>(() => ModelFile.Load(new MemoryStream(Saved(FamilyKinds.Digits))));
+        Assert.Equal("This file holds an image network, not a language model.", digits.Message);
+        var odd = Assert.Throws<InvalidDataException>(() => ModelFile.Load(new MemoryStream(Saved(new string('x', 500)))));
+        Assert.Equal("This file holds a different kind of network, not a language model.", odd.Message);
+    }
+
+    [Fact]
+    public void FamilyKinds_FriendlyName_GivesPlainWordsAndNeverTheStoredText()
+    {
+        Assert.Equal("an image network", FamilyKinds.FriendlyName(FamilyKinds.Digits));
+        Assert.Equal("a memory network", FamilyKinds.FriendlyName(FamilyKinds.Memory));
+        Assert.Equal("a diffusion network", FamilyKinds.FriendlyName(FamilyKinds.Diffusion));
+        Assert.Equal("a different kind of network", FamilyKinds.FriendlyName("photo-network"));
+        Assert.Equal("a different kind of network", FamilyKinds.FriendlyName("DIGIT-NETWORK"));
+        Assert.Equal("a different kind of network", FamilyKinds.FriendlyName(""));
+        Assert.Equal("a different kind of network", FamilyKinds.FriendlyName(null!));
     }
 
     [Fact]
