@@ -153,5 +153,10 @@
     "id": "hochreiter1997",
     "citation": "Hochreiter, S., and Schmidhuber, J. (1997). Long Short-Term Memory. Neural Computation, 9(8), 1735-1780.",
     "url": "https://doi.org/10.1162/neco.1997.9.8.1735"
+  },
+  {
+    "id": "alpaydin1998",
+    "citation": "Alpaydin, E., and Kaynak, C. (1998). Optical Recognition of Handwritten Digits [Dataset]. UCI Machine Learning Repository.",
+    "url": "https://doi.org/10.24432/C50P49"
   }
 ]

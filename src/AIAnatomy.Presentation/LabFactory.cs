@@ -48,12 +48,13 @@ public sealed class LabFactory
         Register(SearchLabViewModel.Id, () => new SearchLabViewModel());
         Register(ClassicMlLabViewModel.Id, () => new ClassicMlLabViewModel());
         Register(RewardLabViewModel.Id, () => new RewardLabViewModel());
+        Register(FiltersLabViewModel.Id, () => new FiltersLabViewModel(Family));
         Register(MemoryNetworkLabViewModel.Id, () => new MemoryNetworkLabViewModel(Family, models, () => fables.Value));
         TrainLabViewModel? train = null;
         Register(TrainLabViewModel.Id, () => train ??= new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }
 
-    /// <summary>The shipped family networks (memory, diffusion), loaded once per window; Part B labs take this.</summary>
+    /// <summary>The shipped family networks (digits, memory, diffusion), loaded once per window; Part B labs take this.</summary>
     public FamilyModels Family { get; }
 
     public void Register(string labId, Func<LabViewModel> create)

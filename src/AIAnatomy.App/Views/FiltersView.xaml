@@ -1,0 +1,158 @@
+<UserControl x:Class="AIAnatomy.App.Views.FiltersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views"
+             xmlns:labs="clr-namespace:AIAnatomy.Presentation.Labs;assembly=AIAnatomy.Presentation"
+             x:Name="Root">
+    <!-- DataContext: FiltersLabViewModel. -->
+    <UserControl.Resources>
+        <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+        <BooleanToVisibilityConverter x:Key="VisibleIfTrue" />
+        <!-- A preset button: the Chip look with square corners, since a round pill cuts into the swatch. -->
+        <Style x:Key="PresetChip" TargetType="Button" BasedOn="{StaticResource Chip}">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{DynamicResource HeaderBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- A preset: its 3 by 3 swatch above its name; the numbers are in the tooltip and the help text. -->
+        <DataTemplate x:Key="PresetButton" DataType="{x:Type labs:FilterPreset}">
+            <Button Style="{StaticResource PresetChip}"
+                    Command="{Binding DataContext.ChoosePresetCommand, ElementName=Root}" CommandParameter="{Binding}"
+                    ToolTip="{Binding Description}" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding Description}">
+                <StackPanel>
+                    <c:FilterSwatch Weights="{Binding Weights}" HorizontalAlignment="Center" Margin="0,2,0,4" />
+                    <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="One 3 by 3 filter slides over an 8 by 8 digit. Centred on each pixel in turn, it multiplies that pixel and its eight neighbours by its nine numbers and adds them up: that sum is the feature map's number there. Everything is worked out again at once." />
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,4,0,6" TextWrapping="Wrap"
+                   c:LiveText.IsLive="True" Text="{Binding LoadMessage}"
+                   Visibility="{Binding LoadMessage, Converter={StaticResource VisibleIfSet}}" />
+
+        <!-- The digit: a test digit (Previous, Next, or a digit 0 to 9, the keyboard path) or a drawing. -->
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,8,0,4" Text="The digit" />
+        <WrapPanel Margin="0,0,0,4">
+            <Button Style="{StaticResource Chip}" Content="Previous" Command="{Binding PreviousCommand}" ToolTip="The test digit before this one" />
+            <Button Style="{StaticResource Chip}" Content="Next" Command="{Binding NextCommand}" ToolTip="The next test digit" Margin="0,0,18,6" />
+            <TextBlock Style="{StaticResource BodyText}" VerticalAlignment="Center" Margin="0,0,8,6" Text="Show a" />
+            <ItemsControl ItemsSource="{x:Static labs:FiltersLabViewModel.Digits}" Focusable="False" AutomationProperties.Name="Show a test digit">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource Chip}" Content="{Binding}" Padding="10,4"
+                                Command="{Binding DataContext.ShowDigitCommand, ElementName=Root}" CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding StringFormat='Show a test digit {0}'}"
+                                ToolTip="{Binding StringFormat='Show the next test digit that is a {0}'}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </WrapPanel>
+        <Grid Margin="0,2,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <c:DrawingPad x:Name="Pad" VerticalAlignment="Top" />
+            <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                <TextBlock Style="{StaticResource BodyText}"
+                           Text="Or draw a digit on the pad with the mouse or a pen. Your drawing becomes an 8 by 8 image the way the test digits were made, and the filter slides over it as soon as each stroke ends." />
+                <Button Style="{StaticResource Chip}" Content="Clear the pad" Click="OnClearPad" HorizontalAlignment="Left" Margin="0,8,0,6"
+                        ToolTip="Empty the pad and go back to the test digit" />
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" c:LiveText.IsLive="True" Text="{Binding Message}"
+                           Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- The filter: presets (hand-made and learned) and the nine editable numbers. -->
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,12,0,4" Text="The filter" />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,4"
+                   Text="Each square of a filter is red above zero (+), blue below zero (−) and near-white about zero, scaled to that filter's largest number. Point at a filter to read its numbers." />
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,4,0,4" Text="Made by hand" />
+        <ItemsControl ItemsSource="{x:Static labs:FiltersLabViewModel.HandMadePresets}" ItemTemplate="{StaticResource PresetButton}" Focusable="False"
+                      AutomationProperties.Name="Hand-made filters">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        </ItemsControl>
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,6,0,4" Text="Learned by the shipped network (its first layer's 16 filters)" />
+        <ItemsControl ItemsSource="{Binding LearnedPresets}" ItemTemplate="{StaticResource PresetButton}" Focusable="False"
+                      AutomationProperties.Name="Filters the network learned">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        </ItemsControl>
+
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,8,0,4">
+            <Run Text="Now using: " /><Run Text="{Binding FilterName, Mode=OneWay}" />
+        </TextBlock>
+        <WrapPanel>
+            <ItemsControl ItemsSource="{Binding Filter}" Focusable="False" AutomationProperties.Name="The filter's nine numbers" Margin="0,0,16,6">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type labs:FilterCell}">
+                        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" MinWidth="{DynamicResource FilterBoxWidth}" Margin="0,0,4,4"
+                                 FontFamily="{StaticResource NumberFont}" TextAlignment="Center" LostKeyboardFocus="OnFilterBoxLeft"
+                                 AutomationProperties.Name="{Binding Name}" ToolTip="{Binding ExactText}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <c:FilterSwatch Weights="{Binding Weights}" VerticalAlignment="Top" Margin="0,0,0,6"
+                            AutomationProperties.Name="The filter as coloured squares" />
+        </WrapPanel>
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,8"
+                   Text="Type any numbers from −10 to 10; a number outside that is changed to −10 or 10. The boxes show three decimals; point at a box for the number in full." />
+
+        <!-- The picture and its feature map, side by side when there is room. -->
+        <WrapPanel>
+            <c:Screen ScreenName="image" Margin="0,0,16,8" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="The picture" />
+                    <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4" Text="{Binding ImageCaption}"
+                               MaxWidth="{Binding ActualWidth, ElementName=ImageMap}" HorizontalAlignment="Left" />
+                    <c:HeatMap x:Name="ImageMap" Values="{Binding Image}" Minimum="0" Maximum="1" HorizontalAlignment="Left"
+                               RowLabels="{x:Static labs:FiltersLabViewModel.PositionLabels}" ColumnLabels="{x:Static labs:FiltersLabViewModel.PositionLabels}"
+                               RowAxisTitle="row" ColumnAxisTitle="column"
+                               AutomationProperties.Name="The picture: how much ink in each pixel, from 0 to 1" />
+                </StackPanel>
+            </c:Screen>
+            <c:Screen ScreenName="feature-map" Margin="0,0,0,8" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="The feature map" />
+                    <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4" Text="{Binding FeatureMapCaption}"
+                               MaxWidth="{Binding ActualWidth, ElementName=FeatureMap}" HorizontalAlignment="Left" />
+                    <c:HeatMap x:Name="FeatureMap" Values="{Binding FeatureMap}" Minimum="{Binding MapMinimum}" Maximum="{Binding MapLimit}"
+                               RampLowColor="{DynamicResource DivergingLowColor}" RampMidColor="{DynamicResource DivergingMidColor}"
+                               RampHighColor="{DynamicResource DivergingHighColor}" HorizontalAlignment="Left"
+                               RowLabels="{x:Static labs:FiltersLabViewModel.PositionLabels}" ColumnLabels="{x:Static labs:FiltersLabViewModel.PositionLabels}"
+                               RowAxisTitle="row" ColumnAxisTitle="column"
+                               AutomationProperties.Name="The feature map: the filter's sum centred on each pixel" />
+                    <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,6,0,0" Text="{x:Static labs:FiltersLabViewModel.CountText}"
+                               MaxWidth="{Binding ActualWidth, ElementName=FeatureMap}" HorizontalAlignment="Left" />
+                    <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0"
+                               Text="Red is above zero, blue below zero and near-white about zero; the number is written in each square. Pixels beyond the edge count as 0."
+                               MaxWidth="{Binding ActualWidth, ElementName=FeatureMap}" HorizontalAlignment="Left" />
+                    <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0" Text="{x:Static labs:FiltersLabViewModel.MapNote}"
+                               MaxWidth="{Binding ActualWidth, ElementName=FeatureMap}" HorizontalAlignment="Left" />
+                </StackPanel>
+            </c:Screen>
+        </WrapPanel>
+    </StackPanel>
+</UserControl>

@@ -47,7 +47,7 @@
     { "id": "learning-by-reward", "label": "Learning by reward", "kind": "flow",
       "description": "Edit a maze and watch an agent learn its way to the goal from rewards alone, with each square's value and preferred move shown." },
     { "id": "image-filters", "label": "Image filters", "kind": "flow",
-      "description": "A small filter slides over a digit to make a feature map. Coming in a later part of the app." },
+      "description": "One 3 by 3 filter slides over an 8 by 8 digit, using the same nine numbers everywhere to make a feature map: hand-made presets beside the network's learned filters." },
     { "id": "image-network", "label": "Image network", "kind": "flow",
       "description": "A small convolutional network reads a digit you draw. Coming in a later part of the app." },
     { "id": "memory-networks", "label": "Memory networks", "kind": "flow",

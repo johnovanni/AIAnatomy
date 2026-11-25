@@ -52,11 +52,17 @@ public class FamilyTreeLabTests
     public void Bubbles_ForPlaceholderLessons_AreLater()
     {
         var lab = NewLab();
-        var images = Bubble(lab, "image-filters");
-        Assert.True(Catalog.Get("image-filters").IsPlaceholder);
-        Assert.True(images.IsLater);
-        Assert.Equal("4.6 Image networks, not built yet", images.AutomationName);
-        Assert.Equal("4.6  later", images.HeadText);   // "later" in words, not colour alone
+        // The first tree node whose lesson is still a placeholder (found from the catalog, so building lessons does not break this).
+        var node = Tree.Nodes.First(n => n.LessonId != null && Catalog.Get(n.LessonId).IsPlaceholder);
+        var later = Bubble(lab, node.LessonId!);
+        string number = Catalog.NumberOf(Catalog.Get(node.LessonId!));
+        Assert.True(later.IsLater);
+        Assert.Equal($"{number} {node.Label}, not built yet", later.AutomationName);
+        Assert.Equal($"{number}  later", later.HeadText);   // "later" in words, not colour alone
+        // A built section 4 lesson's bubble is not later.
+        Assert.False(Catalog.Get("image-filters").IsPlaceholder);
+        Assert.False(Bubble(lab, "image-filters").IsLater);
+        Assert.Equal("4.6", Bubble(lab, "image-filters").HeadText);
         Assert.Equal("1.2", Bubble(lab, "architecture-map").HeadText);
         Assert.Equal("", lab.Bubbles.Single(b => b.Id == "neural").HeadText);
         Assert.Equal("whole", Bubble(lab, "architecture-map").Part);

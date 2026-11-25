@@ -242,12 +242,23 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void FiltersLearned_IsARenderViewThatTakesFullLab()
+    {
+        Assert.Equal("filters-learned", DiagnosticOptions.FiltersLearned);
+        var o = DiagnosticOptions.Parse(["--render-png", "image-filters," + DiagnosticOptions.FiltersLearned, "t.png", "--full-lab"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "image-filters", "filters-learned" }, o.Views);
+        Assert.True(o.FullLab);
+        Assert.Equal(Path.Combine("", "t-filters-learned.png"), o.OutputFileFor(DiagnosticOptions.FiltersLearned));
+    }
+
+    [Fact]
     public void IsLabRenderView_IsTrueForTheLabRenderViewsOnly()
     {
         foreach (var v in new[] { "rules-vs-learning-trained", "family-tree-chosen", "expert-system-edited", "search-midgame",
-                                  "search-won", "classic-ml-neighbours", "reward-trained", "memory-network-measured" })
+                                  "search-won", "classic-ml-neighbours", "reward-trained", "memory-network-measured", "filters-learned" })
             Assert.True(DiagnosticOptions.IsLabRenderView(v), v);
-        foreach (var v in new[] { "learning-by-reward", "memory-networks", "classic-ml", "gallery", "contents", "ideamap-radial", "check-answered", "" })
+        foreach (var v in new[] { "learning-by-reward", "memory-networks", "image-filters", "classic-ml", "gallery", "contents", "ideamap-radial", "check-answered", "" })
             Assert.False(DiagnosticOptions.IsLabRenderView(v), v);
     }
 

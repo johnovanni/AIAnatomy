@@ -564,6 +564,41 @@ public class CheckedQuestionTests : IDisposable
         Assert.Contains("−1 + 0.9 × 10 = 8", QuestionNaming(nameof(Reward_ASquareTwoStepsFromTheGoalIsWorthEight)).Why);
         Assert.Equal("8", Correct(nameof(Reward_ASquareTwoStepsFromTheGoalIsWorthEight)));
     }
+    // ---- 4.6 Image networks: filters ----
+
+    [Fact]
+    public async Task Filters_OneFilterIsUsedAt64Positions()
+    {
+        // The lab's 8 by 8 digits with padding 1: the 3 by 3 window is centred on every pixel, so the feature map is 8 by 8,
+        // and every one of its 64 numbers is the same 9 weights times the 9 pixels under the window (0 off the image).
+        SynchronizationContext.SetSynchronizationContext(null);
+        var lab = new FiltersLabViewModel(new FamilyModels(TestEnvironment.Content));
+        await lab.WorkCompleted;
+        Assert.True(lab.IsReady, lab.LoadMessage);
+        lab.ChoosePreset(lab.LearnedPresets[0]);
+        var image = lab.Image!;
+        var map = lab.FeatureMap!;
+        Assert.Equal((8, 8), (map.GetLength(0), map.GetLength(1)));
+        var w = lab.Weights;
+        int positions = 0;
+        for (int r = 0; r < 8; r++)
+            for (int c = 0; c < 8; c++)
+            {
+                double sum = 0;
+                for (int dr = -1; dr <= 1; dr++)
+                    for (int dc = -1; dc <= 1; dc++)
+                    {
+                        int y = r + dr, x = c + dc;
+                        if (y is >= 0 and < 8 && x is >= 0 and < 8) sum += w[(dr + 1) * 3 + dc + 1] * image[y, x];
+                    }
+                Assert.Equal(sum, map[r, c], 1e-12);
+                positions++;
+            }
+        Assert.Equal(64, positions);
+        Assert.Equal(FiltersLabViewModel.CountText, $"The same 9 numbers were used at all {positions} positions.");
+        Assert.Equal("At all 64 positions, with missing pixels at the edge as 0", Correct(nameof(Filters_OneFilterIsUsedAt64Positions)));
+    }
+
     // ---- 4.8 Memory networks ----
 
     private async Task<MemoryNetworkLabViewModel> MemoryLab()
