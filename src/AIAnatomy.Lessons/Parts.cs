@@ -9,9 +9,9 @@ public static class Parts
     public static IReadOnlyList<string> Transformer { get; } =
         ["intro", "tokens", "embeddings", "position", "attention", "feedforward", "residual", "output", "learning", "whole", "later"];
 
-    /// <summary>The parts of the family of AI (section 4); Part B appends vision, memory and diffusion.</summary>
+    /// <summary>The parts of the family of AI (section 4).</summary>
     public static IReadOnlyList<string> Family { get; } =
-        ["family", "rules", "search", "classic", "reward"];
+        ["family", "rules", "search", "classic", "reward", "vision", "memory", "diffusion"];
 
     public static IReadOnlyList<string> All { get; } = [.. Transformer, .. Family];
 

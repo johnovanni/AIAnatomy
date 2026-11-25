@@ -222,7 +222,7 @@ public class ThemeContrastTests
     [Fact]
     public void PartsIsKnown_AcceptsOnlyListedKeys()
     {
-        Assert.Equal(16, Parts.All.Count);
+        Assert.Equal(19, Parts.All.Count);
         Assert.Equal(Parts.Transformer.Concat(Parts.Family), Parts.All);
         Assert.All(Parts.All, k => Assert.True(Parts.IsKnown(k)));
         Assert.False(Parts.IsKnown("Attention"));
