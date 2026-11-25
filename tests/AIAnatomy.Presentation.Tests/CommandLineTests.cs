@@ -180,6 +180,16 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void ExpertSystemEdited_IsARenderViewThatTakesFullLab()
+    {
+        var o = DiagnosticOptions.Parse(["--render-png", "expert-system," + DiagnosticOptions.ExpertSystemEdited, "t.png", "--full-lab"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "expert-system", "expert-system-edited" }, o.Views);
+        Assert.True(o.FullLab);
+        Assert.Equal(Path.Combine("", "t-expert-system-edited.png"), o.OutputFileFor(DiagnosticOptions.ExpertSystemEdited));
+    }
+
+    [Fact]
     public void ContentsView_IsAKnownView_ButNotForFullLab()
     {
         var ok = DiagnosticOptions.Parse(["--render-png", "contents,tokens", "c.png"]);

@@ -113,7 +113,10 @@ public class IdeaMapViewModelTests
         var after = map.Bubbles.SkipWhile(b => b.Id != "section-4").Skip(1).Take(10).ToList();
         Assert.Equal(Section4, after.Select(b => b.Id));
         Assert.False(after[0].IsLater);   // 4.1 The family tree is built (Stage 2A, Task 5)
-        Assert.All(after.Skip(1), b => Assert.True(b.IsLater));
+        Assert.False(after[1].IsLater);   // 4.2 Rules: an expert system is built (Stage 2A, Task 7)
+        // The rest follow the catalog: a lesson is "later" exactly while it is a placeholder.
+        var catalog = AIAnatomy.Lessons.LessonCatalog.Load(TestEnvironment.Content);
+        Assert.All(after, b => Assert.Equal(catalog.Get(b.Id).IsPlaceholder, b.IsLater));
     }
 
     /// <summary>Guards the Tree mode added later: a saved "Tree" (or any other name) is read as Radial.</summary>

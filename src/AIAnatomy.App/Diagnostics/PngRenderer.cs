@@ -52,7 +52,18 @@ public static class PngRenderer
             if (viewModel.CurrentLab is not FamilyTreeLabViewModel tree) throw new InvalidOperationException("The family-tree lesson did not open its lab.");
             tree.Choose("rules");
         }
-        var map = view is DiagnosticOptions.RulesVsLearningTrained or DiagnosticOptions.FamilyTreeChosen ? null : Show(window, viewModel, services, view);
+        if (view == DiagnosticOptions.ExpertSystemEdited)
+        {
+            await viewModel.NavigateToLesson("expert-system");
+            if (viewModel.CurrentLab is not ExpertSystemLabViewModel rules) throw new InvalidOperationException("The expert-system lesson did not open its lab.");
+            foreach (var text in new[] { "if flies then bat", "if has wings bat", "if not mammal then fish", "" })
+            {
+                rules.AddRule();
+                rules.CommitRule(rules.Rules[^1], text);
+            }
+            rules.Describe("albatross");
+        }
+        var map = view is DiagnosticOptions.RulesVsLearningTrained or DiagnosticOptions.FamilyTreeChosen or DiagnosticOptions.ExpertSystemEdited ? null : Show(window, viewModel, services, view);
 
         if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
 

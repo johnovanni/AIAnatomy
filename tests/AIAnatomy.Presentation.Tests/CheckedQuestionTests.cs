@@ -507,4 +507,15 @@ public class CheckedQuestionTests : IDisposable
         Assert.Contains(node, tree.ChildrenOf(tree.Root.Id));
         Assert.Equal(node.Label, Correct(nameof(FamilyTree_TransformerIsLearnedFromExamples)));
     }
+
+    // ---- 4.2 Rules: an expert system ----
+
+    [Fact]
+    public void ExpertSystem_BatGetsNoAnswerFromTheDefaultRules()
+    {
+        var lab = new ExpertSystemLabViewModel();
+        lab.Describe("bat");
+        Assert.Equal("No animal fits these answers.", lab.AnswerText);
+        Assert.Equal(lab.AnswerText.TrimEnd('.'), Correct(nameof(ExpertSystem_BatGetsNoAnswerFromTheDefaultRules)));
+    }
 }

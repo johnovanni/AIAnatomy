@@ -41,6 +41,7 @@ public sealed class LabFactory
         Register(StepThroughLabViewModel.Id, () => new StepThroughLabViewModel(models));
         Register(ScaleLabViewModel.Id, () => new ScaleLabViewModel(models));
         Register(FamilyTreeLabViewModel.Id, () => new FamilyTreeLabViewModel(familyTree.Value, catalog.Value, new MsaglGraphLayout()));
+        Register(ExpertSystemLabViewModel.Id, () => new ExpertSystemLabViewModel());
         TrainLabViewModel? train = null;
         Register(TrainLabViewModel.Id, () => train ??= new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }

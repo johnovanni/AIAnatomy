@@ -1,0 +1,129 @@
+<UserControl x:Class="AIAnatomy.App.Views.ExpertSystemView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls"
+             xmlns:v="clr-namespace:AIAnatomy.App.Views"
+             x:Name="Root">
+    <!-- DataContext: ExpertSystemLabViewModel. -->
+    <UserControl.Resources><v:NullToCollapsedConverter x:Key="VisibleIfSet" /></UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource BodyText}"
+                   Text="Answer the questions yourself, or press an animal to answer them as it would. The rules run at once." />
+
+        <WrapPanel Margin="0,4,0,0">
+            <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,6" Text="Describe:" />
+            <ItemsControl ItemsSource="{Binding Animals}" Focusable="False" AutomationProperties.Name="Describe an animal">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource Chip}" Content="{Binding}"
+                                Command="{Binding DataContext.DescribeCommand, ElementName=Root}" CommandParameter="{Binding}"
+                                ToolTip="Answer the questions as this animal would" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </WrapPanel>
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,4" Text="{Binding DescribedText}" />
+
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,4,0,4" Text="Questions (tick for yes)" />
+        <ItemsControl ItemsSource="{Binding Questions}" Focusable="False" AutomationProperties.Name="Questions">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <CheckBox IsChecked="{Binding IsYes}" Margin="0,0,18,8" VerticalContentAlignment="Center"
+                              AutomationProperties.Name="{Binding Prompt}">
+                        <TextBlock Style="{StaticResource BodyText}" Margin="0" Text="{Binding Prompt}" Foreground="{DynamicResource TextBrush}" />
+                    </CheckBox>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- The two screens: side by side, one above the other when the pane is narrow (see the code-behind). -->
+        <Grid x:Name="Screens" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="FirstColumn" Width="3*" />
+                <ColumnDefinition x:Name="Gap" Width="16" />
+                <ColumnDefinition x:Name="SecondColumn" Width="2*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition x:Name="GapRow" Height="0" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <c:Screen x:Name="TracePanel" Grid.Column="0" ScreenName="trace" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="Trace: the rules that fired, in order" />
+                    <TextBlock Style="{StaticResource BodyText}" Text="{Binding TraceMessage}"
+                               Visibility="{Binding TraceMessage, Converter={StaticResource VisibleIfSet}}" />
+                    <ItemsControl ItemsSource="{Binding TracePasses}" Focusable="False" AutomationProperties.Name="Trace">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,4,0,2" Text="{Binding Heading}"
+                                               Visibility="{Binding Heading, Converter={StaticResource VisibleIfSet}}" />
+                                    <ItemsControl ItemsSource="{Binding Lines}" Focusable="False">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4" Text="{Binding Text}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </c:Screen>
+
+            <c:Screen x:Name="AnswerPanel" Grid.Column="2" ScreenName="answer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="Answer" />
+                    <TextBlock Style="{StaticResource SubheadingText}" TextWrapping="Wrap" Text="{Binding AnswerText}"
+                               AutomationProperties.Name="Answer" />
+                </StackPanel>
+            </c:Screen>
+        </Grid>
+
+        <TextBlock Style="{StaticResource SubheadingText}" Margin="0,14,0,2" Text="The rules" />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6"
+                   Text="Write each rule as: if fact and fact then fact. A condition may start with not. Press Enter or leave the box to apply a change; Escape undoes it." />
+        <ItemsControl x:Name="RuleList" ItemsSource="{Binding Rules}" Focusable="False" Grid.IsSharedSizeScope="True" AutomationProperties.Name="Rules">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="RuleNumber" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource BodyText}" FontFamily="{StaticResource NumberFont}"
+                                   VerticalAlignment="Center" TextAlignment="Right" Margin="0,0,8,8" Text="{Binding Number, StringFormat={}{0}.}" />
+                        <TextBox x:Name="RuleBox" Grid.Column="1" MaxLength="320" TextWrapping="Wrap" AcceptsReturn="False"
+                                 Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=Explicit}"
+                                 AutomationProperties.Name="{Binding Label}"
+                                 KeyDown="OnRuleKeyDown" LostKeyboardFocus="OnRuleLostFocus" />
+                        <Button Grid.Column="2" Margin="6,0,0,8" Content="Delete" ToolTip="{Binding DeleteToolTip}"
+                                AutomationProperties.Name="{Binding DeleteToolTip}"
+                                Command="{Binding DataContext.DeleteRuleCommand, ElementName=Root}" CommandParameter="{Binding}" />
+                        <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,4"
+                                    Visibility="{Binding UnusedText, Converter={StaticResource VisibleIfSet}}">
+                            <TextBlock Style="{StaticResource BodyText}" Margin="0" FontWeight="SemiBold" Text="{Binding UnusedText}" />
+                            <TextBlock Style="{StaticResource BodyText}" Margin="0" Text="{Binding Error}"
+                                       Visibility="{Binding Error, Converter={StaticResource VisibleIfSet}}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <WrapPanel Margin="0,4,0,0">
+            <Button Content="Add rule" Command="{Binding AddRuleCommand}" Click="OnAddRuleClick"
+                    ToolTip="Add an empty rule at the end" />
+            <TextBlock Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding RuleLimitText}" />
+        </WrapPanel>
+    </StackPanel>
+</UserControl>
