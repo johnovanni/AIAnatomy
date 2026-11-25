@@ -51,7 +51,7 @@
     { "id": "image-network", "label": "Image network", "kind": "flow",
       "description": "A small convolutional network reads a digit you draw. Coming in a later part of the app." },
     { "id": "memory-networks", "label": "Memory networks", "kind": "flow",
-      "description": "A recurrent network, with a memory carried from character to character, compared with the transformer. Coming in a later part of the app." },
+      "description": "A recurrent network carries one memory vector from character to character: compare its loss, speed and how far back it remembers with the transformer's." },
     { "id": "diffusion-shapes", "label": "Diffusion: shapes", "kind": "flow",
       "description": "A toy that learns to turn random noise into a shape. Coming in a later part of the app." },
     { "id": "diffusion-steps", "label": "Diffusion: steps", "kind": "flow",

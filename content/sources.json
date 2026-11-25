@@ -138,5 +138,20 @@
     "id": "schultz1997",
     "citation": "Schultz, W., Dayan, P., and Montague, P. R. (1997). A Neural Substrate of Prediction and Reward. Science, 275(5306), 1593-1599.",
     "url": "https://doi.org/10.1126/science.275.5306.1593"
+  },
+  {
+    "id": "elman1990",
+    "citation": "Elman, J. L. (1990). Finding Structure in Time. Cognitive Science, 14(2), 179-211.",
+    "url": "https://doi.org/10.1207/s15516709cog1402_1"
+  },
+  {
+    "id": "bengio1994",
+    "citation": "Bengio, Y., Simard, P., and Frasconi, P. (1994). Learning Long-Term Dependencies with Gradient Descent is Difficult. IEEE Transactions on Neural Networks, 5(2), 157-166.",
+    "url": "https://doi.org/10.1109/72.279181"
+  },
+  {
+    "id": "hochreiter1997",
+    "citation": "Hochreiter, S., and Schmidhuber, J. (1997). Long Short-Term Memory. Neural Computation, 9(8), 1735-1780.",
+    "url": "https://doi.org/10.1162/neco.1997.9.8.1735"
   }
 ]

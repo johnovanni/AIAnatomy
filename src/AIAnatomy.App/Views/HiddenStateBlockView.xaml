@@ -1,0 +1,9 @@
+<UserControl x:Class="AIAnatomy.App.Views.HiddenStateBlockView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AIAnatomy.App.Controls">
+    <!-- DataContext: HiddenStateBlock, one block of units of the memory network's memory (lesson 4.8). -->
+    <c:HeatMap x:Name="Map" Values="{Binding Values}" RowLabels="{Binding RowLabels}" ColumnLabels="{Binding ColumnLabels}"
+               RowAxisTitle="after reading" ColumnAxisTitle="unit of the memory" Minimum="-1" Maximum="1" ShowCellValues="False"
+               AutomationProperties.Name="{Binding Title, StringFormat='The memory after each character: {0}'}" />
+</UserControl>

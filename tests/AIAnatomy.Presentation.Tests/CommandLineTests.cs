@@ -231,12 +231,23 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void MemoryNetworkMeasured_IsARenderViewThatTakesFullLab()
+    {
+        Assert.Equal("memory-network-measured", DiagnosticOptions.MemoryNetworkMeasured);
+        var o = DiagnosticOptions.Parse(["--render-png", "memory-networks," + DiagnosticOptions.MemoryNetworkMeasured, "t.png", "--full-lab"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "memory-networks", "memory-network-measured" }, o.Views);
+        Assert.True(o.FullLab);
+        Assert.Equal(Path.Combine("", "t-memory-network-measured.png"), o.OutputFileFor(DiagnosticOptions.MemoryNetworkMeasured));
+    }
+
+    [Fact]
     public void IsLabRenderView_IsTrueForTheLabRenderViewsOnly()
     {
         foreach (var v in new[] { "rules-vs-learning-trained", "family-tree-chosen", "expert-system-edited", "search-midgame",
-                                  "search-won", "classic-ml-neighbours", "reward-trained" })
+                                  "search-won", "classic-ml-neighbours", "reward-trained", "memory-network-measured" })
             Assert.True(DiagnosticOptions.IsLabRenderView(v), v);
-        foreach (var v in new[] { "learning-by-reward", "classic-ml", "gallery", "contents", "ideamap-radial", "check-answered", "" })
+        foreach (var v in new[] { "learning-by-reward", "memory-networks", "classic-ml", "gallery", "contents", "ideamap-radial", "check-answered", "" })
             Assert.False(DiagnosticOptions.IsLabRenderView(v), v);
     }
 

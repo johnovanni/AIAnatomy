@@ -90,6 +90,13 @@ public static class PngRenderer
             reward.UpdateInterval = TimeSpan.Zero;   // no need to pace a run nobody watches
             await reward.RunCommand.ExecuteAsync(null);   // 300 episodes on the default maze
         }
+        if (view == DiagnosticOptions.MemoryNetworkMeasured)
+        {
+            await viewModel.NavigateToLesson("memory-networks");
+            if (viewModel.CurrentLab is not MemoryNetworkLabViewModel memory) throw new InvalidOperationException("The memory-networks lesson did not open its lab.");
+            await memory.WorkCompleted;   // the networks loaded and the loss by position measured
+            await memory.GenerateSamplesCommand.ExecuteAsync(null);   // 200 characters from each, default text and seed
+        }
         // A lab render view has already opened its lesson and set up its lab above.
         var map = DiagnosticOptions.IsLabRenderView(view) ? null : Show(window, viewModel, services, view);
 

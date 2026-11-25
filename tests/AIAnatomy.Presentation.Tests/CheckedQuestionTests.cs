@@ -564,4 +564,57 @@ public class CheckedQuestionTests : IDisposable
         Assert.Contains("−1 + 0.9 × 10 = 8", QuestionNaming(nameof(Reward_ASquareTwoStepsFromTheGoalIsWorthEight)).Why);
         Assert.Equal("8", Correct(nameof(Reward_ASquareTwoStepsFromTheGoalIsWorthEight)));
     }
+    // ---- 4.8 Memory networks ----
+
+    private async Task<MemoryNetworkLabViewModel> MemoryLab()
+    {
+        SynchronizationContext.SetSynchronizationContext(null);
+        var lab = new MemoryNetworkLabViewModel(new FamilyModels(TestEnvironment.Content), Shipped(), Fables);
+        await lab.WorkCompleted;
+        Assert.True(lab.IsReady, lab.LoadMessage);
+        return lab;
+    }
+
+    [Fact]
+    public async Task Memory_BothCurvesFallFastThenLevelOff()
+    {
+        // The live loss-by-position measurement on the 32 shared validation windows (bands of characters read:
+        // 1, 2-4, 5-8, 9-16, 17-32, 33-64). Each curve drops steeply from 1 character to 5-8, then stays within 0.2 of its
+        // 33-64 average; and the two curves end close together. So neither network shows a clear gain from characters
+        // further back than about 8, and the textbook expectation (the transformer gaining more) is not what this shows.
+        var lab = await MemoryLab();
+        var bands = lab.MemoryBands;
+        Assert.Equal(6, bands.Count);
+        foreach (var curve in new Func<MemoryBand, double>[] { b => b.Transformer, b => b.Memory })
+        {
+            double first = curve(bands[0]), late = curve(bands[5]);
+            Assert.True(first - curve(bands[2]) > 0.5, $"drop from 1 to 5-8 characters: {first - curve(bands[2]):F3}");
+            for (int i = 2; i < 5; i++)
+                Assert.True(Math.Abs(curve(bands[i]) - late) < 0.2, $"band {bands[i].CharactersRead}: {curve(bands[i]):F3} against {late:F3}");
+        }
+        Assert.True(Math.Abs(bands[5].Transformer - bands[5].Memory) < 0.1, $"33-64: {bands[5].Transformer:F3} against {bands[5].Memory:F3}");
+        Assert.Equal("Both fall steeply over the first few characters, then stay about level",
+            Correct(nameof(Memory_BothCurvesFallFastThenLevelOff)));
+    }
+
+    [Fact]
+    public async Task Memory_TheValidationLossesAreAboutTheSame()
+    {
+        // Recorded: the transformer 1.711, the shipped memory network 1.678, on the same 32 windows. The gap is under one
+        // and a half standard errors of the transformer's loss over those windows (each window's mean counted as one
+        // sample, since neighbouring characters are correlated), from one seed each: no win either way.
+        var lab = await MemoryLab();
+        Assert.Equal(1.711, lab.TransformerRecordedLoss);
+        Assert.Equal(1.678, Math.Round(lab.RnnRecordedLoss, 3));
+        var fables = Shipped().Current;
+        var windows = AIAnatomy.Models.Recurrent.MemoryTraining.FablesSource(fables.Tokenizer, Fables()).ValidationWindows;
+        var perWindow = windows.Select(w => AIAnatomy.Models.Recurrent.ContextLoss.LossByPosition(fables.Transformer, new[] { w }).Average()).ToArray();
+        double mean = perWindow.Average();
+        double se = Math.Sqrt(perWindow.Sum(v => (v - mean) * (v - mean)) / (perWindow.Length - 1) / perWindow.Length);
+        double gap = Math.Abs(lab.TransformerRecordedLoss - lab.RnnRecordedLoss);
+        Assert.True(gap < 1.5 * se, $"gap {gap:F3}, standard error {se:F3}");
+        Assert.Contains("1.711", QuestionNaming(nameof(Memory_TheValidationLossesAreAboutTheSame)).Prompt);
+        Assert.Contains("1.678", QuestionNaming(nameof(Memory_TheValidationLossesAreAboutTheSame)).Prompt);
+        Assert.Equal("About the same: the gap is too small to call a win", Correct(nameof(Memory_TheValidationLossesAreAboutTheSame)));
+    }
 }

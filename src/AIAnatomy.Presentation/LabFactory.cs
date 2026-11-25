@@ -48,6 +48,7 @@ public sealed class LabFactory
         Register(SearchLabViewModel.Id, () => new SearchLabViewModel());
         Register(ClassicMlLabViewModel.Id, () => new ClassicMlLabViewModel());
         Register(RewardLabViewModel.Id, () => new RewardLabViewModel());
+        Register(MemoryNetworkLabViewModel.Id, () => new MemoryNetworkLabViewModel(Family, models, () => fables.Value));
         TrainLabViewModel? train = null;
         Register(TrainLabViewModel.Id, () => train ??= new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }
