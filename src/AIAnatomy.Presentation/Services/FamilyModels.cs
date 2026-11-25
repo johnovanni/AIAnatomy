@@ -2,6 +2,7 @@ using AIAnatomy.Models.Diffusion;
 using AIAnatomy.Models.Language;
 using AIAnatomy.Models.Recurrent;
 using AIAnatomy.Models.Tokenization;
+using AIAnatomy.Models.Vision;
 
 namespace AIAnatomy.Presentation.Services;
 
@@ -15,6 +16,9 @@ namespace AIAnatomy.Presentation.Services;
 public sealed class FamilyModels
 {
     private const string MemoryFile = "memory.aimodel";
+    private const string DigitsFile = "digits.aimodel";
+    private const string DigitTestFile = "digits-test.bin.gz";
+    private const string DigitTrainFile = "digits-train.bin.gz";
 
     /// <summary>Each diffusion preset (a <see cref="Shapes.Presets"/> name) and the file holding the network that learned it.</summary>
     private static readonly IReadOnlyDictionary<string, string> DiffusionFiles = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -26,8 +30,10 @@ public sealed class FamilyModels
     };
 
     private readonly string _folder;
+    private readonly string _digitData;
     private readonly object _gate = new();
     private readonly Dictionary<string, Task<byte[]>> _files = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Task<DigitSet>> _sets = new(StringComparer.Ordinal);
     private readonly Func<string, byte[]> _readAllBytes;
 
     public FamilyModels(string contentFolder) : this(contentFolder, File.ReadAllBytes) { }
@@ -39,8 +45,23 @@ public sealed class FamilyModels
         ArgumentException.ThrowIfNullOrWhiteSpace(contentFolder);
         ArgumentNullException.ThrowIfNull(readAllBytes);
         _folder = Path.Combine(contentFolder, "models", "family");
+        _digitData = Path.Combine(contentFolder, "data", "digits");
         _readAllBytes = readAllBytes;
     }
+
+    /// <summary>A fresh copy of the shipped digits network (8x8 images) and its info.</summary>
+    public async Task<(DigitNet Net, ModelInfo Info)> DigitsAsync()
+    {
+        var bytes = await ReadOnceAsync(DigitsFile).ConfigureAwait(false);
+        return await Task.Run(() => Parse(DigitsFile, bytes, DigitNet.Load)).ConfigureAwait(false);
+    }
+
+    /// <summary>The bundled digits test set (1,740 images). A <see cref="DigitSet"/> is read-only, so it is parsed once and
+    /// every call returns the same instance.</summary>
+    public Task<DigitSet> DigitTestSetAsync() => DigitSetOnceAsync(DigitTestFile);
+
+    /// <summary>The bundled digits training set (3,760 images). Parsed once; every call returns the same read-only instance.</summary>
+    public Task<DigitSet> DigitTrainSetAsync() => DigitSetOnceAsync(DigitTrainFile);
 
     /// <summary>The preset names that have a shipped diffusion network.</summary>
     public static IReadOnlyCollection<string> DiffusionPresets => (IReadOnlyCollection<string>)DiffusionFiles.Keys;
@@ -63,21 +84,43 @@ public sealed class FamilyModels
         return await Task.Run(() => Parse(file, bytes, DiffusionNet.Load)).ConfigureAwait(false);
     }
 
+    private Task<DigitSet> DigitSetOnceAsync(string file)
+    {
+        lock (_gate)
+        {
+            if (_sets.TryGetValue(file, out var cached) && !cached.IsFaulted && !cached.IsCanceled) return cached;
+            var load = LoadSetAsync(file);
+            _sets[file] = load;
+            return load;
+        }
+    }
+
+    private async Task<DigitSet> LoadSetAsync(string file)
+    {
+        var bytes = await ReadOnceAsync(file, _digitData).ConfigureAwait(false);
+        // DigitSet.Load wraps what it expects (and a damaged gzip) in an InvalidDataException that names only the file.
+        return await Task.Run(() =>
+        {
+            using var stream = new MemoryStream(bytes, writable: false);
+            return DigitSet.Load(stream, file);
+        }).ConfigureAwait(false);
+    }
+
     /// <summary>The file's bytes, read on a worker thread the first time and kept. Calls made while the read runs share it.</summary>
-    private Task<byte[]> ReadOnceAsync(string file)
+    private Task<byte[]> ReadOnceAsync(string file, string? folder = null)
     {
         lock (_gate)
         {
             if (_files.TryGetValue(file, out var cached) && !cached.IsFaulted && !cached.IsCanceled) return cached;
-            var read = Task.Run(() => ReadBytes(file));
+            var read = Task.Run(() => ReadBytes(file, folder ?? _folder));
             _files[file] = read;
             return read;
         }
     }
 
-    private byte[] ReadBytes(string file)
+    private byte[] ReadBytes(string file, string folder)
     {
-        try { return _readAllBytes(Path.Combine(_folder, file)); }
+        try { return _readAllBytes(Path.Combine(folder, file)); }
         catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
         {
             throw new InvalidDataException($"The network file '{file}' is missing from AI Anatomy's content folder. Reinstalling the app puts it back.", e);

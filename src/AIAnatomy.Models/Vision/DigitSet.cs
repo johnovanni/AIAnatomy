@@ -85,33 +85,52 @@ public sealed class DigitSet
     public static DigitSet Load(string path)
     {
         string name = Path.GetFileName(path);
-        try
+        return Wrapped(name, () =>
         {
             using var file = File.OpenRead(path);
-            using var gzip = new GZipStream(file, CompressionMode.Decompress);
-            using var r = new BinaryReader(gzip, Encoding.ASCII);
+            return Read(file);
+        });
+    }
 
-            if (Encoding.ASCII.GetString(ReadExactly(r, 8)) != Magic) throw new InvalidDataException("it is not a digits file (wrong magic)");
-            int version = r.ReadInt32();
-            if (version != Version) throw new InvalidDataException($"unsupported version {version}");
-            int count = r.ReadInt32();
-            int size = r.ReadInt32();
-            if (size < 1 || size > MaxImageSize) throw new InvalidDataException($"image size {size} is out of range");
-            if (count < 0 || count > 1_000_000) throw new InvalidDataException($"image count {count} is out of range");
+    /// <summary>Reads a digits file from a stream (for example bytes kept in memory). Errors are wrapped exactly as
+    /// <see cref="Load(string)"/> wraps them, naming <paramref name="displayName"/> and nothing else. The stream is left open.</summary>
+    public static DigitSet Load(Stream stream, string displayName)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(displayName);
+        return Wrapped(displayName, () => Read(stream));
+    }
 
-            int n = size * size;
-            var labels = new int[count];
-            var pixels = new byte[count * n];
-            for (int i = 0; i < count; i++)
-            {
-                byte label = ReadExactly(r, 1)[0];
-                if (label > 9) throw new InvalidDataException($"image {i} has label {label}, outside 0-9");
-                labels[i] = label;
-                ReadExactly(r, n).CopyTo(pixels, i * n);
-            }
-            if (r.Read() != -1) throw new InvalidDataException("it has extra bytes after the last image");
-            return new DigitSet(size, labels, pixels);
+    private static DigitSet Read(Stream source)
+    {
+        using var gzip = new GZipStream(source, CompressionMode.Decompress, leaveOpen: true);
+        using var r = new BinaryReader(gzip, Encoding.ASCII);
+
+        if (Encoding.ASCII.GetString(ReadExactly(r, 8)) != Magic) throw new InvalidDataException("it is not a digits file (wrong magic)");
+        int version = r.ReadInt32();
+        if (version != Version) throw new InvalidDataException($"unsupported version {version}");
+        int count = r.ReadInt32();
+        int size = r.ReadInt32();
+        if (size < 1 || size > MaxImageSize) throw new InvalidDataException($"image size {size} is out of range");
+        if (count < 0 || count > 1_000_000) throw new InvalidDataException($"image count {count} is out of range");
+
+        int n = size * size;
+        var labels = new int[count];
+        var pixels = new byte[count * n];
+        for (int i = 0; i < count; i++)
+        {
+            byte label = ReadExactly(r, 1)[0];
+            if (label > 9) throw new InvalidDataException($"image {i} has label {label}, outside 0-9");
+            labels[i] = label;
+            ReadExactly(r, n).CopyTo(pixels, i * n);
         }
+        if (r.Read() != -1) throw new InvalidDataException("it has extra bytes after the last image");
+        return new DigitSet(size, labels, pixels);
+    }
+
+    private static DigitSet Wrapped(string name, Func<DigitSet> read)
+    {
+        try { return read(); }
         catch (InvalidDataException e)
         {
             throw new InvalidDataException($"Digits file '{name}' is not valid: {e.Message}.", e);
