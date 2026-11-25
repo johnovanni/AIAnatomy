@@ -4,10 +4,11 @@ using AIAnatomy.Models.Inspection;
 using AIAnatomy.Models.Language;
 using AIAnatomy.Models.Recurrent;
 using AIAnatomy.Models.Training;
+using AIAnatomy.Models.Vision;
 
 namespace AIAnatomy.Models.Tests;
 
-/// <summary>Checks the family networks committed under content/models/family (memory and diffusion). They only load files, so they are fast.</summary>
+/// <summary>Checks the family networks committed under content/models/family (digits, memory and diffusion). They only load files, so they are fast.</summary>
 public class ShippedFamilyModelTests
 {
     private const long OneMegabyte = 1024 * 1024;
@@ -95,5 +96,23 @@ public class ShippedFamilyModelTests
         double coverage = Shapes.Coverage(samples, shape, 0.05);
         Assert.True(Math.Abs(info.Results["coverage"] - coverage) < 1e-9, $"recorded {info.Results["coverage"]}, measured {coverage}");
         Assert.True(distance < 0.05, $"mean distance {distance}");
+    }
+
+    [Fact]
+    public void Digits_LoadsShipped_AccuracyMatchesRecord_AndIsAtLeast0_90()
+    {
+        DigitNet net;
+        ModelInfo info;
+        using (var stream = File.OpenRead(FamilyPath("digits.aimodel"))) (net, info) = DigitNet.Load(stream);
+        Assert.True(info.IsShipped);
+        Assert.Equal(1, info.Seed);
+        Assert.True(info.Results!.ContainsKey("trainSeconds"));
+        Assert.True(new FileInfo(FamilyPath("digits.aimodel")).Length < OneMegabyte);
+
+        var test = DigitSet.Load(ContentPath("data", "digits", "digits-test.bin.gz"));
+        double accuracy = DigitTrainer.Accuracy(net, test);
+
+        Assert.True(Math.Abs(info.Results["testAccuracy"] - accuracy) < 1e-9, $"recorded {info.Results["testAccuracy"]}, measured {accuracy}");
+        Assert.True(accuracy >= 0.90, $"test accuracy {accuracy}");
     }
 }

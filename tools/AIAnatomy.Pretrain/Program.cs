@@ -15,6 +15,7 @@ using AIAnatomy.Models.Transformers;
 // Builds the family networks that ship in content/models/family (Release; the memory network takes about 5 minutes, each diffusion network about 4):
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- memory --text content/texts/aesop-fables.txt --model content/models/fables-small.aimodel --out content/models/family/memory.aimodel --seed 1
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- diffusion --shape Spiral --out content/models/family/diffusion-spiral.aimodel --seed 1
+//   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- digits --train content/data/digits/digits-train.bin.gz --test content/data/digits/digits-test.bin.gz --out content/models/family/digits.aimodel --seed 1
 // Builds the handwritten-digits subsets in content/data/digits from the UCI optdigits files (kept outside the repository):
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- digits-subset --uci <optdigits.tra> --out content/data/digits/digits-train.bin.gz
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- digits-subset --uci <optdigits.tes> --out content/data/digits/digits-test.bin.gz
@@ -29,6 +30,7 @@ const string Usage =
     "Usage: pretrain fables --text <file> --out <file> --steps <n> [--seed <n>]\n" +
     "       pretrain induction --out <file> [--steps <n>] [--seed <n>]\n" +
     "       pretrain memory --text <file> --model <fables file> --out <file> [--steps <n>] [--seed <n>]\n" +
+    "       pretrain digits --train <file> --test <file> --out <file> [--steps <n>] [--seed <n>]\n" +
     "       pretrain diffusion --shape <preset> --out <file> [--steps <n>] [--seed <n>]\n" +
     "       pretrain digits-subset --uci <optdigits.tra or .tes> --out <file>\n" +
     "       pretrain speed --kind memory --hidden <n> [--steps <n>] [--text <file>] [--model <file>]\n" +
@@ -45,6 +47,7 @@ try
         "induction" => await TrainInductionAsync(options),
         "memory" => await TrainMemoryAsync(options),
         "diffusion" => TrainDiffusion(options),
+        "digits" => TrainDigits(options),
         "digits-subset" => DigitsSubset(options),
         "speed" => await SpeedAsync(options),
         _ => Fail(Usage),
@@ -202,6 +205,44 @@ static async Task<int> TrainMemoryAsync(Dictionary<string, string> o)
         });
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outPath))!);
     using (var stream = File.Create(outPath)) rnn.Save(stream, fables.Tokenizer, info);
+    Console.WriteLine($"saved {outPath} ({new FileInfo(outPath).Length / 1024} KB)");
+    return 0;
+}
+
+static int TrainDigits(Dictionary<string, string> o)
+{
+    string trainPath = Required(o, "train");
+    string testPath = Required(o, "test");
+    string outPath = Required(o, "out");
+    int steps = Number(o, "steps", DigitTraining.ShippedSteps);
+    int seed = Number(o, "seed", 1);
+    RequireRelease();
+    var train = DigitSet.Load(trainPath);
+    var test = DigitSet.Load(testPath);
+    var config = DigitTraining.Shipped;
+    if (train.ImageSize != config.ImageSize || test.ImageSize != config.ImageSize)
+        throw new ArgumentException($"The shipped digits network reads {config.ImageSize}x{config.ImageSize} images; the files hold {train.ImageSize}x{train.ImageSize} and {test.ImageSize}x{test.ImageSize}.");
+
+    var net = new DigitNet(config, new SeededRandom(seed));
+    var trainer = new DigitTrainer(net, train, steps, seed);
+    Console.WriteLine($"digits network: filters {config.Filters1}, {config.Filters2}, hidden {config.Hidden}, {net.Config.CountParameters()} parameters, {steps} steps, {train.Count} training and {test.Count} test images");
+
+    var watch = Stopwatch.StartNew();
+    for (int step = 1; step <= steps; step++)
+    {
+        double loss = trainer.Step();
+        if (!double.IsFinite(loss)) throw new InvalidDataException(SteppedTraining.DivergedMessage);
+        if (step % 500 == 0) Console.WriteLine($"step {step}: train {loss:F4}, {watch.Elapsed.TotalSeconds:F0} s");
+    }
+    double seconds = watch.Elapsed.TotalSeconds;
+
+    double accuracy = DigitTrainer.Accuracy(net, test);
+    Console.WriteLine($"done: {steps} steps in {seconds:F1} s, test accuracy {accuracy:F4} on {test.Count} images");
+
+    var info = new ModelInfo("Handwritten digits network", "UCI 8x8 optical digits (bundled subset)", steps, null, seed, IsShipped: true,
+        Results: new Dictionary<string, double> { ["testAccuracy"] = accuracy, ["trainSeconds"] = seconds });
+    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outPath))!);
+    using (var stream = File.Create(outPath)) net.Save(stream, info);
     Console.WriteLine($"saved {outPath} ({new FileInfo(outPath).Length / 1024} KB)");
     return 0;
 }
