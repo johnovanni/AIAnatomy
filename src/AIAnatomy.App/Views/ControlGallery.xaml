@@ -24,6 +24,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Sample}">
@@ -102,6 +103,19 @@
                                 <TextBlock Text="Next letter: &quot;r&quot; 52.10%" />
                             </c:Screen>
                         </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="5" Grid.Column="0" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="FeatureMapGrid (twelve maps, height limited so they scroll)" />
+                        <c:FeatureMapGrid x:Name="Maps" MaxHeight="520" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="5" Grid.Column="1" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="PointCloudPlot (target spiral, noisy points, noise arrows)" />
+                        <c:PointCloudPlot x:Name="Cloud" ArrowsLabel="noise added" />
                     </StackPanel>
                 </Border>
             </Grid>

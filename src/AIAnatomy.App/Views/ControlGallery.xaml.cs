@@ -72,10 +72,31 @@ public partial class ControlGallery : System.Windows.Controls.UserControl
             new FormulaBlock(@"\mathrm{softmax}\left(\frac{Q K^{\top}}{\sqrt{d_k}}\right) V"),
             new FormulaBlock(@"\frac{1}{"),
         ]);
+
+        Maps.Maps = Enumerable.Range(0, 12).Select(SampleMap).ToList();
+
+        // The spiral preset, doubled to fill the −3..3 axes; a fixed, made-up amount of noise on each point (not model output).
+        var spiral = AIAnatomy.Models.Diffusion.Shapes.Presets[0].Points;
+        var target = spiral.Select(p => new System.Windows.Point(p.X * 2, p.Y * 2)).ToList();
+        var noisy = target.Select((p, i) => new System.Windows.Point(p.X + 0.45 * Math.Sin(i * 12.9898), p.Y + 0.45 * Math.Cos(i * 78.233))).ToList();
+        Cloud.TargetPoints = target;
+        Cloud.Points = noisy.Where((_, i) => i % 4 == 0).ToList();
+        Cloud.Arrows = Enumerable.Range(0, target.Count).Where(i => i % 40 == 0).Select(i => (target[i], noisy[i])).ToList();
     }
 
     /// <summary>The page's content, measured by --render-png gallery to make the picture tall enough.</summary>
     public System.Windows.FrameworkElement Page => Panel;
+
+    // An 8 by 8 map of waves at a different angle and strength for each k: values from about −1.5 to 1.5.
+    private static double[,] SampleMap(int k)
+    {
+        var m = new double[8, 8];
+        double angle = k * Math.PI / 6, strength = 0.5 + (k % 4) * 0.33;
+        for (int r = 0; r < 8; r++)
+        for (int c = 0; c < 8; c++)
+            m[r, c] = strength * Math.Sin((r * Math.Cos(angle) + c * Math.Sin(angle)) * 0.9);
+        return m;
+    }
 
     // Rows that add up to 1 over the past and present only; the future is −∞ (blocked), as after a causal mask.
     private static double[,] CausalWeights(int n)

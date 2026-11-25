@@ -10,7 +10,9 @@ namespace AIAnatomy.Presentation;
 /// links inside labs go through the view's routed navigate event, so the factory needs no navigate callback (final
 /// review M3); it takes the lesson catalog only because the family tree numbers its bubbles from it (read from the
 /// content folder when not given). Most labs are built afresh each time their lesson opens; the Train lab is built once
-/// per factory (so once per window) and kept, so a run carries on while the user reads other lessons (R35).
+/// per factory (so once per window) and kept, so a run carries on while the user reads other lessons (R35). The factory
+/// also builds one <see cref="Services.FamilyModels"/> from the content folder, shared by the Part B labs, so each shipped
+/// family network is read from disk once per window (each lab still gets its own copy of the network).
 /// </summary>
 public sealed class LabFactory
 {
@@ -23,6 +25,7 @@ public sealed class LabFactory
     {
         ArgumentNullException.ThrowIfNull(models);
         ArgumentException.ThrowIfNullOrWhiteSpace(contentFolder);
+        Family = new FamilyModels(contentFolder);
         var fables = new Lazy<string>(() => File.ReadAllText(Path.Combine(contentFolder, "texts", "aesop-fables.txt")));
         var catalog = new Lazy<LessonCatalog>(() => lessons ?? LessonCatalog.Load(contentFolder));
         var familyTree = new Lazy<FamilyTreeData>(() => FamilyTreeData.Load(Path.Combine(contentFolder, "family-tree.json")));
@@ -48,6 +51,9 @@ public sealed class LabFactory
         TrainLabViewModel? train = null;
         Register(TrainLabViewModel.Id, () => train ??= new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }
+
+    /// <summary>The shipped family networks (memory, diffusion), loaded once per window; Part B labs take this.</summary>
+    public FamilyModels Family { get; }
 
     public void Register(string labId, Func<LabViewModel> create)
     {

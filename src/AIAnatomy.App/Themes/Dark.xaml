@@ -60,4 +60,8 @@
     <Color x:Key="RampLowColor">#F1F6FB</Color>
     <Color x:Key="RampMidColor">#6BAED6</Color>
     <Color x:Key="RampHighColor">#08306B</Color>
+    <!-- Diverging ramp for signed values (feature maps, the memory): blue below zero, near-white at zero, red above zero (the ColorBrewer RdBu ends, which stay apart under the common colour-vision differences). The same in both themes; the readout always gives the number. -->
+    <Color x:Key="DivergingLowColor">#2166AC</Color>
+    <Color x:Key="DivergingMidColor">#F7F7F7</Color>
+    <Color x:Key="DivergingHighColor">#B2182B</Color>
 </ResourceDictionary>
