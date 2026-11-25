@@ -28,7 +28,7 @@
     <SolidColorBrush x:Key="ScrollThumbBrush" Color="#9A9AA4" />
     <SolidColorBrush x:Key="HighlightBrush" Color="#EDEDED" />
     <SolidColorBrush x:Key="LabelPlateBrush" Color="#1F2125" />
-    <!-- Screens (inset displays), connection gold and the part palette (Okabe-Ito flavoured; each at least 3:1 on Surface and Screen, and at least 15 CIE76 DeltaE apart, 8 under protanopia and deuteranopia simulation). -->
+    <!-- Screens (inset displays), connection gold and the part palette (Okabe-Ito flavoured; each at least 3:1 on Surface and Screen, and, within a group, at least 15 CIE76 DeltaE apart, 8 under protanopia and deuteranopia simulation; the groups are the transformer parts and the family parts with "later"). -->
     <SolidColorBrush x:Key="ScreenBrush" Color="#0E0F11" />
     <SolidColorBrush x:Key="ScreenTextBrush" Color="#E6EEF8" />
     <SolidColorBrush x:Key="ConnectionBrush" Color="#FFC83D" />
@@ -43,6 +43,11 @@
     <SolidColorBrush x:Key="PartLearningBrush" Color="#80C182" />
     <SolidColorBrush x:Key="PartWholeBrush" Color="#E1E1E1" />
     <SolidColorBrush x:Key="PartLaterBrush" Color="#9B9B9B" />
+    <SolidColorBrush x:Key="PartFamilyBrush" Color="#EE392F" />
+    <SolidColorBrush x:Key="PartRulesBrush" Color="#B12CFB" />
+    <SolidColorBrush x:Key="PartSearchBrush" Color="#4FF510" />
+    <SolidColorBrush x:Key="PartClassicBrush" Color="#AFEF8E" />
+    <SolidColorBrush x:Key="PartRewardBrush" Color="#9873D2" />
     <sys:Double x:Key="ScreenGlowOpacity">0.45</sys:Double>
     <!-- Single-hue sequential ramp for heat maps, light (small) to dark (large). -->
     <Color x:Key="RampLowColor">#F1F6FB</Color>

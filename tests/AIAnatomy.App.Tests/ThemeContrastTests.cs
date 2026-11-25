@@ -153,14 +153,21 @@ public class ThemeContrastTests
     public void PartBrushes_AreDistinguishable_ForColourBlindViewers(string theme)
     {
         var map = Brushes(theme);
-        var keys = Parts.All.ToArray();
+        // The distance rule is per group: parts may share a hue family across sections (spec 5), since the icon and label tell them apart.
+        AssertDistinguishable(theme, Parts.Transformer);
+        AssertDistinguishable(theme, Parts.Family.Append("later").ToArray());
+    }
+
+    private static void AssertDistinguishable(string theme, IReadOnlyList<string> keys)
+    {
+        var map = Brushes(theme);
         (string Name, double Min, Func<double[], double[]> View)[] views =
         [
             ("normal vision", 15, c => c),
             ("protanopia", 8, c => Simulate(Protan, c)),
             ("deuteranopia", 8, c => Simulate(Deutan, c)),
         ];
-        for (var i = 0; i < keys.Length; i++)
+        for (var i = 0; i < keys.Count; i++)
             for (var j = 0; j < i; j++)
             {
                 var a = LinearRgb(map[PartBrush(keys[i])]);
@@ -196,10 +203,19 @@ public class ThemeContrastTests
     [Fact]
     public void PartsIsKnown_AcceptsOnlyListedKeys()
     {
-        Assert.Equal(11, Parts.All.Count);
+        Assert.Equal(16, Parts.All.Count);
+        Assert.Equal(Parts.Transformer.Concat(Parts.Family), Parts.All);
         Assert.All(Parts.All, k => Assert.True(Parts.IsKnown(k)));
         Assert.False(Parts.IsKnown("Attention"));
         Assert.False(Parts.IsKnown(""));
         Assert.False(Parts.IsKnown(null));
+    }
+
+    [Fact]
+    public void EveryPartKeyHasItsOwnGlyph()
+    {
+        var glyphs = Parts.All.Select(AIAnatomy.App.Controls.PartResource.Glyph).ToList();
+        Assert.All(glyphs, g => Assert.NotEqual("", g));
+        Assert.Equal(Parts.All.Count, glyphs.Distinct().Count());
     }
 }
