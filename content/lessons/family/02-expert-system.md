@@ -35,16 +35,16 @@ why: Rule 1 makes it a mammal, but no rule goes on from a mammal that flies to a
 see: lab
 checked-by-code: ExpertSystem_BatGetsNoAnswerFromTheDefaultRules
 
-? What can you do with an expert system's answer that is much harder with a learned model's?
-* Read the rules that fired, step by step, to see why it gave that answer
-- Trust it on cases that its rules never mention
-- Watch it improve its own rules from examples
-why: The trace lists every rule that fired, in order, and a person wrote each one. A learned model's behaviour is spread over many numbers that nobody wrote. But the rules know nothing beyond what was written, and they never change by themselves.
+? What can you do with an expert system's answer that is much harder with a neural network's?
+* Read the rules that fired to see why it answered
+- Trust it on cases that none of its rules mention
+- Watch it improve its own rules from new examples
+why: The trace lists every rule that fired, in order, and a person wrote each one. A neural network's behaviour is spread over many numbers that nobody wrote (a decision tree, though learned, can be read too, as lesson 4.4 shows). But the rules know nothing beyond what was written, and they never change by themselves.
 see: explanation
 
 ? In forward chaining, when does a rule fire?
-* When all its conditions hold and its conclusion is not known yet
-- When at least one of its conditions is a known fact
-- When its conclusion is the answer the system is hoping for
+- When at least one of its conditions is already a known fact
+- When its conclusion is the answer the system is hoping to reach
+* When its conditions all hold and its conclusion is not known yet
 why: Each rule that fires adds its conclusion as a new fact, and the system goes round the rules until nothing new follows. For the tiger, rule 5 fires only once rule 1 has made "mammal" a known fact.
 see: explanation

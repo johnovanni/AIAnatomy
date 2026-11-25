@@ -14,7 +14,7 @@ public enum MazeTool { Wall, Start, Goal }
 /// <summary>
 /// One square of the maze as the view shows it. <see cref="Value"/> is the agent's value for the square (the best of its
 /// four move values; 0 on a wall and at the goal), <see cref="ValueText"/> that value to two decimals ("" on a wall and at
-/// the goal), and <see cref="Arrow"/> the move it prefers there (null when it prefers none).
+/// the goal), and <see cref="Arrow"/> the move it prefers there (null when no single move is best).
 /// </summary>
 public sealed record MazeSquare(GridCell Cell, bool IsWall, bool IsStart, bool IsGoal, bool HasAgent,
     double Value, string ValueText, Move? Arrow, string AutomationName);
@@ -459,7 +459,7 @@ public sealed partial class RewardLabViewModel : LabViewModel
         if (start) parts.Add("start");
         if (here) parts.Add("agent here");
         parts.Add($"value {value}");
-        parts.Add(arrow is { } move ? $"prefers {MoveName(move)}" : "no preferred move yet");
+        parts.Add(arrow is { } move ? $"prefers {MoveName(move)}" : "no single best move yet");
         return $"{SquareName(cell)}: {string.Join(", ", parts)}";
     }
 

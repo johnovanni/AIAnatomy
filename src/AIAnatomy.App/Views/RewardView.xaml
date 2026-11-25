@@ -10,7 +10,7 @@
     </UserControl.Resources>
     <StackPanel>
         <TextBlock Style="{StaticResource BodyText}"
-                   Text="The agent starts at S and has to find G. Nobody shows it the way: it gets 10 for reaching the goal and loses the step cost for every other move. Step makes one move; Run plays up to 300 episodes. Choose a tool and click squares to change the maze." />
+                   Text="The agent starts at S and has to find G. Nobody shows it the way: it gets the goal reward for reaching the goal and loses the step cost for every other move. Step makes one move; Run plays up to 300 episodes. Choose a tool and click squares to change the maze." />
 
         <!-- The tool, the four sliders with their values, and the seed. -->
         <Grid Margin="0,4,0,0">
@@ -92,7 +92,7 @@
                                Text="{Binding ReadoutText, ElementName=Maze, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnReadoutUpdated"
                                AutomationProperties.LiveSetting="Polite" />
                     <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0"
-                               Text="S is the start and G the goal; the ring is the agent, and each arrow is the move it prefers there. Darker squares are worth more. Squares are numbered column, then row, from the top left." />
+                               Text="S is the start and G the goal; the ring is the agent, and each arrow is the move it prefers there (no arrow while no single move is best). Darker squares are worth more. Squares are numbered column, then row, from the top left." />
                     <TextBlock Style="{StaticResource BodyText}" Margin="0,4,0,0"
                                Text="{Binding LastStepText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
                                Visibility="{Binding LastStepText, Converter={StaticResource VisibleIfSet}}" AutomationProperties.LiveSetting="Polite" />

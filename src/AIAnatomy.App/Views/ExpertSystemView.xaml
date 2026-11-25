@@ -79,8 +79,10 @@
             <c:Screen x:Name="AnswerPanel" Grid.Column="2" ScreenName="answer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <StackPanel>
                     <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="Answer" />
-                    <TextBlock Style="{StaticResource SubheadingText}" TextWrapping="Wrap" Text="{Binding AnswerText}"
-                               AutomationProperties.Name="Answer" />
+                    <!-- Read with its own text ("Answer: tiger."), and read out when it changes. -->
+                    <TextBlock Style="{StaticResource SubheadingText}" TextWrapping="Wrap"
+                               Text="{Binding AnswerText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
+                               AutomationProperties.LiveSetting="Polite" />
                 </StackPanel>
             </c:Screen>
         </Grid>

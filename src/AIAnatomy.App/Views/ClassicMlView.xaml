@@ -67,7 +67,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <Button Style="{StaticResource Chip}" Content="Clear" Command="{Binding ClearCommand}" ToolTip="Remove every point" />
+                <Button Style="{StaticResource Chip}" Content="Clear" Command="{Binding ClearCommand}" ToolTip="Remove every point" VerticalAlignment="Top" />
             </WrapPanel>
         </Grid>
 

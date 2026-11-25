@@ -19,7 +19,7 @@
       "label": "Learned from examples",
       "parent": "root",
       "lesson": null,
-      "whatItIs": "The program is shown many examples. It adjusts itself until it does well on them, then is used on new cases."
+      "whatItIs": "The program is shown many examples and fits itself to them: it adjusts its numbers or a tree's questions, or simply keeps the examples to compare new cases with."
     },
     {
       "id": "reward",

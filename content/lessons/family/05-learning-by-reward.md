@@ -8,20 +8,20 @@ sources: watkins1992, suttonbarto2018, schultz1997, textbook
 idea: An agent learns by trial and error from rewards alone: nobody shows it the right moves.
 part: reward
 ---
-In the other labs a program was given rules, or shown examples of right answers. Here nobody shows the **agent** the way through the maze. It only gets **rewards**: 10 for stepping into the goal and −1 for every other move, so wandering costs it. This is called reinforcement learning, and the method in this lab is **Q-learning**, first described by Watkins in 1989.
+Other labs gave a program rules, or examples of right answers. Here nobody shows the **agent** the way through the maze. It only gets **rewards**: 10 for stepping into the goal and −1 for every other move. This is reinforcement learning, and the lab's method is **Q-learning**, first described by Watkins in 1989.
 
-The agent keeps a table with a number for each square and each of the four moves: its estimate of the reward still to come after that move. A square's **value** is its best number, shown by the shading, and the **arrow** shows the move with that number. After every move the agent nudges one number towards what just happened: the reward it got, plus the value of the square it landed in. Good news from the goal spreads backwards, one square at a time. Watkins and Dayan (1992) proved that such a table reaches the best values when every move in every square keeps being tried and the learning rate is lowered in the right way over time; this lab keeps it fixed at 0.5, which works well in a maze this small.
+The agent keeps a table with a number for each square and move: its estimate of the reward still to come after that move. A square's **value** is its best number, shown by the shading, and the **arrow** shows its best move (none when moves tie). After every move the agent nudges one number towards what just happened: the reward it got, plus the discounted value of the square it landed in. Good news from the goal spreads backwards, square by square. Watkins and Dayan (1992) proved that such a table reaches the best values when every move in every square keeps being tried and the learning rate is lowered in the right way over time; this lab keeps it fixed at 0.5, which works well in a maze this small.
 
-The **discount** (0.9 here) says how much a reward one step later counts. With it, a square one step from the goal is worth 10, two steps away −1 + 0.9 × 10 = 8, three steps away 6.2, and so on.
+The **discount** (0.9 here) says how much a reward one step later counts. So a square one step from the goal is worth 10, two steps away −1 + 0.9 × 10 = 8, three steps 6.2, and so on.
 
-The agent also has to choose between using what it knows and **exploring**. With an exploration rate of 0.2 it makes a random move one time in five. Exploring finds better routes and fills in the table; never exploring can lock in the first route that worked.
+The agent must also balance using what it knows against **exploring**. At an exploration rate of 0.2 it makes a random move one time in five, filling in the table. At 0 it only takes the move that looks best. Untried moves keep their starting 0, which at first beats tried moves that paid the step cost, so it still finds a short route; squares off that route keep wrong values.
 
-This maze is a tiny case. Sutton and Barto (2018), a standard textbook, also cover much bigger problems, where an estimate such as a neural network takes the place of the table.
+In much bigger problems, covered by Sutton and Barto (2018), an estimate such as a neural network takes the place of the table.
 
 *Sources: Watkins and Dayan (1992) for Q-learning, its update and its proof, with its conditions; Sutton and Barto (2018) for reinforcement learning, values, the discount and exploring, which are standard textbook material.*
 
 ## Try this
-1. Press Step a few times. The ring is the agent, and the line under the maze says which way it moved and the reward it got. Each step costs 1, so the move it just made scores lower and an arrow appears pointing another way.
+1. Press Step a few times. The ring is the agent, and the line under the maze says which way it moved and the reward it got. Each step costs 1, so the move it just made scores lower than the moves not yet tried there. A square gets an arrow only when one move is best, so arrows appear after a few steps.
 2. Press Run. The chart shows the steps in each episode: the first takes over 100 steps, the last ones 10 to 20. The arrows now show a way to the goal, and the start is worth about −2.25, the value worked out by hand for a square 10 steps from the goal.
 3. Press Reset, set the exploration rate to 0 and press Run: by the end the agent walks a 10-step route every time, but squares away from that route keep wrong values. Try 1 instead: every square gets its hand-worked value, such as 8 two steps from the goal, but the agent only wanders.
 4. With the wall tool, click squares to add or remove walls; the agent starts learning again. Wall the goal in, and the lab says it can't be reached: every episode then stops at 200 steps.
@@ -46,7 +46,7 @@ see: explanation
 - Because it cannot work out which move is best
 * To try moves its numbers may be wrong about
 - Because random moves earn a bigger reward
-why: That is exploring. With the exploration rate at 0 the agent repeats the first route that worked, and squares away from it keep wrong values; exploring keeps filling in the table.
+why: That is exploring. With the rate at 0 the agent only takes the move that looks best. Untried moves start at 0, which at first looks better than a tried move that paid the step cost, so it still finds a short route, but squares away from that route keep wrong values; exploring keeps filling in the table.
 see: lab
 
 ## Formula
@@ -69,7 +69,7 @@ $$
 - Q(s, a): the agent's number for making move a in square s; every number starts at 0.
 - α (alpha): the learning rate, 0.5 in this lab: how far each number moves towards its new target.
 - γ (gamma): the discount, 0.9 at first: how much the next square's value counts.
-- V(s): the square's value, shown by its shading; its arrow is the move with that best number.
+- V(s): the square's value, shown by its shading; its arrow is the move with that best number (no arrow when moves tie).
 
 ## Brains and models
 

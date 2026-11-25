@@ -28,7 +28,22 @@ public class QLearningTests
         Assert.Equal(6.2, agent.Value(new GridCell(0, 1)), 1e-3);
         Assert.Equal(0.0, agent.Value(new GridCell(2, 0)));
         Assert.Equal(Move.Right, agent.Preferred(new GridCell(1, 0)));
+        Assert.Equal(Move.Right, agent.Preferred(new GridCell(0, 0)));
         Assert.Null(agent.Preferred(new GridCell(2, 0)));
+    }
+
+    [Fact]
+    public void Preferred_IsNullWhenTwoMovesTieForBest()
+    {
+        var agent = Explorer(Open());
+        for (int i = 0; i < 5000; i++) agent.RunEpisode();
+
+        // From (1,1), Up and Right both lead to a square next to the goal: both are worth −1 + 0.9 × 10 = 8.
+        var cell = new GridCell(1, 1);
+        Assert.Equal(8.0, agent.Q(cell, Move.Up), 1e-9);
+        Assert.Equal(8.0, agent.Q(cell, Move.Right), 1e-9);
+        Assert.Equal(agent.Q(cell, Move.Up), agent.Q(cell, Move.Right));   // an exact tie once converged
+        Assert.Null(agent.Preferred(cell));
     }
 
     [Fact]

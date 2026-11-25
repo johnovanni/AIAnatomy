@@ -90,9 +90,8 @@ public static class PngRenderer
             reward.UpdateInterval = TimeSpan.Zero;   // no need to pace a run nobody watches
             await reward.RunCommand.ExecuteAsync(null);   // 300 episodes on the default maze
         }
-        var map = view is DiagnosticOptions.RulesVsLearningTrained or DiagnosticOptions.FamilyTreeChosen or DiagnosticOptions.ExpertSystemEdited
-            or DiagnosticOptions.SearchMidgame or DiagnosticOptions.SearchWon or DiagnosticOptions.ClassicMlNeighbours
-            or DiagnosticOptions.RewardTrained ? null : Show(window, viewModel, services, view);
+        // A lab render view has already opened its lesson and set up its lab above.
+        var map = DiagnosticOptions.IsLabRenderView(view) ? null : Show(window, viewModel, services, view);
 
         if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
 

@@ -36,16 +36,16 @@ see: lab
 checked-by-code: Search_TheComputerLooksAt549946PositionsForItsFirstMove
 
 ? When the computer looks ahead, what does minimax assume about your moves?
-* That you always make the reply that is best for you, and so worst for the computer
-- That you choose your squares at random
-- That you will copy the computer's last move
+- That you choose each of your squares at random from the free ones
+* That you always make the reply that is worst for the computer
+- That you copy the computer's last move whenever you can
 why: Backing up the scores takes the computer's best move on its turns and your best reply on yours. If you play worse than that, the computer can only do better.
 see: explanation
 
 ? Why can't a chess program simply look ahead to the end of every game, as this lab does?
-* There are far too many ways a game can go, so it looks a few moves ahead and scores those positions with an estimate
+* There are far too many ways a game can go to look at them all
 - The rules of chess are too hard to write down for a computer
-- Minimax only works on a board of nine squares
+- Minimax only works on a board with nine squares or fewer
 why: Shannon (1950) estimated about 10 to the power 120 ways a game of chess could go. Programs look a few moves ahead, score the positions there with an estimate, and skip branches that cannot change the choice.
 see: explanation
 

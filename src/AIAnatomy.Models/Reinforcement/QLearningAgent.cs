@@ -67,23 +67,23 @@ public sealed class QLearningAgent
     }
 
     /// <summary>
-    /// The move with the highest Q, ties going to the first in the order Up, Right, Down, Left.
-    /// Null at the goal, on a wall, or when all four values are equal (nothing learned there yet).
+    /// The one move with the strictly highest Q. Null at the goal, on a wall, or when two or more moves tie for best
+    /// (all four are equal before anything is learned there). The agent breaks such ties at random when it moves, so an
+    /// arrow for a tied square would point at a move it does not favour.
     /// </summary>
     public Move? Preferred(GridCell cell)
     {
         if (cell == World.Goal || World.IsWall(cell)) return null;
-        double first = Q(cell, Moves[0]);
-        bool allEqual = true;
         Move best = Moves[0];
-        double bestValue = first;
+        double bestValue = Q(cell, Moves[0]);
+        bool tied = false;
         for (int i = 1; i < Moves.Length; i++)
         {
             double q = _q[cell.Column, cell.Row, i];
-            if (q != first) allEqual = false;
-            if (q > bestValue) { bestValue = q; best = Moves[i]; }
+            if (q > bestValue) { bestValue = q; best = Moves[i]; tied = false; }
+            else if (q == bestValue) tied = true;
         }
-        return allEqual ? null : best;
+        return tied ? null : best;
     }
 
     /// <summary>Makes one move and learns from it.</summary>
@@ -133,7 +133,7 @@ public sealed class QLearningAgent
         if (_random.NextDouble() < ExplorationRate)
             return Moves[_random.NextInt(Moves.Length)];
 
-        // Greedy: the highest Q, ties broken at random (unlike Preferred, which uses a fixed order).
+        // Greedy: the highest Q, ties broken at random (Preferred shows no arrow for a tie).
         double best = double.NegativeInfinity;
         var tied = new List<Move>(Moves.Length);
         foreach (Move m in Moves)

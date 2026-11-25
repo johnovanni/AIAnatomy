@@ -231,6 +231,16 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void IsLabRenderView_IsTrueForTheLabRenderViewsOnly()
+    {
+        foreach (var v in new[] { "rules-vs-learning-trained", "family-tree-chosen", "expert-system-edited", "search-midgame",
+                                  "search-won", "classic-ml-neighbours", "reward-trained" })
+            Assert.True(DiagnosticOptions.IsLabRenderView(v), v);
+        foreach (var v in new[] { "learning-by-reward", "classic-ml", "gallery", "contents", "ideamap-radial", "check-answered", "" })
+            Assert.False(DiagnosticOptions.IsLabRenderView(v), v);
+    }
+
+    [Fact]
     public void ContentsView_IsAKnownView_ButNotForFullLab()
     {
         var ok = DiagnosticOptions.Parse(["--render-png", "contents,tokens", "c.png"]);

@@ -152,7 +152,6 @@ public class ThemeContrastTests
     [InlineData("Light")]
     public void PartBrushes_AreDistinguishable_ForColourBlindViewers(string theme)
     {
-        var map = Brushes(theme);
         // The distance rule is per group: parts may share a hue family across sections (spec 5), since the icon and label tell them apart.
         AssertDistinguishable(theme, Parts.Transformer.Select(PartBrush).ToArray());
         AssertDistinguishable(theme, Parts.Family.Append("later").Select(PartBrush).ToArray());

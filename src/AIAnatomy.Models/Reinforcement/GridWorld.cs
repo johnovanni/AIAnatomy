@@ -1,6 +1,6 @@
 namespace AIAnatomy.Models.Reinforcement;
 
-/// <summary>One of the four moves. The order (Up, Right, Down, Left) is the fixed tie-break order for showing arrows.</summary>
+/// <summary>One of the four moves, in the order Up, Right, Down, Left.</summary>
 public enum Move { Up, Right, Down, Left }
 
 /// <summary>A cell of the grid; (0, 0) is the top left.</summary>

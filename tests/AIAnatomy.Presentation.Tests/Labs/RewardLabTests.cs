@@ -75,8 +75,8 @@ public class RewardLabTests
     public void SquareNames_SayWhatEachSquareIs()
     {
         var lab = NewLab();
-        Assert.Equal("Square 1, 1: start, agent here, value 0.00, no preferred move yet", At(lab, 0, 0).AutomationName);
-        Assert.Equal("Square 2, 1: value 0.00, no preferred move yet", At(lab, 1, 0).AutomationName);
+        Assert.Equal("Square 1, 1: start, agent here, value 0.00, no single best move yet", At(lab, 0, 0).AutomationName);
+        Assert.Equal("Square 2, 1: value 0.00, no single best move yet", At(lab, 1, 0).AutomationName);
         Assert.Equal("Square 2, 2: wall", At(lab, 1, 1).AutomationName);
         Assert.Equal("Square 6, 6: goal", At(lab, 5, 5).AutomationName);
         Assert.Equal("", At(lab, 1, 1).ValueText);
@@ -474,5 +474,18 @@ public class RewardLabTests
         raised.Clear();
         lab.Apply(new GridCell(0, 0));   // the same refusal again: nothing new to see
         Assert.Empty(raised);
+    }
+
+    [Fact]
+    public void TryThis_AfterOneStep_NoArrow_ThenArrowsAppearWithinAFewSteps()
+    {
+        var lab = NewLab();
+        lab.StepOnce();
+        // The move just made now scores lower; the three untried moves still tie at 0, so no single move is best.
+        Assert.All(lab.Squares, s => Assert.Null(s.Arrow));
+        Assert.Contains("no single best move yet", At(lab, 0, 0).AutomationName);
+
+        for (int i = 0; i < 9 && lab.Squares.All(s => s.Arrow == null); i++) lab.StepOnce();
+        Assert.Contains(lab.Squares, s => s.Arrow != null);   // "after a few steps arrows appear"
     }
 }

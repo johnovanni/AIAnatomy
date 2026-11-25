@@ -69,6 +69,10 @@ public sealed record DiagnosticOptions(
     /// <summary>The learning-by-reward lesson after one full Run (300 episodes) on the default maze, so values, arrows and
     /// the steps chart show (a render cannot press Run).</summary>
     public const string RewardTrained = "reward-trained";
+    /// <summary>Whether the view is one of the lab render views above, each a lesson whose lab is set up first.</summary>
+    public static bool IsLabRenderView(string v) =>
+        v is RulesVsLearningTrained or FamilyTreeChosen or ExpertSystemEdited or SearchMidgame or SearchWon
+            or ClassicMlNeighbours or RewardTrained;
     public const string AllLabsTest = "all-labs";
     public const string TrainTest = "train";
 
