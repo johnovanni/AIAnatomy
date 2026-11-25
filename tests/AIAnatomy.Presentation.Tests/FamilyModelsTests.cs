@@ -160,11 +160,74 @@ public sealed class FamilyModelsTests : IDisposable
     [Fact]
     public async Task Calls_at_the_same_time_share_one_read()
     {
-        var models = new FamilyModels(_content);
-        var both = await Task.WhenAll(models.MemoryAsync(), models.MemoryAsync());
+        int reads = 0;
+        using var gate = new ManualResetEventSlim(false);
+        var models = new FamilyModels(_content, path =>
+        {
+            Interlocked.Increment(ref reads);
+            gate.Wait(TimeSpan.FromSeconds(10));   // hold the read until both calls have been made
+            return File.ReadAllBytes(path);
+        });
+        var first = models.MemoryAsync();
+        var second = models.MemoryAsync();
+        gate.Set();
+        var both = await Task.WhenAll(first, second);
         Assert.NotSame(both[0].Rnn, both[1].Rnn);
-        File.Delete(FamilyFile("memory.aimodel"));
-        Assert.NotNull((await models.MemoryAsync()).Rnn);
+        await models.MemoryAsync();
+        Assert.Equal(1, reads);
+    }
+
+    [Fact]
+    public async Task Each_file_is_read_once_by_count()
+    {
+        var read = new List<string>();
+        var models = new FamilyModels(_content, path => { lock (read) read.Add(Path.GetFileName(path)); return File.ReadAllBytes(path); });
+        await models.DiffusionAsync("Spiral");
+        await models.DiffusionAsync("Spiral");
+        await models.DiffusionAsync("Circle");
+        await models.MemoryAsync();
+        await models.MemoryAsync();
+        Assert.Equal(new[] { "diffusion-spiral.aimodel", "diffusion-circle.aimodel", "memory.aimodel" }, read);
+    }
+
+    [Fact]
+    public async Task A_truncated_file_gives_a_plain_message()
+    {
+        var bytes = File.ReadAllBytes(FamilyFile("memory.aimodel"));
+        File.WriteAllBytes(FamilyFile("memory.aimodel"), bytes[..(bytes.Length / 2)]);
+        var models = new FamilyModels(_content);
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => models.MemoryAsync());
+        Assert.Contains("memory.aimodel", error.Message);
+        Assert.DoesNotContain(_content, error.Message);
+    }
+
+    [Fact]
+    public async Task A_read_that_ends_early_is_wrapped()
+    {
+        var models = new FamilyModels(_content, _ => throw new EndOfStreamException("raw"));
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => models.DiffusionAsync("Circle"));
+        Assert.Contains("diffusion-circle.aimodel", error.Message);
+        Assert.DoesNotContain("raw", error.Message);
+    }
+
+    [Fact]
+    public async Task An_unreadable_file_gives_a_plain_message_without_the_path()
+    {
+        var models = new FamilyModels(_content, path => throw new UnauthorizedAccessException($"Access to the path '{path}' is denied."));
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => models.MemoryAsync());
+        Assert.Contains("memory.aimodel", error.Message);
+        Assert.DoesNotContain(_content, error.Message);
+    }
+
+    [Fact]
+    public async Task A_second_call_after_a_bad_file_also_fails_cleanly()
+    {
+        File.WriteAllText(FamilyFile("diffusion-spiral.aimodel"), "not a model");
+        var models = new FamilyModels(_content);
+        var first = await Assert.ThrowsAsync<InvalidDataException>(() => models.DiffusionAsync("Spiral"));
+        var second = await Assert.ThrowsAsync<InvalidDataException>(() => models.DiffusionAsync("Spiral"));
+        Assert.Equal(first.Message, second.Message);
+        Assert.Contains("diffusion-spiral.aimodel", second.Message);
     }
 
     [Fact]

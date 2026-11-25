@@ -28,11 +28,18 @@ public sealed class FamilyModels
     private readonly string _folder;
     private readonly object _gate = new();
     private readonly Dictionary<string, Task<byte[]>> _files = new(StringComparer.Ordinal);
+    private readonly Func<string, byte[]> _readAllBytes;
 
-    public FamilyModels(string contentFolder)
+    public FamilyModels(string contentFolder) : this(contentFolder, File.ReadAllBytes) { }
+
+    /// <summary>For tests: <paramref name="readAllBytes"/> stands in for <see cref="File.ReadAllBytes(string)"/>, so the
+    /// number of reads can be counted.</summary>
+    internal FamilyModels(string contentFolder, Func<string, byte[]> readAllBytes)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(contentFolder);
+        ArgumentNullException.ThrowIfNull(readAllBytes);
         _folder = Path.Combine(contentFolder, "models", "family");
+        _readAllBytes = readAllBytes;
     }
 
     /// <summary>The preset names that have a shipped diffusion network.</summary>
@@ -70,14 +77,15 @@ public sealed class FamilyModels
 
     private byte[] ReadBytes(string file)
     {
-        try { return File.ReadAllBytes(Path.Combine(_folder, file)); }
+        try { return _readAllBytes(Path.Combine(_folder, file)); }
         catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
         {
             throw new InvalidDataException($"The network file '{file}' is missing from AI Anatomy's content folder. Reinstalling the app puts it back.", e);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
         {
-            throw new InvalidDataException($"The network file '{file}' cannot be read: {e.Message}", e);
+            // The system's message may hold the full path; the plain message names only the file.
+            throw new InvalidDataException($"The network file '{file}' cannot be read. Check that AI Anatomy's content folder can be opened, or reinstall the app.", e);
         }
     }
 
@@ -88,6 +96,13 @@ public sealed class FamilyModels
         catch (InvalidDataException e)
         {
             throw new InvalidDataException($"The network file '{file}' cannot be opened. {e.Message}", e);
+        }
+        catch (Exception e) when (e is IOException or FormatException or OverflowException or ArgumentException
+                                   or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            // The loaders turn what they expect into InvalidDataException; anything else that slips past (a stream that
+            // ends early, a number that does not parse) is still a bad file, and the lab shows the same plain message.
+            throw new InvalidDataException($"The network file '{file}' cannot be opened: it is damaged or cut short.", e);
         }
     }
 }

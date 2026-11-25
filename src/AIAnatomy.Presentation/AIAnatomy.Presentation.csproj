@@ -3,6 +3,9 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="AIAnatomy.Presentation.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\AIAnatomy.Lessons\AIAnatomy.Lessons.csproj" />
     <ProjectReference Include="..\AIAnatomy.Models\AIAnatomy.Models.csproj" />
   </ItemGroup>

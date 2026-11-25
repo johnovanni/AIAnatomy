@@ -7,12 +7,16 @@ using AIAnatomy.Presentation.Visuals;
 namespace AIAnatomy.App.Controls;
 
 /// <summary>
-/// A cloud of 2-D points (as in the diffusion lab) on square axes. Three things can be shown, told apart by shape and
-/// line style as well as colour: the target shape, faint, as small hollow rings; the current points as solid squares;
-/// and optional arrows (such as the noise added to, or predicted for, each point) as dashed lines with a solid head.
+/// A cloud of 2-D points (as in the diffusion lab) on square axes. Everything shown is told apart by shape and line style
+/// as well as colour: the target shape, faint, as small hollow rings; the current points as solid squares; highlighted
+/// points (<see cref="HighlightIndices"/>) as large outlined circles around their squares; arrows (such as the true
+/// noise) as solid lines with an open head; and a second set of arrows (such as the predicted noise) as dashed lines with
+/// a filled head. The legend names each one with its style in words.
 /// The axes run from −<see cref="AxisLimit"/> to +<see cref="AxisLimit"/> (3 by default), or fit the data when
 /// <see cref="FitToData"/> is set. The line under the plot gives the number of points, where their middle is and how
-/// spread out they are, in words; it is also the plot's help text, read when the keyboard reaches the plot.
+/// spread out they are, in words, at the full text size. It changes only with the data, never from a key, so it is not
+/// a live region (during sampling it would be read out many times a second); it is the plot's help text instead, read
+/// when the keyboard reaches the plot, whose name is "Point cloud" unless a lab sets another.
 /// </summary>
 public sealed class PointCloudPlot : ChartBase
 {
@@ -26,6 +30,10 @@ public sealed class PointCloudPlot : ChartBase
     public static readonly DependencyProperty PointsLabelProperty = Register(nameof(PointsLabel), "points");
     public static readonly DependencyProperty TargetLabelProperty = Register(nameof(TargetLabel), "target shape");
     public static readonly DependencyProperty ArrowsLabelProperty = Register(nameof(ArrowsLabel), "noise");
+    public static readonly DependencyProperty SecondaryArrowsProperty = Register<IReadOnlyList<(Point From, Point To)>?>(nameof(SecondaryArrows), null);
+    public static readonly DependencyProperty SecondaryArrowsLabelProperty = Register(nameof(SecondaryArrowsLabel), "predicted noise");
+    public static readonly DependencyProperty HighlightIndicesProperty = Register<IReadOnlyList<int>?>(nameof(HighlightIndices), null);
+    public static readonly DependencyProperty HighlightLabelProperty = Register(nameof(HighlightLabel), "highlighted points");
     public static readonly DependencyProperty AxisLimitProperty = Register(nameof(AxisLimit), 3.0);
     public static readonly DependencyProperty FitToDataProperty = Register(nameof(FitToData), false);
 
@@ -33,6 +41,7 @@ public sealed class PointCloudPlot : ChartBase
     {
         Focusable = true;
         ToolTipService.SetInitialShowDelay(this, 200);
+        AutomationProperties.SetName(this, "Point cloud");   // a lab may set its own name
         AutomationProperties.SetHelpText(this, SummaryText());
     }
 
@@ -40,7 +49,7 @@ public sealed class PointCloudPlot : ChartBase
     public IReadOnlyList<Point>? Points { get => (IReadOnlyList<Point>?)GetValue(PointsProperty); set => SetValue(PointsProperty, value); }
     /// <summary>The shape being learned, drawn faintly as hollow rings behind everything else.</summary>
     public IReadOnlyList<Point>? TargetPoints { get => (IReadOnlyList<Point>?)GetValue(TargetPointsProperty); set => SetValue(TargetPointsProperty, value); }
-    /// <summary>Arrows from one place to another (such as the noise vectors), dashed with a solid head.</summary>
+    /// <summary>Arrows from one place to another (such as the true noise vectors): solid lines with an open head.</summary>
     public IReadOnlyList<(Point From, Point To)>? Arrows { get => (IReadOnlyList<(Point From, Point To)>?)GetValue(ArrowsProperty); set => SetValue(ArrowsProperty, value); }
     /// <summary>The legend's name for the current points.</summary>
     public string PointsLabel { get => (string)GetValue(PointsLabelProperty); set => SetValue(PointsLabelProperty, value); }
@@ -48,12 +57,26 @@ public sealed class PointCloudPlot : ChartBase
     public string TargetLabel { get => (string)GetValue(TargetLabelProperty); set => SetValue(TargetLabelProperty, value); }
     /// <summary>The legend's name for the arrows.</summary>
     public string ArrowsLabel { get => (string)GetValue(ArrowsLabelProperty); set => SetValue(ArrowsLabelProperty, value); }
+    /// <summary>A second set of arrows (such as the predicted noise): dashed lines with a filled head.</summary>
+    public IReadOnlyList<(Point From, Point To)>? SecondaryArrows { get => (IReadOnlyList<(Point From, Point To)>?)GetValue(SecondaryArrowsProperty); set => SetValue(SecondaryArrowsProperty, value); }
+    /// <summary>The legend's name for the second set of arrows.</summary>
+    public string SecondaryArrowsLabel { get => (string)GetValue(SecondaryArrowsLabelProperty); set => SetValue(SecondaryArrowsLabelProperty, value); }
+    /// <summary>Indices into <see cref="Points"/> to draw with a large outlined circle, so a few points stand out from the
+    /// cloud (indices outside the list are ignored).</summary>
+    public IReadOnlyList<int>? HighlightIndices { get => (IReadOnlyList<int>?)GetValue(HighlightIndicesProperty); set => SetValue(HighlightIndicesProperty, value); }
+    /// <summary>The legend's name for the highlighted points.</summary>
+    public string HighlightLabel { get => (string)GetValue(HighlightLabelProperty); set => SetValue(HighlightLabelProperty, value); }
     /// <summary>The axes run from −AxisLimit to +AxisLimit on both sides (3 by default) unless <see cref="FitToData"/>.</summary>
     public double AxisLimit { get => (double)GetValue(AxisLimitProperty); set => SetValue(AxisLimitProperty, value); }
     /// <summary>Fit the axes to everything shown instead (the same range on both, so the shape is not stretched).</summary>
     public bool FitToData { get => (bool)GetValue(FitToDataProperty); set => SetValue(FitToDataProperty, value); }
 
-    private bool HasData => Points is { Count: > 0 } || TargetPoints is { Count: > 0 } || Arrows is { Count: > 0 };
+    private bool HasData => Points is { Count: > 0 } || TargetPoints is { Count: > 0 } || Arrows is { Count: > 0 } || SecondaryArrows is { Count: > 0 };
+
+    /// <summary>The highlighted points that exist (each once, in order).</summary>
+    private List<Point> Highlighted => Points is { } points && HighlightIndices is { } indices
+        ? indices.Where(i => i >= 0 && i < points.Count).Distinct().Select(i => points[i]).ToList()
+        : [];
 
     /// <summary>The line under the plot: how many points, their middle and their spread (standard deviation along each axis).</summary>
     public string SummaryText()
@@ -65,6 +88,8 @@ public sealed class PointCloudPlot : ChartBase
         string count = points.Count == 1 ? $"1 of the {PointsLabel}" : $"{points.Count:#,0} {PointsLabel}";
         string text = $"{char.ToUpperInvariant(count[0])}{count[1..]}, centred at ({NumberText.Short(mx)}, {NumberText.Short(my)}); "
                       + $"spread (standard deviation) {NumberText.Short(sx)} across and {NumberText.Short(sy)} up and down.";
+        int highlighted = Highlighted.Count;
+        if (highlighted > 0) text += highlighted == 1 ? $" 1 of them is marked ({HighlightLabel})." : $" {highlighted:#,0} of them are marked ({HighlightLabel}).";
         if (!FitToData)
         {
             double limit = Limit;
@@ -79,14 +104,15 @@ public sealed class PointCloudPlot : ChartBase
     private (double Min, double Max) Range()
     {
         if (!FitToData) return (-Limit, Limit);
-        var all = (Points ?? []).Concat(TargetPoints ?? []).Concat((Arrows ?? []).SelectMany(a => new[] { a.From, a.To }))
+        var all = (Points ?? []).Concat(TargetPoints ?? []).Concat((Arrows ?? []).Concat(SecondaryArrows ?? []).SelectMany(a => new[] { a.From, a.To }))
             .Where(p => double.IsFinite(p.X) && double.IsFinite(p.Y)).ToList();
         if (all.Count == 0) return (-Limit, Limit);
         var (min, max) = AxisTicks.Pad(Math.Min(all.Min(p => p.X), all.Min(p => p.Y)), Math.Max(all.Max(p => p.X), all.Max(p => p.Y)));
         return (min, max);
     }
 
-    private FormattedText Readout(double width) => Text(SummaryText(), FontSize * 0.9, Foreground, maxWidth: Math.Max(50, FiniteOr(width, 600)));
+    // The main way the numbers reach the learner, so at the full text size.
+    private FormattedText Readout(double width) => Text(SummaryText(), FontSize, Foreground, maxWidth: Math.Max(50, FiniteOr(width, 600)));
 
     protected override Size MeasureOverride(Size available)
     {
@@ -133,8 +159,12 @@ public sealed class PointCloudPlot : ChartBase
         }
         if (Points is { Count: > 0 } points)
             dc.DrawGeometry(Series1Brush, null, Markers(points.Select(p => frame.Map(p.X, p.Y)), r, ring: false));
+        var highlighted = Highlighted;
+        if (highlighted.Count > 0) DrawHighlights(dc, highlighted.Select(p => frame.Map(p.X, p.Y)), r);
         if (Arrows is { Count: > 0 } arrows)
-            DrawArrows(dc, arrows.Select(a => (frame.Map(a.From.X, a.From.Y), frame.Map(a.To.X, a.To.Y))), r);
+            DrawArrows(dc, arrows.Select(a => (frame.Map(a.From.X, a.From.Y), frame.Map(a.To.X, a.To.Y))), r, secondary: false);
+        if (SecondaryArrows is { Count: > 0 } second)
+            DrawArrows(dc, second.Select(a => (frame.Map(a.From.X, a.From.Y), frame.Map(a.To.X, a.To.Y))), r, secondary: true);
         dc.Pop();
 
         dc.DrawText(readout, new Point(0, ActualHeight - readout.Height));
@@ -169,14 +199,30 @@ public sealed class PointCloudPlot : ChartBase
         return geometry;
     }
 
-    private Pen ArrowPen => new(Series2Brush, 1.5) { DashStyle = new DashStyle(new DoubleCollection { 3, 2 }, 0) };
-
-    /// <summary>Dashed shafts with solid heads; a head is never longer than half its arrow.</summary>
-    private void DrawArrows(DrawingContext dc, IEnumerable<(Point From, Point To)> arrows, double r)
+    /// <summary>A large circle around each highlighted point: a thick line in the text colour over a wider surface-coloured
+    /// one, so it shows on the cloud and on the background alike.</summary>
+    private void DrawHighlights(DrawingContext dc, IEnumerable<Point> centres, double r)
     {
+        double radius = r * 2.6;
+        var geometry = new GeometryGroup();
+        foreach (var c in centres)
+            if (double.IsFinite(c.X) && double.IsFinite(c.Y)) geometry.Children.Add(new EllipseGeometry(c, radius, radius));
+        geometry.Freeze();
+        dc.DrawGeometry(null, new Pen(SurfaceBrush, 4.5), geometry);
+        dc.DrawGeometry(null, new Pen(Foreground, 2), geometry);
+    }
+
+    /// <summary>The first set: solid shafts with open (outlined) heads in Series 2. The second: dashed shafts with filled
+    /// heads in Series 3. A head is never longer than half its arrow.</summary>
+    private void DrawArrows(DrawingContext dc, IEnumerable<(Point From, Point To)> arrows, double r, bool secondary)
+    {
+        var brush = secondary ? Series3Brush : Series2Brush;
+        var shaftPen = secondary
+            ? new Pen(brush, 1.8) { DashStyle = new DashStyle(new DoubleCollection { 2.5, 1.8 }, 0) }
+            : new Pen(brush, 1.8);
         var shafts = new StreamGeometry();
         var heads = new StreamGeometry();
-        double headLength = Math.Max(6, r * 2.6);
+        double headLength = Math.Max(9, r * 3.5);   // big enough to tell an open head from a filled one
         using (var s = shafts.Open())
         using (var h = heads.Open())
         {
@@ -192,14 +238,15 @@ public sealed class PointCloudPlot : ChartBase
                 var side = new Vector(-along.Y, along.X) * head * 0.45;
                 s.BeginFigure(from, false, false);
                 s.LineTo(back, true, false);
-                h.BeginFigure(to, true, true);
-                h.PolyLineTo([back + side, back - side], true, false);
+                h.BeginFigure(to, secondary, true);
+                h.PolyLineTo([back + side, back - side], true, true);
             }
         }
         shafts.Freeze();
         heads.Freeze();
-        dc.DrawGeometry(null, ArrowPen, shafts);
-        dc.DrawGeometry(Series2Brush, null, heads);
+        dc.DrawGeometry(null, shaftPen, shafts);
+        if (secondary) dc.DrawGeometry(brush, null, heads);
+        else dc.DrawGeometry(SurfaceBrush, new Pen(brush, 1.8) { LineJoin = PenLineJoin.Miter }, heads);   // open head: outlined, hollow
     }
 
     /// <summary>Draws the legend (when <paramref name="dc"/> is not null) and returns its height. Only what is shown is named.</summary>
@@ -217,9 +264,18 @@ public sealed class PointCloudPlot : ChartBase
         if (Points is { Count: > 0 })
             items.Add(($"{PointsLabel} (solid squares)", (d, at) =>
                 d.DrawGeometry(Series1Brush, null, Markers([at with { X = at.X - r * 2.5 }, at, at with { X = at.X + r * 2.5 }], r, ring: false))));
+        if (Highlighted.Count > 0)
+            items.Add(($"{HighlightLabel} (large circles)", (d, at) =>
+            {
+                d.DrawGeometry(Series1Brush, null, Markers([at], r, ring: false));
+                DrawHighlights(d, [at], r);
+            }));
         if (Arrows is { Count: > 0 })
-            items.Add(($"{ArrowsLabel} (dashed arrows)", (d, at) =>
-                DrawArrows(d, [(at with { X = at.X - 18 }, at with { X = at.X + 18 })], r)));
+            items.Add(($"{ArrowsLabel} (solid arrows, open heads)", (d, at) =>
+                DrawArrows(d, [(at with { X = at.X - 18 }, at with { X = at.X + 18 })], r, secondary: false)));
+        if (SecondaryArrows is { Count: > 0 })
+            items.Add(($"{SecondaryArrowsLabel} (dashed arrows, filled heads)", (d, at) =>
+                DrawArrows(d, [(at with { X = at.X - 18 }, at with { X = at.X + 18 })], r, secondary: true)));
         foreach (var (label, key) in items)
         {
             var text = Text(label, LabelSize, Foreground);
@@ -239,7 +295,9 @@ public sealed class PointCloudPlot : ChartBase
     {
         base.OnPropertyChanged(e);
         if (e.Property == PointsProperty || e.Property == TargetPointsProperty || e.Property == PointsLabelProperty
-            || e.Property == TargetLabelProperty || e.Property == AxisLimitProperty || e.Property == FitToDataProperty)
+            || e.Property == TargetLabelProperty || e.Property == AxisLimitProperty || e.Property == FitToDataProperty
+            || e.Property == HighlightIndicesProperty || e.Property == HighlightLabelProperty
+            || e.Property == ArrowsProperty || e.Property == SecondaryArrowsProperty)
         {
             string summary = SummaryText();
             AutomationProperties.SetHelpText(this, summary);

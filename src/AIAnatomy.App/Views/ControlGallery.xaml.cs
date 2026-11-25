@@ -82,6 +82,18 @@ public partial class ControlGallery : System.Windows.Controls.UserControl
         Cloud.TargetPoints = target;
         Cloud.Points = noisy.Where((_, i) => i % 4 == 0).ToList();
         Cloud.Arrows = Enumerable.Range(0, target.Count).Where(i => i % 40 == 0).Select(i => (target[i], noisy[i])).ToList();
+        // A made-up "prediction": the true noise turned a little and shortened, from the same start.
+        Cloud.SecondaryArrows = Enumerable.Range(0, target.Count).Where(i => i % 40 == 0).Select(i =>
+        {
+            var (dx, dy) = (noisy[i].X - target[i].X, noisy[i].Y - target[i].Y);
+            return (target[i], new System.Windows.Point(target[i].X + 0.8 * (dx * 0.94 - dy * 0.34), target[i].Y + 0.8 * (dx * 0.34 + dy * 0.94)));
+        }).ToList();
+        Cloud.HighlightIndices = Enumerable.Range(0, 20).Select(k => k * 12).ToList();
+
+        var few = Enumerable.Range(0, 6).Select(k => SampleMap(k * 2 + 1)).ToList();
+        few.Insert(2, new double[0, 0]);   // an empty map is skipped; the others keep their numbers
+        MapsUnlimited.Maps = few;
+        MapSingle.Maps = [RingMap28()];
     }
 
     /// <summary>The page's content, measured by --render-png gallery to make the picture tall enough.</summary>
@@ -95,6 +107,19 @@ public partial class ControlGallery : System.Windows.Controls.UserControl
         for (int r = 0; r < 8; r++)
         for (int c = 0; c < 8; c++)
             m[r, c] = strength * Math.Sin((r * Math.Cos(angle) + c * Math.Sin(angle)) * 0.9);
+        return m;
+    }
+
+    // A 28 by 28 map in −1..1: a ring that is positive inside and negative just outside, like an edge detector's output.
+    private static double[,] RingMap28()
+    {
+        var m = new double[28, 28];
+        for (int r = 0; r < 28; r++)
+        for (int c = 0; c < 28; c++)
+        {
+            double d = Math.Sqrt((r - 13.5) * (r - 13.5) + (c - 13.5) * (c - 13.5));
+            m[r, c] = Math.Tanh(1.5 * Math.Cos(d * 0.45)) * Math.Exp(-d / 30);
+        }
         return m;
     }
 

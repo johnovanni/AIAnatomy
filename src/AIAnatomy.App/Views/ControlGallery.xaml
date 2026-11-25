@@ -25,6 +25,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Sample}">
@@ -108,14 +109,27 @@
 
                 <Border Grid.Row="5" Grid.Column="0" Style="{StaticResource Sample}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource PaneTitle}" Text="FeatureMapGrid (twelve maps, height limited so they scroll)" />
-                        <c:FeatureMapGrid x:Name="Maps" MaxHeight="520" />
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="FeatureMapGrid (twelve maps, maps area limited to 300 so they scroll; never under two rows)" />
+                        <c:FeatureMapGrid x:Name="Maps" MaxMapsHeight="300" />
                     </StackPanel>
                 </Border>
                 <Border Grid.Row="5" Grid.Column="1" Style="{StaticResource Sample}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource PaneTitle}" Text="PointCloudPlot (target spiral, noisy points, noise arrows)" />
-                        <c:PointCloudPlot x:Name="Cloud" ArrowsLabel="noise added" />
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="PointCloudPlot (target spiral, noisy points, 20 highlighted, true and predicted noise)" />
+                        <c:PointCloudPlot x:Name="Cloud" ArrowsLabel="true noise" SecondaryArrowsLabel="predicted noise" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="6" Grid.Column="0" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="FeatureMapGrid (no height limit; map 3 is empty and skipped)" />
+                        <c:FeatureMapGrid x:Name="MapsUnlimited" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="6" Grid.Column="1" Style="{StaticResource Sample}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PaneTitle}" Text="FeatureMapGrid (one 28 by 28 map, scale fixed at 1)" />
+                        <c:FeatureMapGrid x:Name="MapSingle" Limit="1" MapSize="280" />
                     </StackPanel>
                 </Border>
             </Grid>
