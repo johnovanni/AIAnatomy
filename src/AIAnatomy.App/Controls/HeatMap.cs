@@ -105,8 +105,9 @@ public sealed class HeatMap : ChartBase
         double captionHeight = caption == null ? 0 : caption.Height + Gap;
         double rowLabelWidth = Enumerable.Range(0, rows).Max(r => Text(RowName(r), label, Foreground, BoldFace).Width) + 12;
         // The largest square grows with the text, so the numbers inside still fit at large text sizes.
-        double maxCell = Math.Max(MaxCell, ValueWidth(3) + 8);
-        double cell = double.IsFinite(width) ? Math.Clamp((width - rowLabelWidth - 2) / cols, 4, maxCell) : Math.Max(UnboundedCell, ValueWidth(3) + 8);
+        double valueRoom = ShowCellValues ? ValueWidth(3) + 8 : 0;
+        double maxCell = Math.Max(MaxCell, valueRoom);
+        double cell = double.IsFinite(width) ? Math.Clamp((width - rowLabelWidth - 2) / cols, 4, maxCell) : Math.Max(UnboundedCell, valueRoom);
         double columnLabelWidth = Enumerable.Range(0, cols).Max(c => Text(ColumnName(c), label, Foreground, BoldFace).Width);
         bool rotate = columnLabelWidth > cell - 4;
         double columnLabelHeight = (rotate ? columnLabelWidth : Text("Ag", label, Foreground).Height) + 8;
@@ -171,8 +172,8 @@ public sealed class HeatMap : ChartBase
 
         // The squares.
         double valueSize = ValueSize;
-        // Three decimals if they fit, else two; otherwise no numbers in the squares (the readout always has the exact value).
-        int decimals = ValueWidth(3) + 6 <= l.Cell ? 3 : ValueWidth(2) + 6 <= l.Cell ? 2 : -1;
+        // Three decimals if they fit, else two, else one; otherwise no numbers in the squares (the readout always has the exact value).
+        int decimals = Decimals(l.Cell);
         bool writeValues = ShowCellValues && decimals >= 0;
         for (int r = 0; r < rows; r++)
         for (int c = 0; c < cols; c++)
@@ -283,7 +284,7 @@ public sealed class HeatMap : ChartBase
                       && cell.Row < Values!.GetLength(0) && cell.Column < Values.GetLength(1)
             ? Describe(cell)
             : "Click a square, or use the arrow keys, to see its exact value.";
-        var formatted = Text(text, FontSize * 0.9, Foreground, maxWidth: double.IsFinite(width) ? Math.Max(50, width) : 0);
+        var formatted = Text(text, ReadoutTextSize, Foreground, maxWidth: double.IsFinite(width) ? Math.Max(50, width) : 0);
         int colon = text.LastIndexOf(": ", StringComparison.Ordinal);
         if (SelectedCell != null && colon > 0 && !text.EndsWith(BlockedText, StringComparison.Ordinal))
         {
@@ -292,7 +293,25 @@ public sealed class HeatMap : ChartBase
         return formatted;
     }
 
-    private double ValueSize => LabelSize * 0.8;
+    /// <summary>The smallest size, in DIPs, of the numbers in the squares and of the readout.</summary>
+    public const double MinValueTextSize = 12;
+
+    // The numbers in the squares are read like body text: the body size, never under 12 DIPs (Task 13 review, Important 1).
+    // A square too narrow for them loses decimals, then the numbers; the text never shrinks.
+    private double ValueSize => Math.Max(MinValueTextSize, FontSize);
+
+    /// <summary>The size of the numbers written in the squares: the body text size, never under <see cref="MinValueTextSize"/>.</summary>
+    public double ValueTextSize => ValueSize;
+
+    /// <summary>The size of the readout line under the grid: the body text size, never under <see cref="MinValueTextSize"/>.</summary>
+    public double ReadoutTextSize => Math.Max(MinValueTextSize, FontSize);
+
+    /// <summary>How many decimals the numbers in the squares have at the present width (3, 2 or 1), or −1 when no
+    /// numbers are written there (the readout still gives every value).</summary>
+    public int CellDecimals => HasData && ShowCellValues ? Decimals(ComputeLayout(ActualWidth).Cell) : -1;
+
+    private int Decimals(double cell) =>
+        ValueWidth(3) + 6 <= cell ? 3 : ValueWidth(2) + 6 <= cell ? 2 : ValueWidth(1) + 6 <= cell ? 1 : -1;
 
     /// <summary>Width of a typical number written in a square with this many decimals (a negative one, the widest).</summary>
     private double ValueWidth(int decimals) => Number(NumberText.ShortWithDecimals(-0.5, decimals), ValueSize, Foreground).Width;
