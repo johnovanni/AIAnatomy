@@ -103,7 +103,7 @@ public class CheckYourselfViewModelTests : IDisposable
     public void NoScoreIsKept()
     {
         var vm = _env.NewMain();
-        vm.NavigateToLesson("family-coming");
+        vm.NavigateToLesson("beyond-coming");
         Assert.Null(vm.CurrentPage!.Check);   // no questions, no section
         vm.NavigateToLesson("attention");
 
@@ -190,7 +190,7 @@ public class CheckYourselfViewModelTests : IDisposable
     public void PlaceholderLesson_HasNoCheck()
     {
         var vm = _env.NewMain();
-        vm.NavigateToLesson("family-coming");
+        vm.NavigateToLesson("beyond-coming");
         Assert.Null(vm.CurrentPage!.Check);
     }
 

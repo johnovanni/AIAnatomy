@@ -13,11 +13,20 @@ public class LessonContentTests
     // Tone rules for the explanation pane: plain explanations of 150 to 350 words, short "Brains and models" notes.
     private const int MinExplanationWords = 150, MaxExplanationWords = 350;
     private const int MinBrainsWords = 60, MaxBrainsWords = 150;
+    // A "coming later" placeholder is one short paragraph (plus its source line) and is held to a lower minimum.
+    private const int MinPlaceholderWords = 40;
+
+    /// <summary>The lessons still "coming later". Each lab task removes its own id when it turns its lesson into a built one.</summary>
+    private static readonly string[] StillComingLater =
+    [
+        "beyond-coming", "family-tree", "expert-system", "search", "classic-ml", "learning-by-reward",
+        "image-filters", "image-network", "memory-networks", "diffusion-shapes", "diffusion-steps",
+    ];
 
     [Fact]
     public void EveryLessonHasExplanationOver80Words()
     {
-        var tooShort = Catalog.All.Where(l => WordCount(l.Explanation) <= 80).Select(Describe).ToList();
+        var tooShort = Catalog.All.Where(l => !l.IsPlaceholder && WordCount(l.Explanation) <= 80).Select(Describe).ToList();
         Assert.True(tooShort.Count == 0, "Explanations of 80 words or fewer: " + string.Join(", ", tooShort));
     }
 
@@ -28,7 +37,7 @@ public class LessonContentTests
         foreach (var lesson in Catalog.All)
         {
             int words = WordCount(lesson.Explanation);
-            if (words is < MinExplanationWords or > MaxExplanationWords)
+            if (words < (lesson.IsPlaceholder ? MinPlaceholderWords : MinExplanationWords) || words > MaxExplanationWords)
                 problems.Add($"{lesson.Id} explanation has {words} words");
             if (lesson.BrainsAndModels is { } brains && WordCount(brains) is var b and (< MinBrainsWords or > MaxBrainsWords))
                 problems.Add($"{lesson.Id} brains-and-models note has {b} words");
@@ -98,8 +107,8 @@ public class LessonContentTests
     [Fact]
     public void EveryBuiltLesson_HasIdeaPartTryThisAndTwoToThreeQuestions()
     {
-        // Only the two "coming later" lessons are placeholders, so every other lesson is held to the checks below.
-        Assert.Equal(["beyond-coming", "family-coming"], Catalog.All.Where(l => l.IsPlaceholder).Select(l => l.Id).Order(StringComparer.Ordinal));
+        // Only the "coming later" lessons are placeholders, so every other lesson is held to the checks below.
+        Assert.Equal(StillComingLater.Order(StringComparer.Ordinal), Catalog.All.Where(l => l.IsPlaceholder).Select(l => l.Id).Order(StringComparer.Ordinal));
         var problems = new List<string>();
         foreach (var lesson in BuiltLessons)
         {
@@ -165,12 +174,12 @@ public class LessonContentTests
     [Fact]
     public void ComingLaterLessons_HaveNoFormulaOrNote()
     {
-        foreach (var id in new[] { "family-coming", "beyond-coming" })
+        foreach (var id in StillComingLater)
         {
             var lesson = Catalog.Get(id);
             Assert.Null(lesson.Formula);
             Assert.Null(lesson.BrainsAndModels);
-            Assert.Contains(lesson.Explanation.Blocks, b => b is BulletList);
+            if (id == "beyond-coming") Assert.Contains(lesson.Explanation.Blocks, b => b is BulletList);
         }
     }
 

@@ -90,6 +90,41 @@ public class IdeaMapViewModelTests
         Assert.DoesNotContain(map.Bubbles, b => b.Id == "centre");
     }
 
+    private static readonly string[] Section4 =
+        ["family-tree", "expert-system", "search", "classic-ml", "learning-by-reward",
+         "image-filters", "image-network", "memory-networks", "diffusion-shapes", "diffusion-steps"];
+
+    [Fact]
+    public void Loop_ShowsOnlyTheFamilyTreeFromSection4()
+    {
+        using var env = new TestEnvironment();
+        var map = NewMap(env);
+        map.Mode = MapMode.Loop;
+        var ids = map.Bubbles.Select(b => b.Id).ToList();
+        Assert.Contains("family-tree", ids);
+        foreach (var id in Section4.Skip(1)) Assert.DoesNotContain(id, ids);
+    }
+
+    [Fact]
+    public void Radial_Section4HasItsTenLessonsInOrder()
+    {
+        using var env = new TestEnvironment();
+        var map = NewMap(env);
+        var after = map.Bubbles.SkipWhile(b => b.Id != "section-4").Skip(1).Take(10).ToList();
+        Assert.Equal(Section4, after.Select(b => b.Id));
+        Assert.All(after, b => Assert.True(b.IsLater));
+    }
+
+    /// <summary>Guards the Tree mode added later: a saved "Tree" (or any other name) is read as Radial.</summary>
+    [Fact]
+    public void SavedTreeMode_IsReadAsRadial()
+    {
+        using var env = new TestEnvironment();
+        var settings = env.NewSettings();
+        settings.Save(settings.Current with { IdeaMapLayout = "Tree" });
+        Assert.Equal(MapMode.Radial, NewMap(env, settings: settings).Mode);
+    }
+
     [Fact]
     public void Bubbles_RadialHasCentreSectionsAndLessons_LoopHasFlowBubblesAndLessons()
     {
@@ -106,7 +141,7 @@ public class IdeaMapViewModelTests
 
         map.Mode = MapMode.Loop;
 
-        string[] loop = ["your-text", "next-character", .. lessons];
+        string[] loop = ["your-text", "next-character", .. lessons.Except(Section4.Skip(1))];   // Loop shows only the first lesson of section 4
         Assert.Equal(loop.Order(), map.Bubbles.Select(b => b.Id).Order());
     }
 

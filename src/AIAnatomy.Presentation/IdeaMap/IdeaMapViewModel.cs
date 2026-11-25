@@ -70,7 +70,7 @@ public sealed partial class IdeaMapViewModel : ObservableObject
 
         // Only the names count (Enum.TryParse would also take numbers such as "1" or "7").
         var saved = settings.Current.IdeaMapLayout;
-        _mode = Enum.GetNames<MapMode>().Contains(saved) ? Enum.Parse<MapMode>(saved) : MapMode.Radial;
+        _mode = saved == nameof(MapMode.Loop) ? MapMode.Loop : MapMode.Radial;   // only "Radial" or "Loop" are read
         _groupLabel = MakeGroupLabel();
         _bubbles = BuildBubbles();
         _progress.Changed += (_, _) => UpdateMarks();
@@ -210,7 +210,9 @@ public sealed partial class IdeaMapViewModel : ObservableObject
         {
             var lessonIds = _catalog.All.Select(l => l.Id).ToHashSet(StringComparer.Ordinal);
             bubbles.AddRange(_map.Nodes.Where(n => n.Kind == IdeaMapData.Flow && !lessonIds.Contains(n.Id)).Select(n => Plain(n.Id)));
-            bubbles.AddRange(_catalog.InContentsOrder.Select(LessonBubble));
+            // Section 4 is a family of many members; the Loop map, which follows the flow of text, shows only its first lesson (the family tree).
+            var hiddenInLoop = _catalog.InSection(Section.Family).Skip(1).Select(l => l.Id).ToHashSet(StringComparer.Ordinal);
+            bubbles.AddRange(_catalog.InContentsOrder.Where(l => !hiddenInLoop.Contains(l.Id)).Select(LessonBubble));
         }
         return bubbles;
     }

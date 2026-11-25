@@ -156,8 +156,11 @@ public class GraphLayoutTests
     {
         var layout = LayOut(mode, 13);
 
-        Assert.True(layout.Width <= 1040, $"{mode} is {layout.Width:F0} px wide at 13 pt.");
-        Assert.True(layout.Height <= 660, $"{mode} is {layout.Height:F0} px high at 13 pt.");
+        // Radial now carries ten section-4 lessons (Stage 2), so its map is allowed to be up to 1.4 times the area and the
+        // view scrolls it; Loop shows only the first of them and keeps the area.
+        double allowance = mode == MapMode.Radial ? 1.4 : 1;
+        Assert.True(layout.Width <= 1040 * allowance, $"{mode} is {layout.Width:F0} px wide at 13 pt.");
+        Assert.True(layout.Height <= 660 * allowance, $"{mode} is {layout.Height:F0} px high at 13 pt.");
     }
 
     [Fact]

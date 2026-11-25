@@ -11,7 +11,9 @@ public class LessonCatalogTests
         "rules-vs-learning", "architecture-map",
         "tokens", "embeddings", "position", "attention", "multi-head", "feed-forward", "residual-stream", "output-sampling", "learning",
         "train", "step-through", "scale",
-        "family-coming", "beyond-coming",
+        "family-tree", "expert-system", "search", "classic-ml", "learning-by-reward",
+        "image-filters", "image-network", "memory-networks", "diffusion-shapes", "diffusion-steps",
+        "beyond-coming",
     };
 
     private const string Header = "---\nid: a\nsection: parts\norder: 1\ntitle: A\nlab: ALab\nsources: textbook\n";
@@ -139,7 +141,7 @@ public class LessonCatalogTests
     public void Placeholders_AreMarked()
     {
         var catalog = LessonCatalog.Load(Content);
-        Assert.True(catalog.Get("family-coming").IsPlaceholder);
+        Assert.True(catalog.Get("family-tree").IsPlaceholder);
         Assert.True(catalog.Get("beyond-coming").IsPlaceholder);
         Assert.False(catalog.Get("attention").IsPlaceholder);
     }
@@ -230,7 +232,7 @@ public class LessonCatalogTests
     [Fact]
     public void MissingOptionalSections_AreNull()
     {
-        var coming = LessonCatalog.Load(Content).Get("family-coming");
+        var coming = LessonCatalog.Load(Content).Get("beyond-coming");
         Assert.Null(coming.Formula);
         Assert.Null(coming.BrainsAndModels);
         Assert.NotEmpty(coming.Explanation.Blocks);

@@ -113,7 +113,7 @@ public class LessonPageViewModelTests : IDisposable
     public void PlaceholderPage_HasNoIdeaTryOrQuestions()
     {
         var vm = _env.NewMain();
-        vm.NavigateToLesson("family-coming");
+        vm.NavigateToLesson("beyond-coming");
         var page = vm.CurrentPage!;
         Assert.True(page.Lesson.IsPlaceholder);
         Assert.Null(page.Idea);
