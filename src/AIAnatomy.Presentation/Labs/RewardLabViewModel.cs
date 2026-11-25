@@ -156,6 +156,15 @@ public sealed partial class RewardLabViewModel : LabViewModel
     /// <summary>"Square 3, 2": column then row, counted from 1 at the top left.</summary>
     public static string SquareName(GridCell cell) => $"Square {cell.Column + 1}, {cell.Row + 1}";
 
+    /// <summary>A square's value as the lab shows it: always two decimals, with the true minus sign ("8.00", "10.00",
+    /// "−2.25"); a value that rounds to zero is "0.00", never "−0.00".</summary>
+    public static string ValueString(double value)
+    {
+        double rounded = Math.Round(value, 2, MidpointRounding.AwayFromZero);
+        if (rounded == 0) rounded = 0;   // drops the sign of −0
+        return rounded.ToString("0.00", CultureInfo.InvariantCulture).Replace('-', '−');
+    }
+
     /// <summary>"up", "right", "down" or "left".</summary>
     public static string MoveName(Move move) => move switch
     {
@@ -255,6 +264,8 @@ public sealed partial class RewardLabViewModel : LabViewModel
         {
             if (generation == _generation)
             {
+                // A rate set during the last batch, or while Stop took effect, has not reached the agent yet.
+                _agent.ExplorationRate = ExplorationRate;
                 IsRunning = false;
                 EndRun();
             }
@@ -283,7 +294,9 @@ public sealed partial class RewardLabViewModel : LabViewModel
 
     public override void Reset()
     {
-        StopRun();
+        // A run under way ends, but its screens are compared only once Reset's own result has been reported: Reset is
+        // a direct action and lights each changed screen once, never for the stopped run's half-way state.
+        var run = DetachRun();
         _quiet = true;
         try
         {
@@ -304,6 +317,7 @@ public sealed partial class RewardLabViewModel : LabViewModel
         LastStepText = "";
         NewAgent();
         Refresh();
+        run?.Dispose();
     }
 
     public override void Deactivate() => StopRun();
@@ -354,12 +368,13 @@ public sealed partial class RewardLabViewModel : LabViewModel
     /// <summary>A change that clears learning: any run ends, a fresh agent starts, and the message says so.</summary>
     private void Restart()
     {
-        StopRun();
+        var run = DetachRun();   // as in Reset: the edit lights each changed screen once, for its own result
         _refusal = null;
         _changed = true;
         LastStepText = "";
         NewAgent();
         Refresh();
+        run?.Dispose();
     }
 
     private void Refuse(string why)
@@ -370,13 +385,19 @@ public sealed partial class RewardLabViewModel : LabViewModel
     }
 
     /// <summary>Ends the generation: a run under way stops, and whatever its worker returns is thrown away.</summary>
-    private void StopRun()
+    private void StopRun() => DetachRun()?.Dispose();
+
+    /// <summary>Ends the generation and returns the run's screen scope (null when no run), still open, for the caller
+    /// to close once its own result is reported.</summary>
+    private IDisposable? DetachRun()
     {
         // The generation ends first: cancelling may run the run's continuation at once, and it must see that it is over.
         _generation++;
         if (RunCommand.IsRunning) RunCancelCommand.Execute(null);
         IsRunning = false;
-        EndRun();
+        var run = _run;
+        _run = null;
+        return run;
     }
 
     private void EndRun()
@@ -418,7 +439,7 @@ public sealed partial class RewardLabViewModel : LabViewModel
             var cell = new GridCell(column, row);
             bool wall = world.IsWall(cell), start = cell == world.Start, goal = cell == world.Goal, here = cell == agent.Position;
             double value = wall ? 0 : agent.Value(cell);
-            string text = wall || goal ? "" : NumberText.ShortWithDecimals(value, 2);
+            string text = wall || goal ? "" : ValueString(value);
             var arrow = agent.Preferred(cell);
             list.Add(new MazeSquare(cell, wall, start, goal, here, value, text, arrow, Describe(cell, wall, start, goal, here, text, arrow)));
         }

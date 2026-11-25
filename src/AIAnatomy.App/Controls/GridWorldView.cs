@@ -5,7 +5,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using AIAnatomy.Models.Reinforcement;
 using AIAnatomy.Presentation.Labs;
-using AIAnatomy.Presentation.Visuals;
 using GridCell = AIAnatomy.Models.Reinforcement.GridCell;
 
 namespace AIAnatomy.App.Controls;
@@ -178,14 +177,14 @@ public sealed class GridWorldView : ChartBase
     {
         double label = LabelSize, h = LineHeight;
         double x = 0;
-        var low = Number(NumberText.ShortWithDecimals(min, 2), label, Foreground);
+        var low = Number(RewardLabViewModel.ValueString(min), label, Foreground);
         dc.DrawText(low, new Point(x, top));
         x += low.Width + 8;
         double bar = Math.Clamp(FiniteOr(ActualWidth, 600) * 0.25, 60, 220);
         var ramp = new LinearGradientBrush(new GradientStopCollection { new(RampLowColor, 0), new(RampMidColor, 0.5), new(RampHighColor, 1) }, 0);
         dc.DrawRectangle(ramp, new Pen(AxisBrush, 1), new Rect(x, top + 2, bar, h - 4));
         x += bar + 8;
-        var high = Number(NumberText.ShortWithDecimals(max, 2), label, Foreground);
+        var high = Number(RewardLabViewModel.ValueString(max), label, Foreground);
         dc.DrawText(high, new Point(x, top));
         x += high.Width + 24;
         var swatch = new Rect(x, top + 2, h - 4, h - 4);
@@ -266,8 +265,11 @@ public sealed class GridWorldView : ChartBase
     private MazeSquare? SquareAt(GridCell cell) =>
         HasData ? Squares![cell.Row * Columns + cell.Column] : null;
 
+    // Also called when the squares change (a run's update, an edit), so the line and the tooltip of the square under
+    // the pointer always show its current value, not the one it had when the pointer arrived.
     private void UpdateReadout()
     {
+        ToolTip = _hover is { } hovered && SquareAt(hovered) is { } square ? square.AutomationName : null;
         string text = _hover is { } hover && SquareAt(hover) is { } h ? h.AutomationName
             : IsKeyboardFocused && SquareAt(_focus) is { } f ? f.AutomationName
             : HintText;
@@ -295,7 +297,6 @@ public sealed class GridWorldView : ChartBase
         var cell = CellAt(e.GetPosition(this));
         if (cell == _hover) return;
         _hover = cell;
-        ToolTip = cell is { } c && SquareAt(c) is { } s ? s.AutomationName : null;
         UpdateReadout();
     }
 

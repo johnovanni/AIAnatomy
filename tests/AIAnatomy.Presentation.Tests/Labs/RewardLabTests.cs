@@ -75,12 +75,12 @@ public class RewardLabTests
     public void SquareNames_SayWhatEachSquareIs()
     {
         var lab = NewLab();
-        Assert.Equal("Square 1, 1: start, agent here, value 0, no preferred move yet", At(lab, 0, 0).AutomationName);
-        Assert.Equal("Square 2, 1: value 0, no preferred move yet", At(lab, 1, 0).AutomationName);
+        Assert.Equal("Square 1, 1: start, agent here, value 0.00, no preferred move yet", At(lab, 0, 0).AutomationName);
+        Assert.Equal("Square 2, 1: value 0.00, no preferred move yet", At(lab, 1, 0).AutomationName);
         Assert.Equal("Square 2, 2: wall", At(lab, 1, 1).AutomationName);
         Assert.Equal("Square 6, 6: goal", At(lab, 5, 5).AutomationName);
         Assert.Equal("", At(lab, 1, 1).ValueText);
-        Assert.Equal("0", At(lab, 1, 0).ValueText);
+        Assert.Equal("0.00", At(lab, 1, 0).ValueText);
     }
 
     [Fact]
@@ -364,5 +364,115 @@ public class RewardLabTests
         Assert.All(lab.StepsSeries.Single().Points.TakeLast(10), p => Assert.Equal(10, p.Y));
         var distance = DistancesToGoal(lab.World);
         Assert.Contains(lab.Squares, s => !s.IsWall && !s.IsGoal && Math.Abs(HandValue(distance[s.Cell]) - s.Value) > 1);
+    }
+
+    // ---- review fixes ----
+
+    [Fact]
+    public void ValueText_AlwaysHasTwoDecimals_WithATrueMinus()
+    {
+        Assert.Equal("8.00", RewardLabViewModel.ValueString(8));
+        Assert.Equal("10.00", RewardLabViewModel.ValueString(10));
+        Assert.Equal("−2.25", RewardLabViewModel.ValueString(-2.2515));
+        Assert.Equal("0.00", RewardLabViewModel.ValueString(-0.001));   // never "−0.00"
+        Assert.Equal("6.20", RewardLabViewModel.ValueString(6.2));
+    }
+
+    [Fact]
+    public async Task ValueTexts_AfterARun_AllHaveTwoDecimals()
+    {
+        var lab = await Trained(RewardLabViewModel.MaxEpisodesPerRun);
+        foreach (var s in lab.Squares.Where(s => !s.IsWall && !s.IsGoal))
+        {
+            Assert.Matches(@"^−?\d+\.\d\d$", s.ValueText);
+            Assert.Contains($"value {s.ValueText}", s.AutomationName);
+        }
+    }
+
+    /// <summary>
+    /// Starts a run that pauses on the worker after episode <paramref name="pauseAfter"/> (the agent's count), and returns
+    /// the run and a way to let it carry on. Waiting on the pause is waiting for an event, not for time.
+    /// </summary>
+    private static (Task Run, Action Release) PausedRun(RewardLabViewModel lab, int pauseAfter)
+    {
+        var reached = new ManualResetEventSlim(false);
+        var gate = new ManualResetEventSlim(false);
+        lab.AfterEpisode = n =>
+        {
+            if (n != pauseAfter) return;
+            reached.Set();
+            gate.Wait(TimeSpan.FromSeconds(30));
+        };
+        var run = lab.RunCommand.ExecuteAsync(null);
+        Assert.True(reached.Wait(TimeSpan.FromSeconds(30)), "the run never reached the pause");
+        return (run, gate.Set);
+    }
+
+    [Fact]
+    public async Task ExplorationRateChangedInTheLastBatch_ReachesTheAgentWhenTheRunEnds()
+    {
+        var lab = NewLab();
+        lab.EpisodesPerUpdate = RewardLabViewModel.MaxEpisodesPerRun;   // one batch: the rate is never handed over between batches
+        var (run, release) = PausedRun(lab, 1);
+        lab.ExplorationRate = 0;   // while the only batch is playing
+        release();
+        await run;
+        Assert.Equal(300, lab.Episodes);
+
+        // Never exploring, the trained agent walks straight along its arrows to the goal: 10 steps, one episode.
+        for (int i = 0; i < 10; i++)
+        {
+            var from = Assert.Single(lab.Squares, s => s.HasAgent);
+            lab.StepOnce();
+            Assert.StartsWith($"Moved {RewardLabViewModel.MoveName(from.Arrow!.Value)} ", lab.LastStepText);
+        }
+        Assert.Equal(301, lab.Episodes);
+        Assert.Contains("into the goal", lab.LastStepText);
+    }
+
+    [Fact]
+    public async Task ResetDuringARun_LightsEachScreenOnce_ForItsOwnResult()
+    {
+        var lab = await Trained(20);
+        lab.EpisodesPerUpdate = 1;   // several updates before the pause, so the screens have moved on during the run
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        var (run, release) = PausedRun(lab, 24);
+        lab.Reset();
+        release();
+        await run;
+        Assert.Equal(["episodes", "values"], raised.Order(StringComparer.Ordinal));
+        Assert.Equal(NewLab().Squares, lab.Squares);
+        Assert.Equal(0, lab.Episodes);
+    }
+
+    [Fact]
+    public async Task SeedChangeDuringARun_LightsEachScreenOnce_AndSaysLearningStartsAgain()
+    {
+        var lab = await Trained(20);
+        lab.EpisodesPerUpdate = 1;
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => { lock (raised) raised.Add(e.Screen); };
+        var (run, release) = PausedRun(lab, 24);
+        lab.Seed = 2;
+        Assert.False(lab.IsRunning);
+        release();
+        await run;
+        Assert.Equal(["episodes", "values"], raised.Order(StringComparer.Ordinal));
+        Assert.Equal(RewardLabViewModel.ChangedMessage, lab.Message);
+        Assert.Equal(0, lab.Episodes);
+    }
+
+    [Fact]
+    public void ARefusedEdit_LightsTheValuesScreenOnly()
+    {
+        var lab = NewLab();
+        var raised = new List<string>();
+        lab.ScreenChanged += (_, e) => raised.Add(e.Screen);
+        lab.Apply(new GridCell(0, 0));   // a wall on the start
+        Assert.Equal(["values"], raised);
+        raised.Clear();
+        lab.Apply(new GridCell(0, 0));   // the same refusal again: nothing new to see
+        Assert.Empty(raised);
     }
 }
