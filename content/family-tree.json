@@ -103,7 +103,7 @@
       "label": "Transformer",
       "parent": "neural",
       "lesson": "architecture-map",
-      "whatItIs": "A neural network in which each piece of a text looks at other pieces, using attention. In GPT-style models, like the one in this app, each piece looks back only at the pieces before it. It is the kind inside most large language models.",
+      "whatItIs": "A neural network in which each piece of a text looks at other pieces, using attention. In GPT-style models, like the one in this app, each piece looks only at itself and the pieces before it. It is the kind inside most large language models.",
       "goodAt": "Long text, and learning from huge amounts of it. It handles many pieces at once.",
       "badAt": "The cost grows quickly as the text gets longer. It can give fluent answers that are wrong.",
       "example": "Large language models, which are built from transformers. The model in this app is a tiny one."

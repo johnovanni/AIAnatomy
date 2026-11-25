@@ -38,7 +38,7 @@
         <Border Style="{StaticResource ScreenFrame}" Padding="0">
             <ScrollViewer x:Name="TreeScroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                           Focusable="False" AutomationProperties.Name="Family tree">
-                <Canvas x:Name="TreeCanvas" HorizontalAlignment="Center" Margin="4" />
+                <Canvas x:Name="TreeCanvas" HorizontalAlignment="Center" />
             </ScrollViewer>
         </Border>
 

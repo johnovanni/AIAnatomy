@@ -33,11 +33,22 @@ public partial class FamilyTreeView : UserControl
     {
         InitializeComponent();
         DataContextChanged += (_, e) => Attach(e.NewValue as FamilyTreeLabViewModel);
-        Loaded += (_, _) => ScheduleMeasure();
-        // The probe's size follows the body text size resource; a change means the bubbles must be measured again.
-        DependencyPropertyDescriptor.FromProperty(TextBlock.FontSizeProperty, typeof(TextBlock))
-            .AddValueChanged(SizeProbe, (_, _) => ScheduleMeasure());
+        // The probe's size follows the body text size resource; a change means the bubbles must be measured again. The
+        // hook is held by WPF's property descriptor, so it is added while the view is loaded and removed when it is
+        // unloaded; otherwise every visit to the lesson would keep its view and lab alive.
+        Loaded += (_, _) =>
+        {
+            FontSizeDescriptor.RemoveValueChanged(SizeProbe, OnTextSizeChanged);   // never twice
+            FontSizeDescriptor.AddValueChanged(SizeProbe, OnTextSizeChanged);
+            ScheduleMeasure();
+        };
+        Unloaded += (_, _) => FontSizeDescriptor.RemoveValueChanged(SizeProbe, OnTextSizeChanged);
     }
+
+    private static readonly DependencyPropertyDescriptor FontSizeDescriptor =
+        DependencyPropertyDescriptor.FromProperty(TextBlock.FontSizeProperty, typeof(TextBlock));
+
+    private void OnTextSizeChanged(object? sender, EventArgs e) => ScheduleMeasure();
 
     private void Attach(FamilyTreeLabViewModel? lab)
     {

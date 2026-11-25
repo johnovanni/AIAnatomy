@@ -7,8 +7,9 @@ namespace AIAnatomy.Presentation;
 
 /// <summary>
 /// Builds the view-model for a lab id; every lab is registered in the constructor with <see cref="Register"/>. Lesson
-/// links inside labs go through the view's routed navigate event, so the factory needs no lesson list or navigate
-/// callback (final review M3). Most labs are built afresh each time their lesson opens; the Train lab is built once
+/// links inside labs go through the view's routed navigate event, so the factory needs no navigate callback (final
+/// review M3); it takes the lesson catalog only because the family tree numbers its bubbles from it (read from the
+/// content folder when not given). Most labs are built afresh each time their lesson opens; the Train lab is built once
 /// per factory (so once per window) and kept, so a run carries on while the user reads other lessons (R35).
 /// </summary>
 public sealed class LabFactory

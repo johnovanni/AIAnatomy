@@ -12,7 +12,7 @@ The transformer in sections 1 to 3 is one member of a large family. Every member
 
 **Written by a person.** A person works out what the program should do and writes it down. An expert system follows if-then rules that people supplied. A search program is given the rules of a game and a way to score a position, then looks ahead through possible moves. Nothing in the program changes from data.
 
-**Learned from examples.** The program is shown many examples, often with the right answers, and adjusts its own numbers until it does well on them. Classic machine learning, such as a decision tree, learns from a table of examples. Neural networks learn the same way, with far more adjustable numbers. The transformer is one kind; image networks, memory networks and diffusion models are others.
+**Learned from examples.** The program is shown many examples, often with the right answers, and fits itself to them: it adjusts its numbers or a tree's questions, or simply keeps the examples to compare new cases with. Classic machine learning, such as a decision tree or a nearest-neighbour rule, learns from a table of examples. Neural networks learn the same way, with far more adjustable numbers. The transformer is one kind; image networks, memory networks and diffusion models are others.
 
 **Learned from reward.** The program tries actions and receives a reward or a penalty. Over many tries it learns which actions pay off. Nobody tells it the right action at each step.
 
