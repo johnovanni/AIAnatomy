@@ -19,6 +19,7 @@
     <sys:Double x:Key="DiagramHeight">364</sys:Double>
     <sys:Double x:Key="GraphDiagramHeight">520</sys:Double>
     <sys:Double x:Key="ScrollBarSize">15.6</sys:Double>
+    <sys:Double x:Key="CheckBoxSize">13</sys:Double>
 
     <FontFamily x:Key="BodyFont">Segoe UI</FontFamily>
     <FontFamily x:Key="NumberFont">Cascadia Mono, Consolas</FontFamily>
@@ -479,6 +480,56 @@
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource FocusBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Check boxes: the usual 13 px square drawn in a Viewbox CheckBoxSize across (ThemeManager: as many px as the body
+         text has pt, never under 13), so at 13 pt it is WPF's own size and it grows with the text. Ticked: a tick and a
+         highlighted edge, so the state shows in more than colour. Keyboard focus draws the same outer ring as buttons. -->
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Viewbox Width="{DynamicResource CheckBoxSize}" Height="{DynamicResource CheckBoxSize}"
+                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                            <Grid Width="13" Height="13">
+                                <Border x:Name="Box" BorderThickness="1" Background="{DynamicResource SurfaceBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}" SnapsToDevicePixels="True" />
+                                <Path x:Name="Tick" Data="M 2.6,6.6 L 5.3,9.3 L 10.4,3.4" Stroke="{DynamicResource TextBrush}"
+                                      StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round" Visibility="Collapsed" />
+                                <Rectangle x:Name="Dash" Margin="3,5.5" Fill="{DynamicResource TextBrush}" Visibility="Collapsed" />
+                            </Grid>
+                        </Viewbox>
+                        <ContentPresenter Grid.Column="1" Margin="8,0,0,0" RecognizesAccessKey="True"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource HighlightBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="{x:Null}">
+                            <Setter TargetName="Dash" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource FocusBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

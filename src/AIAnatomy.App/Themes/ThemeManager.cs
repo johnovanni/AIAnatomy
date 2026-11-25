@@ -15,7 +15,7 @@ public static class ThemeManager
 
     /// <summary>
     /// Applies a theme and sizes, all from the body size in points: BodyFontSize, TitleFontSize (body x 2), HeadingFontSize
-    /// and SubheadingFontSize (body x 1.15), SmallFontSize (body x 0.85, never under 9 pt), FormulaScale and ScrollBarSize.
+    /// and SubheadingFontSize (body x 1.15), SmallFontSize (body x 0.85, never under 9 pt), FormulaScale, ScrollBarSize and CheckBoxSize.
     /// </summary>
     public static void Apply(string theme, double bodyPt)
     {
@@ -38,5 +38,6 @@ public static class ThemeManager
         resources["GraphDiagramHeight"] = bodyPt * 30 * PxPerPt;    // the expression graph has six boxes with two lines of numbers each
         resources["DiagramHeight"] = bodyPt * 21 * PxPerPt;        // the map keeps its text legible at large sizes
         resources["ScrollBarSize"] = Math.Max(14, 24 * bodyPt / 20);
+        resources["CheckBoxSize"] = Math.Max(13, bodyPt);          // WPF's own 13 px box at 13 pt, growing with the text (24 px at 24 pt)
     }
 }

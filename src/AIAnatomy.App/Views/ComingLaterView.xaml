@@ -7,7 +7,7 @@
         <StackPanel>
             <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="{Binding Title}" />
             <TextBlock Style="{StaticResource BodyText}" Text="{Binding Message}" />
-            <TextBlock Style="{StaticResource MutedText}" Margin="0" Text="The explanation for this lesson is on the right." />
+            <TextBlock Style="{StaticResource MutedText}" Margin="0" Text="The explanation for this lesson is beside this box, or below it at large text sizes." />
         </StackPanel>
     </Border>
 </UserControl>
