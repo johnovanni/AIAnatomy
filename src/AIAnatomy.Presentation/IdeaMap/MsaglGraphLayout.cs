@@ -45,6 +45,8 @@ public sealed class MsaglGraphLayout : IGraphLayout
     private const double CornerStep = 4;           // px, when looking for room in a corner
     private const double LoopNodeSeparation = 20;  // MSAGL default 10; leaves lines a way between boxes in a row
     private const double LoopLayerSeparation = 20; // MSAGL's default is 30; labels take a layer of their own between rows
+    private const double TreeNodeSeparation = 20;  // px, between boxes in a row
+    private const double TreeLayerSeparation = 40; // px, between rows
     private const string GroupKey = "\u0001group";
 
     public GraphLayoutResult Layout(GraphInput input)
@@ -52,7 +54,12 @@ public sealed class MsaglGraphLayout : IGraphLayout
         ArgumentNullException.ThrowIfNull(input);
         Rectangle? frame = null;
         Dictionary<(string, string), Point>? labels = null;
-        var centres = input.Mode == MapMode.Radial ? PlaceRadial(input) : PlaceLoop(input, out frame, out labels);
+        var centres = input.Mode switch
+        {
+            MapMode.Radial => PlaceRadial(input),
+            MapMode.Tree => PlaceTree(input),
+            _ => PlaceLoop(input, out frame, out labels),
+        };
         return Route(input, centres, frame, labels ?? []);
     }
 
@@ -290,6 +297,30 @@ public sealed class MsaglGraphLayout : IGraphLayout
             }
         }
         return centres;
+    }
+
+    /// <summary>
+    /// Tree: a top-down layered (Sugiyama) layout of parent → child edges. Each parent's children are passed to
+    /// <c>AddSameLayerNeighbors</c> in the given order, so siblings sit left to right in that order.
+    /// </summary>
+    private static Dictionary<string, Point> PlaceTree(GraphInput input)
+    {
+        var graph = new GeometryGraph();
+        var nodes = AddNodes(graph, input.Nodes);
+        var seen = new HashSet<(string, string)>();
+        var kidsOf = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var e in input.PlacementEdges)
+        {
+            if (e.From == e.To || !nodes.ContainsKey(e.From) || !nodes.ContainsKey(e.To) || !seen.Add((e.From, e.To))) continue;
+            graph.Edges.Add(new Edge(nodes[e.From], nodes[e.To]));
+            if (!kidsOf.TryGetValue(e.From, out var list)) kidsOf[e.From] = list = [];
+            list.Add(e.To);
+        }
+        var settings = new SugiyamaLayoutSettings { LayerSeparation = TreeLayerSeparation, NodeSeparation = TreeNodeSeparation };
+        foreach (var kids in kidsOf.Values.Where(k => k.Count > 1))
+            settings.AddSameLayerNeighbors(kids.Select(k => nodes[k]).ToList());
+        new LayeredLayout(graph, settings).Run();
+        return nodes.ToDictionary(kv => kv.Key, kv => kv.Value.Center, StringComparer.Ordinal);
     }
 
     /// <summary>The first box in <paramref name="taken"/> that comes within 2 × <see cref="BoxGap"/> of <paramref name="r"/>.</summary>

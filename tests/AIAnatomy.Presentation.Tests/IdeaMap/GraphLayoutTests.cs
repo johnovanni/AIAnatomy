@@ -209,6 +209,102 @@ public class GraphLayoutTests
     }
 
     /// <summary>The empty space between two boxes: the larger of the horizontal and vertical gaps (negative if they overlap).</summary>
+    // ---- Tree (the family tree, spec 5.1) ----------------------------------------------------------------------------
+
+    private static readonly (string Parent, string[] Kids)[] TreeShape =
+    [
+        ("root", ["a", "b", "c"]),
+        ("a", ["a1", "a2"]),
+        ("b", ["b1", "b2"]),
+        ("c", ["c1"]),
+        ("b2", ["b2a", "b2b", "b2c", "b2d"]),
+    ];
+
+    private static GraphInput TreeInput(double w, double h)
+    {
+        var ids = new List<string> { "root" };
+        foreach (var (_, kids) in TreeShape) ids.AddRange(kids);
+        var edges = TreeShape.SelectMany(t => t.Kids.Select(k => new LayoutEdge(t.Parent, k))).ToList();
+        // Nodes in file order: parents before children, siblings in order (a tree walked depth first).
+        var order = new List<string>();
+        void Walk(string id)
+        {
+            order.Add(id);
+            foreach (var k in TreeShape.Where(t => t.Parent == id).SelectMany(t => t.Kids)) Walk(k);
+        }
+        Walk("root");
+        Assert.Equal(13, order.Count);
+        return new GraphInput(MapMode.Tree, order.Select(i => new LayoutNode(i, w, h)).ToList(), edges, [], "root", []);
+    }
+
+    public static TheoryData<double, double> TreeBoxSizes => new() { { 120, 40 }, { 300, 90 } };
+
+    [Theory]
+    [MemberData(nameof(TreeBoxSizes))]
+    public void Tree_ParentsSitAboveTheirChildren(double w, double h)
+    {
+        var input = TreeInput(w, h);
+        var r = new MsaglGraphLayout().Layout(input);
+        var by = r.Nodes.ToDictionary(n => n.Id);
+        foreach (var e in input.PlacementEdges)
+            Assert.True(by[e.From].Y + by[e.From].Height <= by[e.To].Y - 10, $"{e.From} is not clear above {e.To}.");
+    }
+
+    [Theory]
+    [MemberData(nameof(TreeBoxSizes))]
+    public void Tree_SiblingsKeepTheirOrderLeftToRight(double w, double h)
+    {
+        var input = TreeInput(w, h);
+        var r = new MsaglGraphLayout().Layout(input);
+        var by = r.Nodes.ToDictionary(n => n.Id);
+        foreach (var g in input.PlacementEdges.GroupBy(e => e.From))
+        {
+            var xs = input.Nodes.Where(n => g.Any(e => e.To == n.Id)).Select(n => by[n.Id].X + by[n.Id].Width / 2).ToList();
+            for (int i = 1; i < xs.Count; i++)
+                Assert.True(xs[i] > xs[i - 1], $"Children of {g.Key} are out of order: {string.Join(", ", xs)}.");
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(TreeBoxSizes))]
+    public void Tree_NoTwoBoxesOverlap(double w, double h)
+    {
+        var r = new MsaglGraphLayout().Layout(TreeInput(w, h));
+        for (int i = 0; i < r.Nodes.Count; i++)
+            for (int j = i + 1; j < r.Nodes.Count; j++)
+            {
+                var a = r.Nodes[i]; var b = r.Nodes[j];
+                Assert.False(Overlap(a.X, a.Y, a.Width, a.Height, b.X, b.Y, b.Width, b.Height), $"{a.Id} overlaps {b.Id}.");
+            }
+    }
+
+    [Theory]
+    [MemberData(nameof(TreeBoxSizes))]
+    public void Tree_EveryEdgeIsRoutedFromParentToChild(double w, double h)
+    {
+        var input = TreeInput(w, h);
+        var r = new MsaglGraphLayout().Layout(input);
+        var by = r.Nodes.ToDictionary(n => n.Id);
+        Assert.Equal(input.PlacementEdges.Count, r.Edges.Count);
+        foreach (var e in input.PlacementEdges)
+        {
+            var routed = Assert.Single(r.Edges, x => x.From == e.From && x.To == e.To);
+            Assert.True(DistanceToRect(routed.Points[0], by[e.From]) <= 2, $"{e.From}->{e.To} does not start at the parent.");
+            Assert.True(DistanceToRect(routed.Points[^1], by[e.To]) <= 2, $"{e.From}->{e.To} does not end at the child.");
+        }
+    }
+
+    [Fact]
+    public void Tree_SameInputGivesTheSameLayout()
+    {
+        var a = new MsaglGraphLayout().Layout(TreeInput(120, 40));
+        var b = new MsaglGraphLayout().Layout(TreeInput(120, 40));
+        Assert.Equal(a.Nodes, b.Nodes);
+        Assert.Equal(a.Width, b.Width);
+        Assert.Equal(a.Height, b.Height);
+        Assert.Equal(a.Edges.Select(e => e.Points), b.Edges.Select(e => e.Points));
+    }
+
     internal static double Gap(PlacedNode a, PlacedNode b) => Math.Max(
         Math.Max(b.X - (a.X + a.Width), a.X - (b.X + b.Width)),
         Math.Max(b.Y - (a.Y + a.Height), a.Y - (b.Y + b.Height)));

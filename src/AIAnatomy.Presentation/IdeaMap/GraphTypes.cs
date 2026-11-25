@@ -1,7 +1,7 @@
 namespace AIAnatomy.Presentation.IdeaMap;
 
-/// <summary>The two idea-map layouts: the contents as a tree round a centre, or the path text takes through the model.</summary>
-public enum MapMode { Radial, Loop }
+/// <summary>The graph layouts: the contents as a tree round a centre (Radial), the path text takes through the model (Loop), or a top-down tree (Tree, the family tree).</summary>
+public enum MapMode { Radial, Loop, Tree }
 
 /// <summary>A box to place, with its size in px.</summary>
 public sealed record LayoutNode(string Id, double Width, double Height);
