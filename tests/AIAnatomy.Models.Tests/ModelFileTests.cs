@@ -130,6 +130,52 @@ public class ModelFileTests
         BitConverter.GetBytes(double.NaN).CopyTo(bytes, bytes.Length - 8);
         Assert.Throws<InvalidDataException>(() => Open(bytes));
     }
+
+    private static string ShippedPath(string file) => Path.Combine(AppContext.BaseDirectory, "content", "models", file);
+
+    [Fact]
+    public void ShippedStage1Files_StillLoad()
+    {
+        using (var fables = File.OpenRead(ShippedPath("fables-small.aimodel")))
+        {
+            var model = ModelFile.Load(fables);
+            Assert.Equal("Fables model", model.Info.Name);
+            Assert.Equal("Aesop's Fables (Townsend)", model.Info.TrainingTextName);
+            Assert.Equal(3000, model.Info.StepsTrained);
+            Assert.NotNull(model.Info.ValidationLoss);
+            Assert.InRange(model.Info.ValidationLoss!.Value, 1.70, 1.72); // D20: 1.711
+            Assert.Null(model.Info.Results);
+        }
+        using (var induction = File.OpenRead(ShippedPath("induction-demo.aimodel")))
+        {
+            var model = ModelFile.Load(induction);
+            Assert.Equal("Induction demo", model.Info.Name);
+            Assert.Equal("Repeated letter sequences", model.Info.TrainingTextName);
+            Assert.Equal(1500, model.Info.StepsTrained);
+            Assert.Null(model.Info.ValidationLoss);
+            Assert.Null(model.Info.Results);
+        }
+    }
+
+    [Theory]
+    [InlineData("fables-small.aimodel")]
+    [InlineData("induction-demo.aimodel")]
+    public void ModelFile_SavingAShippedModel_GivesTheShippedBytesExactly(string file)
+    {
+        var shipped = File.ReadAllBytes(ShippedPath(file));
+        var resaved = Saved(Open(shipped));
+        Assert.Equal(shipped.Length, resaved.Length);
+        Assert.True(shipped.AsSpan().SequenceEqual(resaved), "the version 1 bytes changed");
+    }
+
+    [Fact]
+    public void ModelFile_InfoWithoutResults_WritesNoResultsAndReadsBackNull()
+    {
+        var bytes = Saved(SamplingTests.MakeModel());
+        string header = Encoding.UTF8.GetString(bytes, 0, Array.IndexOf(bytes, (byte)'\n'));
+        Assert.DoesNotContain("results", header);
+        Assert.Null(Open(bytes).Info.Results);
+    }
 }
 
 public class ModelLibraryTests : IDisposable
@@ -269,6 +315,37 @@ public class ModelLibraryTests : IDisposable
         var list = library.List();
         Assert.Equal(2, list.Count);
         Assert.All(list, e => Assert.False(e.IsReadable));
+    }
+
+    [Fact]
+    public void Library_UserModelRoundTrips_WithNullResults()
+    {
+        var library = Library();
+        var model = SamplingTests.MakeModel();
+        var loaded = library.Load(library.Save(model, "mine"));
+        Assert.Equal(model.Info with { Name = "mine" }, loaded.Info);
+        Assert.Null(loaded.Info.Results);
+        Assert.Equal(model.Predict("abc").Forward.Logits.Data, loaded.Predict("abc").Forward.Logits.Data);
+    }
+
+    [Fact]
+    public void Library_FamilyFilesInFamilySubfolder_AreNotListed()
+    {
+        WriteShipped("fables", SamplingTests.MakeModel());
+        string family = Path.Combine(Shipped, "family");
+        Directory.CreateDirectory(family);
+        using (var stream = File.Create(Path.Combine(family, "digits.aimodel")))
+        {
+            AIAnatomy.Models.Files.FamilyModelFile.Save(stream, AIAnatomy.Models.Files.FamilyKinds.Digits, new { width = 2 }, null,
+                new ModelInfo("Digits", "digits", 1, null, 1, true), new[] { new Parameter("w", Tensor.FromArray(new[] { 1.0, 2.0 }, 2)) });
+        }
+        // A language model file in the subfolder is not listed either: only the top-level folder is read.
+        using (var stream = File.Create(Path.Combine(family, "hidden.aimodel")))
+            ModelFile.Save(SamplingTests.MakeModel(), stream);
+
+        var listed = Assert.Single(Library().List());
+        Assert.Equal(Path.Combine(Shipped, "fables.aimodel"), listed.Path);
+        Assert.True(listed.IsReadable);
     }
 
     [Fact]

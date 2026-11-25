@@ -1,32 +1,20 @@
-using System.Buffers.Binary;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using AIAnatomy.Core;
+using AIAnatomy.Models.Files;
 using AIAnatomy.Models.Tokenization;
 using AIAnatomy.Models.Transformers;
+using static AIAnatomy.Models.Files.ModelContainer;
 
 namespace AIAnatomy.Models.Language;
 
 /// <summary>
-/// The .aimodel format: one UTF-8 JSON header line, "\n", then every parameter as little-endian 64-bit floats
-/// in <c>Transformer.Parameters()</c> order. The header lists each parameter's name and shape so a file can be checked before use.
+/// The .aimodel format, version 1 (language models): one UTF-8 JSON header line, "\n", then every parameter as
+/// little-endian 64-bit floats in <c>Transformer.Parameters()</c> order. The header lists each parameter's name and shape
+/// so a file can be checked before use. The shared parts live in <see cref="ModelContainer"/>; a version 2 file (a family
+/// network, read by <see cref="FamilyModelFile"/>) is refused here with a message naming what it holds.
 /// </summary>
 public static class ModelFile
 {
-    private const string FormatName = "aianatomy-model";
-    private const int Version = 1;
-    private const int MaxHeaderBytes = 4 * 1024 * 1024;
-    private const int MaxDimension = 100_000;
-    private const long MaxParameters = 50_000_000;
-
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        Converters = { new JsonStringEnumConverter() },
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-
-    private sealed record ParameterEntry(string Name, int[] Shape);
+    private const int Version = LanguageVersion;
 
     private sealed record Header(
         string? Format, int Version, TransformerConfig? Config, string? Vocabulary, ModelInfo? Info, List<ParameterEntry>? Parameters);
@@ -39,46 +27,20 @@ public static class ModelFile
         var header = new Header(
             FormatName, Version, m.Transformer.Config, new string(m.Tokenizer.Vocabulary.ToArray()), m.Info,
             parameters.Select(p => new ParameterEntry(p.Name, p.Value.Shape)).ToList());
-        s.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(header, Json) + "\n"));
-
-        var buffer = new byte[8 * 4096];
-        foreach (var p in parameters)
-        {
-            var data = p.Value.Data;
-            for (int offset = 0; offset < data.Length; offset += 4096)
-            {
-                int count = Math.Min(4096, data.Length - offset);
-                for (int i = 0; i < count; i++) BinaryPrimitives.WriteDoubleLittleEndian(buffer.AsSpan(i * 8), data[offset + i]);
-                s.Write(buffer, 0, count * 8);
-            }
-        }
+        WriteHeader(s, header);
+        WriteValues(s, parameters.Select(p => p.Value.Data));
     }
 
     /// <summary>Rebuilds a model. Anything wrong with the file throws <see cref="InvalidDataException"/> with a plain message.</summary>
     public static LanguageModel Load(Stream s)
     {
         ArgumentNullException.ThrowIfNull(s);
-        try
-        {
-            return LoadCore(s);
-        }
-        catch (EndOfStreamException)
-        {
-            throw new InvalidDataException("The model file is cut short: some of its numbers are missing.");
-        }
-        catch (JsonException)
-        {
-            throw new InvalidDataException("The model file does not start with a readable header.");
-        }
-        catch (Exception e) when (e is ArgumentException or OverflowException or NotSupportedException)
-        {
-            throw new InvalidDataException("The model file describes a model that cannot be built: " + e.Message);
-        }
+        return Read(() => LoadCore(s));
     }
 
     private static LanguageModel LoadCore(Stream s)
     {
-        var header = ReadHeader(ReadHeaderLine(s));
+        var header = ReadLanguageHeader(ReadHeaderLine(s));
         var config = header.Config!;
         CheckConfigSize(config);
 
@@ -99,46 +61,21 @@ public static class ModelFile
                 throw new InvalidDataException($"The model file's parameter {i + 1} ('{listed[i].Name}') does not match what this model shape needs ('{parameters[i].Name}').");
         }
 
-        var buffer = new byte[8 * 4096];
-        foreach (var p in parameters)
-        {
-            var data = p.Value.Data;
-            for (int offset = 0; offset < data.Length; offset += 4096)
-            {
-                int count = Math.Min(4096, data.Length - offset);
-                s.ReadExactly(buffer, 0, count * 8);
-                for (int i = 0; i < count; i++)
-                {
-                    double value = BinaryPrimitives.ReadDoubleLittleEndian(buffer.AsSpan(i * 8));
-                    if (!double.IsFinite(value)) throw new InvalidDataException($"The model file has a number that is not valid in '{p.Name}'.");
-                    data[offset + i] = value;
-                }
-            }
-        }
-        if (s.ReadByte() != -1) throw new InvalidDataException("The model file has extra data after its numbers.");
+        var buffer = NewBuffer();
+        foreach (var p in parameters) ReadValues(s, p.Name, p.Value.Data, buffer);
+        ExpectEnd(s);
 
         return new LanguageModel(transformer, tokenizer, header.Info!);
     }
 
-    private static byte[] ReadHeaderLine(Stream s)
+    private static Header ReadLanguageHeader(byte[] line)
     {
-        var bytes = new List<byte>();
-        while (true)
-        {
-            int b = s.ReadByte();
-            if (b < 0) throw new InvalidDataException("The model file ends before its header does.");
-            if (b == '\n') return bytes.ToArray();
-            bytes.Add((byte)b);
-            if (bytes.Count > MaxHeaderBytes) throw new InvalidDataException("The model file does not start with a readable header.");
-        }
-    }
-
-    private static Header ReadHeader(byte[] line)
-    {
-        var header = JsonSerializer.Deserialize<Header>(line, Json)
-            ?? throw new InvalidDataException("The model file does not start with a readable header.");
-        if (header.Format != FormatName) throw new InvalidDataException("This is not an AI Anatomy model file.");
-        if (header.Version != Version) throw new InvalidDataException($"This model file has version {header.Version}, but this program reads version {Version}.");
+        var preamble = ReadPreamble(line);
+        // A version 2 header without a kind is not a family file either, so it gets the plain version message.
+        if (preamble.Version == FamilyVersion && !string.IsNullOrWhiteSpace(preamble.Kind))
+            throw new InvalidDataException($"This file holds a {preamble.Kind}, not a language model.");
+        if (preamble.Version != Version) throw new InvalidDataException(VersionMessage(preamble.Version, Version));
+        var header = ReadHeader<Header>(line);
         if (header.Config is null || header.Vocabulary is null || header.Info is null || header.Parameters is null || header.Info.Name is null || header.Info.TrainingTextName is null)
             throw new InvalidDataException("The model file's header is missing required information.");
         return header;
