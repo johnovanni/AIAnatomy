@@ -19,7 +19,7 @@ public class ConnectionsTests
     {
         Assert.Empty(Real.Validate(Catalog, Sources, Map));
         Assert.Empty(Map.Validate(Catalog));
-        Assert.Equal(24, Real.All.Count);   // expert-system -> rules-vs-learning added in Stage 2A Task 7, search -> learning-by-reward in Task 9, classic-ml -> learning in Task 11
+        Assert.Equal(25, Real.All.Count);   // expert-system -> rules-vs-learning added in Stage 2A Task 7, search -> learning-by-reward in Task 9, classic-ml -> learning in Task 11, learning-by-reward -> learning in Task 13
     }
 
     [Fact]

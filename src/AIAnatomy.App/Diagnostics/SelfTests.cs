@@ -15,6 +15,9 @@ namespace AIAnatomy.App.Diagnostics;
 public static class SelfTests
 {
     public const int TrainSteps = 5;
+
+    /// <summary>The learning-by-reward lab's short run in the all-labs self-test.</summary>
+    public const int RewardEpisodes = 5;
     private static readonly TimeSpan Patience = TimeSpan.FromMinutes(5);
 
     public static Task<int> RunAsync(DiagnosticOptions options) => options.SelfTest switch
@@ -27,7 +30,8 @@ public static class SelfTests
     /// <summary>
     /// Opens every lesson, creates its lab, checks a view exists for it, that every branch anchor is on the page and scrolls
     /// to the top, and that the view's screen names are the ones the lab reports, then calls Reset (waiting for any work
-    /// that starts) and Deactivate. Fails if any of that throws or does not hold, or if a lesson names a lab that is not
+    /// that starts) and Deactivate. Rules vs learning also learns for two chunks, and learning by reward plays a run of
+    /// <see cref="RewardEpisodes"/> episodes, which its episodes line must name. Fails if any of that throws or does not hold, or if a lesson names a lab that is not
     /// registered.
     /// </summary>
     private static async Task<int> AllLabsAsync()
@@ -69,6 +73,15 @@ public static class SelfTests
                     if (rules.History.Count != 2)
                         return Fail($"Lesson '{lesson.Id}': after one press of Learn the history has {rules.History.Count} entries, not 2.");
                     rules.Reset();
+                }
+                if (lab is RewardLabViewModel reward)
+                {
+                    reward.EpisodesPerRun = RewardEpisodes;
+                    await reward.RunCommand.ExecuteAsync(null).WaitAsync(Patience);
+                    if (reward.Episodes != RewardEpisodes || !reward.EpisodesText.StartsWith($"Episodes: {RewardEpisodes}. ", StringComparison.Ordinal))
+                        return Fail($"Lesson '{lesson.Id}': after a run of {RewardEpisodes} episodes the lab says \"{reward.EpisodesText}\".");
+                    Console.WriteLine($"  {reward.EpisodesText}");
+                    reward.Reset();
                 }
                 lab.Deactivate();
                 checkedLabs++;

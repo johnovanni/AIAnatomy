@@ -38,6 +38,7 @@
         <DataTemplate DataType="{x:Type labs:ExpertSystemLabViewModel}"><v:ExpertSystemView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:SearchLabViewModel}"><v:SearchView /></DataTemplate>
         <DataTemplate DataType="{x:Type labs:ClassicMlLabViewModel}"><v:ClassicMlView /></DataTemplate>
+        <DataTemplate DataType="{x:Type labs:RewardLabViewModel}"><v:RewardView /></DataTemplate>
 
         <DataTemplate x:Key="ModelEntryTemplate" DataType="{x:Type models:ModelEntry}">
             <TextBlock TextTrimming="CharacterEllipsis">

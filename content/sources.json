@@ -128,5 +128,15 @@
     "id": "coverhart1967",
     "citation": "Cover, T. M., and Hart, P. E. (1967). Nearest Neighbor Pattern Classification. IEEE Transactions on Information Theory, 13(1), 21-27.",
     "url": "https://doi.org/10.1109/TIT.1967.1053964"
+  },
+  {
+    "id": "watkins1992",
+    "citation": "Watkins, C. J. C. H., and Dayan, P. (1992). Q-learning. Machine Learning, 8(3-4), 279-292.",
+    "url": "https://doi.org/10.1007/BF00992698"
+  },
+  {
+    "id": "schultz1997",
+    "citation": "Schultz, W., Dayan, P., and Montague, P. R. (1997). A Neural Substrate of Prediction and Reward. Science, 275(5306), 1593-1599.",
+    "url": "https://doi.org/10.1126/science.275.5306.1593"
   }
 ]

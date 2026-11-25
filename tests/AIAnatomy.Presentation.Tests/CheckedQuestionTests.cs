@@ -545,4 +545,23 @@ public class CheckedQuestionTests : IDisposable
         Assert.Equal("100", right.Groups[3].Value);
         Assert.Equal($"All {right.Groups[2].Value} of them", Correct(nameof(ClassicMl_ADepth10TreeGetsEveryDefaultPointRight)));
     }
+
+    // ---- 4.5 Learning by reward ----
+
+    [Fact]
+    public void Reward_ASquareTwoStepsFromTheGoalIsWorthEight()
+    {
+        // The lab's default maze, rewards and discount; exploring at random (rate 1) so every square is tried often.
+        var lab = new RewardLabViewModel();
+        Assert.Equal((10.0, 1.0, 0.9), (lab.GoalReward, lab.StepCost, lab.Discount));
+        var agent = new AIAnatomy.Models.Reinforcement.QLearningAgent(lab.World, lab.Settings with { ExplorationRate = 1 }, lab.Seed);
+        for (int i = 0; i < 5000; i++) agent.RunEpisode();
+        // (5, 3) is two steps above the goal at (5, 5): down to (5, 4), then down into the goal ((4, 4) is a wall).
+        var square = new AIAnatomy.Models.Reinforcement.GridCell(5, 3);
+        Assert.Equal(new AIAnatomy.Models.Reinforcement.GridCell(5, 5), lab.World.Goal);
+        Assert.Equal(-lab.StepCost + lab.Discount * lab.GoalReward, agent.Value(square), 1e-3);
+        Assert.Equal(8, agent.Value(square), 1e-3);
+        Assert.Contains("−1 + 0.9 × 10 = 8", QuestionNaming(nameof(Reward_ASquareTwoStepsFromTheGoalIsWorthEight)).Why);
+        Assert.Equal("8", Correct(nameof(Reward_ASquareTwoStepsFromTheGoalIsWorthEight)));
+    }
 }

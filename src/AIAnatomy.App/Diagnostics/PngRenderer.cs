@@ -83,8 +83,16 @@ public static class PngRenderer
             classic.Method = ClassicMethod.NearestNeighbours;   // on the default set
             classic.K = 1;
         }
+        if (view == DiagnosticOptions.RewardTrained)
+        {
+            await viewModel.NavigateToLesson("learning-by-reward");
+            if (viewModel.CurrentLab is not RewardLabViewModel reward) throw new InvalidOperationException("The learning-by-reward lesson did not open its lab.");
+            reward.UpdateInterval = TimeSpan.Zero;   // no need to pace a run nobody watches
+            await reward.RunCommand.ExecuteAsync(null);   // 300 episodes on the default maze
+        }
         var map = view is DiagnosticOptions.RulesVsLearningTrained or DiagnosticOptions.FamilyTreeChosen or DiagnosticOptions.ExpertSystemEdited
-            or DiagnosticOptions.SearchMidgame or DiagnosticOptions.SearchWon or DiagnosticOptions.ClassicMlNeighbours ? null : Show(window, viewModel, services, view);
+            or DiagnosticOptions.SearchMidgame or DiagnosticOptions.SearchWon or DiagnosticOptions.ClassicMlNeighbours
+            or DiagnosticOptions.RewardTrained ? null : Show(window, viewModel, services, view);
 
         if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
 

@@ -44,6 +44,7 @@ public sealed class LabFactory
         Register(ExpertSystemLabViewModel.Id, () => new ExpertSystemLabViewModel());
         Register(SearchLabViewModel.Id, () => new SearchLabViewModel());
         Register(ClassicMlLabViewModel.Id, () => new ClassicMlLabViewModel());
+        Register(RewardLabViewModel.Id, () => new RewardLabViewModel());
         TrainLabViewModel? train = null;
         Register(TrainLabViewModel.Id, () => train ??= new TrainLabViewModel(models, () => fables.Value, libraryChanged));
     }

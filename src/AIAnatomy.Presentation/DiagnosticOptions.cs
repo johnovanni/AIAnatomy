@@ -6,7 +6,7 @@ public enum DiagnosticMode { Normal, RenderPng, SelfTest }
 
 /// <summary>
 /// The app's command line, for checks and diagnostics only:
-/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning|ideamap-radial-progress|rules-vs-learning-trained|family-tree-chosen|expert-system-edited|search-midgame|search-won|classic-ml-neighbours|check-answered|check-skipped|branch-anchor|settings-reset-question&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
+/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning|ideamap-radial-progress|rules-vs-learning-trained|family-tree-chosen|expert-system-edited|search-midgame|search-won|classic-ml-neighbours|reward-trained|check-answered|check-skipped|branch-anchor|settings-reset-question&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
 /// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 13 pt unless
 /// told otherwise, so pictures do not depend on the user's own settings. Several views may be given as
 /// <c>gallery,sources,settings</c>; each then goes to "file-view.png". <c>--full-lab</c> (lesson ids only) draws the lab
@@ -66,6 +66,9 @@ public sealed record DiagnosticOptions(
     /// <summary>The classic machine learning lesson in nearest-neighbours mode with k = 1 on the default set, so the
     /// neighbour regions carving round the odd points show (a render cannot click).</summary>
     public const string ClassicMlNeighbours = "classic-ml-neighbours";
+    /// <summary>The learning-by-reward lesson after one full Run (300 episodes) on the default maze, so values, arrows and
+    /// the steps chart show (a render cannot press Run).</summary>
+    public const string RewardTrained = "reward-trained";
     public const string AllLabsTest = "all-labs";
     public const string TrainTest = "train";
 

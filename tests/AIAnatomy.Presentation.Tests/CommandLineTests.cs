@@ -220,6 +220,17 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void RewardTrained_IsARenderViewThatTakesFullLab()
+    {
+        Assert.Equal("reward-trained", DiagnosticOptions.RewardTrained);
+        var o = DiagnosticOptions.Parse(["--render-png", "learning-by-reward," + DiagnosticOptions.RewardTrained, "t.png", "--full-lab"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "learning-by-reward", "reward-trained" }, o.Views);
+        Assert.True(o.FullLab);
+        Assert.Equal(Path.Combine("", "t-reward-trained.png"), o.OutputFileFor(DiagnosticOptions.RewardTrained));
+    }
+
+    [Fact]
     public void ContentsView_IsAKnownView_ButNotForFullLab()
     {
         var ok = DiagnosticOptions.Parse(["--render-png", "contents,tokens", "c.png"]);
