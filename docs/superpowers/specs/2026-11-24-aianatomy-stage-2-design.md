@@ -180,8 +180,9 @@ One **3×3 filter** sliding over a digit.
 - Edit the filter's nine numbers, or choose a preset (vertical edge, horizontal edge, blur); see the **feature map**
   it produces, with the numbers on hover.
 - Shows the learned filters of the shipped network's first layer beside the hand-made presets.
-- Explains convolution as the same small set of weights reused at every position, the idea the transformer did not
-  have.
+- Explains convolution as a small local window: a 3×3 filter looks only at a pixel's neighbours, and the same nine
+  numbers slide across the whole image. (A transformer also reuses its weights at every position; what is new here is
+  the local window.)
 
 ### 5.7 Image networks: the whole network (4.7)
 

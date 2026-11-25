@@ -14,6 +14,8 @@ A bare model like the ones in this app only continues text. An assistant such as
 - **Thinking as extra text.** Steps a model writes out for itself become part of its context, and can help it reach a better answer.
 - **Tools.** The model writes a special request, an ordinary program carries it out (a calculator, say), and the result is put back into the context for the model to read.
 
-The stage will also end with a map of how the family of AI fits together in a modern assistant. Each of these builds on what you can already see here: tokens, the context length, sampling, and the fact that the numbers stay fixed once training ends.
+Each of these builds on what you can already see here: tokens, the context length, sampling, and the fact that the numbers stay fixed once training ends.
+
+The stage will also end with a map of how the family of AI fits together in a modern assistant.
 
 *Sources: Ouyang et al. (2022); Bai et al. (2022); the rest is standard textbook material.*
