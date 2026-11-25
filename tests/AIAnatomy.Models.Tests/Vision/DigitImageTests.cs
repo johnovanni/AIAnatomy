@@ -45,10 +45,31 @@ public class DigitImageTests
     }
 
     [Fact]
-    public void StrokesWithNoLength_GiveNull()
+    public void StrokesWithNoLength_AreInk_NotNull()
     {
-        Assert.Null(DigitImage.FromStrokes(Strokes([(0.5, 0.5)]), Size));
-        Assert.Null(DigitImage.FromStrokes(Strokes([(0.3, 0.4), (0.3, 0.4)], [(0.6, 0.6)]), Size));
+        // A click without a drag, or a stroke whose points are all the same, is a dot: the pad shows it, so the image must too.
+        Assert.NotNull(DigitImage.FromStrokes(Strokes([(0.5, 0.5)]), Size));
+        Assert.NotNull(DigitImage.FromStrokes(Strokes([(0.3, 0.4), (0.3, 0.4)], [(0.6, 0.6)]), Size));
+    }
+
+    /// <summary>"A small centred blob": at most 6 inked squares, at most 3 by 2, total ink under 2.5, centre of mass 3..4 both ways.</summary>
+    private static void AssertSmallCentredBlob(double[]? image)
+    {
+        Assert.NotNull(image);
+        var ink = Measure(image);
+        Assert.True(ink.NonZero <= 6, $"{ink.NonZero} squares have ink.");
+        Assert.True(ink.Height <= 2 && ink.Width <= 3, $"The blob is {ink.Width} by {ink.Height} squares.");
+        Assert.True(image.Sum() < 2.5, $"Total ink {image.Sum():F2}.");
+        Assert.InRange(ink.CentreX, 3, 4);
+        Assert.InRange(ink.CentreY, 3, 4);
+    }
+
+    [Fact]
+    public void AOnePointStroke_GivesASmallCentredBlob()
+    {
+        // What the pad records for a press and release without moving (it skips moves under 0.004 pad units).
+        AssertSmallCentredBlob(DigitImage.FromStrokes(Strokes([(0.2, 0.7)]), Size));
+        AssertSmallCentredBlob(DigitImage.FromStrokes(Strokes([(0.6, 0.3), (0.6, 0.3), (0.6, 0.3)]), Size));
     }
 
     [Fact]
@@ -80,17 +101,8 @@ public class DigitImageTests
     }
 
     [Fact]
-    public void ADot_GivesASmallCentredBlob_NotABlownUpSquare()
-    {
-        var image = DigitImage.FromStrokes(Strokes([(0.5, 0.5), (0.503, 0.501)]), Size);
-        Assert.NotNull(image);
-        var ink = Measure(image);
-        Assert.True(ink.NonZero <= 6, $"{ink.NonZero} squares have ink.");
-        Assert.True(ink.Height <= 2 && ink.Width <= 3, $"The blob is {ink.Width} by {ink.Height} squares.");
-        Assert.True(image.Sum() < 2.5, $"Total ink {image.Sum():F2}.");
-        Assert.InRange(ink.CentreX, 3, 4);
-        Assert.InRange(ink.CentreY, 3, 4);
-    }
+    public void ATinyStroke_GivesASmallCentredBlob_NotABlownUpSquare() =>
+        AssertSmallCentredBlob(DigitImage.FromStrokes(Strokes([(0.5, 0.5), (0.503, 0.501)]), Size));
 
     [Fact]
     public void AllValues_AreBetweenZeroAndOne()
@@ -110,10 +122,121 @@ public class DigitImageTests
     }
 
     [Fact]
+    public void TheDefaultSize_IsEight()
+    {
+        var image = DigitImage.FromStrokes(Strokes([(0.3, 0.2), (0.3, 0.7)]));
+        Assert.NotNull(image);
+        Assert.Equal(Size * Size, image.Length);
+        Assert.Equal(DigitImage.FromStrokes(Strokes([(0.3, 0.2), (0.3, 0.7)]), Size), image);
+    }
+
+    [Fact]
     public void ImageSizesOtherThanEight_AreNotSupported()
     {
-        Assert.Throws<NotSupportedException>(() => DigitImage.FromStrokes(Strokes([(0, 0), (1, 1)])));
+        Assert.Throws<NotSupportedException>(() => DigitImage.FromStrokes(Strokes([(0, 0), (1, 1)]), 28));
         Assert.Throws<NotSupportedException>(() => DigitImage.FromStrokes(Strokes([(0, 0), (1, 1)]), 16));
+    }
+
+    [Fact]
+    public void StrokesPartlyOutsideThePad_GiveTheSameImageAsInside()
+    {
+        // Sensible: only the shape matters, not where it is, so a "0" hanging off the pad's top-right corner gives exactly
+        // the image of the same "0" in the middle (the pad itself clamps to 0..1; other callers may not).
+        var inside = DigitImage.FromStrokes(Strokes(Ellipse(0.5, 0.5, 0.22, 0.35)), Size);
+        var outside = DigitImage.FromStrokes(Strokes(Ellipse(0.95, -0.1, 0.22, 0.35)), Size);
+        Assert.NotNull(outside);
+        Assert.Equal(inside, outside);
+        var ink = Measure(outside);
+        Assert.Equal(Size, ink.Height);
+        Assert.InRange(ink.CentreX, 3.4, 3.6);
+    }
+
+    [Fact]
+    public void AStrokeAlongThePadsEdge_IsCentredLikeOneInTheMiddle()
+    {
+        // Sensible: a line down the pad's left edge is the same "1" as a line down the middle: full height, centred across.
+        var edge = DigitImage.FromStrokes(Strokes([(0, 0), (0, 1)]), Size);
+        var middle = DigitImage.FromStrokes(Strokes([(0.5, 0), (0.5, 1)]), Size);
+        Assert.NotNull(edge);
+        Assert.Equal(middle, edge);
+        var ink = Measure(edge);
+        Assert.Equal(0, ink.Top);
+        Assert.Equal(Size - 1, ink.Bottom);
+        Assert.InRange(ink.CentreX, 3.4, 3.6);
+    }
+
+    [Fact]
+    public void AMarkSmallerThanMinMark_IsNotBlownUpToFullSize()
+    {
+        // A "0" 0.04 by 0.06 pad units (under MinMark 0.1). Sensible: drawn at its size within a MinMark box, so it is centred
+        // but does not reach the top or bottom rows, and has less ink than the same "0" drawn full size.
+        var tiny = DigitImage.FromStrokes(Strokes(Ellipse(0.3, 0.3, 0.02, 0.03)), Size);
+        var full = DigitImage.FromStrokes(Strokes(Ellipse(0.5, 0.5, 0.22, 0.35)), Size);
+        Assert.NotNull(tiny);
+        Assert.NotNull(full);
+        var ink = Measure(tiny);
+        Assert.True(ink.Top > 0 && ink.Bottom < Size - 1, $"The mark spans rows {ink.Top} to {ink.Bottom}.");
+        Assert.True(tiny.Sum() < full.Sum(), $"Tiny ink {tiny.Sum():F2}, full-size ink {full.Sum():F2}.");
+        Assert.InRange(ink.CentreX, 3.4, 3.6);
+        Assert.InRange(ink.CentreY, 3.4, 3.6);
+    }
+
+    [Fact]
+    public void AScribbleOverTheWholePad_FillsTheBox_WithValuesInRange()
+    {
+        // A zigzag across the whole pad, eleven times. Sensible: it fills the same 20-by-32 box as any digit (all 8 rows,
+        // columns 1 to 6 only), is centred, its values stay in 0..1, and most of the box is inked.
+        var zigzag = new List<(double X, double Y)>();
+        for (int i = 0; i <= 10; i++) { zigzag.Add((0, i / 10.0)); zigzag.Add((1, i / 10.0 + 0.05)); }
+        var image = DigitImage.FromStrokes(Strokes(zigzag.ToArray()), Size);
+        Assert.NotNull(image);
+        Assert.All(image, v => Assert.InRange(v, 0.0, 1.0));
+        var ink = Measure(image);
+        Assert.Equal(Size, ink.Height);
+        Assert.True(ink.Width <= 6 && image.Where((_, i) => i % Size is 0 or Size - 1).All(v => v == 0), "Ink reaches the outer columns.");
+        Assert.InRange(ink.CentreX, 3.3, 3.7);
+        Assert.InRange(ink.CentreY, 3.3, 3.7);
+        Assert.True(ink.Mean > 0.5, $"Mean ink {ink.Mean:F3}.");
+    }
+
+    [Fact]
+    public void WideDrawings_ThePenTurnsTallAfterScaling()
+    {
+        // The pen is round in pad units; the drawing is then scaled separately across (to 20 pixels) and down (to 32), so on a
+        // wide, flat drawing the pen becomes taller than it is wide, as when NIST scaled already-written ink. Intended.
+        // A horizontal bar 0.8 long: a band centred down and across, 20 pixels wide (columns 1 to 6), much thicker than a
+        // line (rows 1 to 6), but not reaching the top or bottom rows (its box is at least MinMark tall).
+        var bar = DigitImage.FromStrokes(Strokes([(0.1, 0.5), (0.9, 0.5)]), Size);
+        Assert.NotNull(bar);
+        var ink = Measure(bar);
+        Assert.Equal((1, 6), (ink.Top, ink.Bottom));
+        Assert.Equal(6, ink.Width);
+        Assert.InRange(ink.CentreX, 3.4, 3.6);
+        Assert.InRange(ink.CentreY, 3.4, 3.6);
+
+        // A flat ellipse (0.8 by 0.2): stretched to the full height like a "0", its top and bottom strokes thick (row 1's
+        // middle squares are full) and its sides thin (the middle rows' centre squares have less ink than those).
+        var flat = DigitImage.FromStrokes(Strokes(Ellipse(0.5, 0.5, 0.4, 0.1)), Size);
+        Assert.NotNull(flat);
+        var flatInk = Measure(flat);
+        Assert.Equal((0, Size - 1), (flatInk.Top, flatInk.Bottom));
+        Assert.Equal(1.0, flat[1 * Size + 3]);
+        Assert.True(flat[3 * Size + 3] < flat[1 * Size + 3] && flat[4 * Size + 4] < flat[6 * Size + 4],
+            "The ring's middle is as inked as its top and bottom.");
+        Assert.InRange(flatInk.CentreX, 3.4, 3.6);
+        Assert.InRange(flatInk.CentreY, 3.4, 3.6);
+    }
+
+    [Fact]
+    public void TheTrainingSet_HasTheFactsTheRuleIsBuiltOn()
+    {
+        // Measured 2026-11-25 (docs/decisions.md, Task 8), reproduced here from the bundled training file.
+        var train = BundledDigits.Train;
+        var all = Enumerable.Range(0, train.Count).Select(i => Measure(train.Pixels(i))).ToList();
+        Assert.Equal(3760, all.Count);
+        Assert.All(all, ink => Assert.Equal((0, Size - 1), (ink.Top, ink.Bottom)));   // every digit touches the top and bottom rows
+        Assert.Equal(6, all.Select(ink => ink.Width).Order().ElementAt(all.Count / 2));   // median ink width: 6 columns
+        Assert.InRange(all.Average(ink => ink.Mean), 0.30, 0.32);   // mean ink about 0.31 (measured 0.308)
     }
 
     [Fact]

@@ -20,13 +20,16 @@ namespace AIAnatomy.Models.Vision;
 /// and 32 tall, centred in the 32x32 bitmap.
 /// </para>
 /// <para>
-/// <b>The rule.</b> The ink is the strokes' centre lines drawn with a round pen whose width is <see cref="PenFraction"/>
-/// of the drawing's larger side, so the pen scales with the drawing and a digit drawn small or large gives the same
-/// image (the pad's visible line is only for show). The ink's box (centre lines plus the pen) is scaled to 32 pixels tall
-/// and, separately, to 20 wide, but never stretched across by more than <see cref="MaxStretch"/> times the vertical
+/// <b>The rule.</b> The ink is the strokes' centre lines drawn with a pen that is round in pad units, whose width is
+/// <see cref="PenFraction"/> of the drawing's larger side, so the pen scales with the drawing and a digit drawn small or
+/// large gives the same image (the pad's visible line is only for show). The ink's box (centre lines plus the pen) is
+/// scaled to 32 pixels tall and, separately, to 20 wide, but never stretched across by more than <see cref="MaxStretch"/> times the vertical
 /// scale, so a straight "1" becomes a bar about 11 pixels wide (the training 1s are 4 to 6 squares wide) rather than a
 /// solid block. The box's centre goes to the bitmap's centre. A pixel is on when its centre is within the pen of a
-/// stroke. Marks smaller than <see cref="MinMark"/> pad units are treated as if their box were that size, so a dot stays a
+/// stroke. Because the two scales differ, the round pen becomes an ellipse in the bitmap: on a tall, narrow digit it is
+/// wider than it is tall (a "1" becomes a wide bar), on a wide, flat drawing taller than it is wide. That is intended: it is
+/// what scaling already-written ink does, as NIST scaled scanned digits written with a fixed pen. A one-point stroke (a
+/// click without a drag) is ink too: a dot. Marks smaller than <see cref="MinMark"/> pad units are treated as if their box were that size, so a dot stays a
 /// small blob in the middle instead of being blown up. The pen width and stretch limit were chosen so a drawn "0" and
 /// "1" have the training digits' ink (0.31 and 0.31 mean, 32 squares inked) and are nearest their own digit's mean
 /// training image.
@@ -51,18 +54,18 @@ public static class DigitImage
     private const int Bitmap = 32, Block = 4, InkHeight = 32, InkWidth = 20;
 
     /// <summary>
-    /// The image (row by row, values 0..1 in steps of 1/16) for the strokes, or null when there is no ink (no strokes, or
-    /// none with any length). Only <paramref name="imageSize"/> 8 is supported: the app's digits are UCI's 8x8, and the
-    /// MNIST 28x28 method was not built (<see cref="NotSupportedException"/>).
+    /// The image (row by row, values 0..1 in steps of 1/16) for the strokes, or null when there is no ink (no points at
+    /// all). A stroke with one point, or with all its points the same, is a dot. Only <paramref name="imageSize"/> 8 is
+    /// supported (the default): the app's digits are UCI's 8x8, and the MNIST 28x28 method was not built
+    /// (<see cref="NotSupportedException"/>).
     /// </summary>
-    public static double[]? FromStrokes(IReadOnlyList<IReadOnlyList<(double X, double Y)>> strokes, int imageSize = 28)
+    public static double[]? FromStrokes(IReadOnlyList<IReadOnlyList<(double X, double Y)>> strokes, int imageSize = SupportedSize)
     {
         ArgumentNullException.ThrowIfNull(strokes);
         if (imageSize != SupportedSize)
             throw new NotSupportedException($"Only {SupportedSize}x{SupportedSize} digit images are supported (the UCI digits), not {imageSize}x{imageSize}.");
 
         var lines = new List<IReadOnlyList<(double X, double Y)>>();
-        bool hasLength = false;
         double x0 = double.MaxValue, x1 = double.MinValue, y0 = double.MaxValue, y1 = double.MinValue;
         foreach (var stroke in strokes)
         {
@@ -74,11 +77,10 @@ public static class DigitImage
                     throw new ArgumentException("A stroke has a point that is not a finite number.", nameof(strokes));
                 x0 = Math.Min(x0, x); x1 = Math.Max(x1, x);
                 y0 = Math.Min(y0, y); y1 = Math.Max(y1, y);
-                if (i > 0 && stroke[i] != stroke[i - 1]) hasLength = true;
             }
             lines.Add(stroke);
         }
-        if (!hasLength) return null;
+        if (lines.Count == 0) return null;
 
         double width = x1 - x0, height = y1 - y0;
         double pen = PenFraction * Math.Max(MinMark, Math.Max(width, height));

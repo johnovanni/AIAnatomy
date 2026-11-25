@@ -6,8 +6,10 @@ using System.Windows.Media;
 namespace AIAnatomy.App.Controls;
 
 /// <summary>
-/// A square pad to draw a digit on with the mouse or a pen (WPF turns pen and touch input into mouse input), for the image
-/// networks lab (lesson 4.7). Each press-drag-release adds a stroke, drawn as a thick round line while it is made.
+/// A square pad to draw a digit on with the mouse, a pen or a finger, for the image networks lab (lesson 4.7). Pen input
+/// arrives as mouse input (flicks and press-and-hold are turned off on the pad); touch is handled as touch and captured, so
+/// a finger drag draws instead of panning a surrounding ScrollViewer. Each press-drag-release adds a stroke, drawn as a
+/// thick round line while it is made; a press and release without a drag adds a one-point stroke, a dot.
 /// <see cref="Strokes"/> holds them in pad units: the square runs 0..1 each way, y downward, so the drawing survives a
 /// change of size (a text-size switch) and goes straight to <c>DigitImage.FromStrokes</c> through <see cref="ToDigitStrokes"/>.
 /// <see cref="StrokesChanged"/> is raised when a stroke is finished, when <see cref="Clear"/> empties the pad, and when
@@ -35,11 +37,15 @@ public sealed class DrawingPad : ChartBase
     private const double MinStep = 0.004;
 
     private List<Point>? _current;   // the stroke being drawn, in pad units
+    private TouchDevice? _touch;     // the finger drawing it, when it is drawn by touch
 
     public DrawingPad()
     {
         Focusable = true;
         Cursor = Cursors.Pen;
+        // A pen drag draws: no flick gestures, and no press-and-hold right-click circle.
+        Stylus.SetIsFlicksEnabled(this, false);
+        Stylus.SetIsPressAndHoldEnabled(this, false);
         SetResourceReference(BorderBrushProperty, "BorderBrush");
         AutomationProperties.SetName(this, "Drawing pad");
         AutomationProperties.SetHelpText(this, HelpText);
@@ -63,8 +69,11 @@ public sealed class DrawingPad : ChartBase
     /// <summary>Empties the pad (and drops a stroke being drawn).</summary>
     public void Clear()
     {
-        _current = null;
+        var touch = _touch;
+        _current = null;   // first, so losing the captures below finishes nothing
+        _touch = null;
         if (IsMouseCaptured) ReleaseMouseCapture();
+        if (touch is not null && touch.Captured == this) ReleaseTouchCapture(touch);
         if (Strokes.Count == 0) InvalidateVisual();
         else Strokes = NoStrokes;
     }
@@ -124,42 +133,58 @@ public sealed class DrawingPad : ChartBase
         dc.DrawGeometry(null, pen, geometry);
     }
 
-    /// <summary>The pointer's place in pad units, kept inside the pad.</summary>
-    private Point PadPoint(MouseEventArgs e)
+    /// <summary>A place in pad units, kept inside the pad.</summary>
+    private Point PadPoint(Point at)
     {
-        var at = e.GetPosition(this);
         double side = Side;
         return new Point(Math.Clamp(at.X / side, 0, 1), Math.Clamp(at.Y / side, 0, 1));
+    }
+
+    private bool InsideSquare(Point at) => at.X <= Side && at.Y <= Side;
+
+    private void StartStroke(Point at)
+    {
+        Focus();
+        _current = [PadPoint(at)];
+        InvalidateVisual();
+    }
+
+    private void ExtendStroke(Point at)
+    {
+        if (_current is null) return;
+        var p = PadPoint(at);
+        if ((p - _current[^1]).Length < MinStep) return;
+        _current.Add(p);
+        InvalidateVisual();
     }
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);
-        Focus();
-        var at = e.GetPosition(this);
-        if (at.X > Side || at.Y > Side) return;   // outside the square
-        _current = [PadPoint(e)];
+        if (_touch is not null || !InsideSquare(e.GetPosition(this))) return;   // a finger is drawing, or outside the square
+        StartStroke(e.GetPosition(this));
         CaptureMouse();
-        InvalidateVisual();
         e.Handled = true;
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        if (_current is null || e.LeftButton != MouseButtonState.Pressed) return;
-        var p = PadPoint(e);
-        if ((p - _current[^1]).Length < MinStep) return;
-        _current.Add(p);
-        InvalidateVisual();
+        if (_current is null || _touch is not null) return;
+        // The button was released where no Up event reached the pad (outside the window, say): the stroke ends here.
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            FinishStroke();
+            return;
+        }
+        ExtendStroke(e.GetPosition(this));
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
-        if (_current is null) return;
-        var p = PadPoint(e);
-        if ((p - _current[^1]).Length >= MinStep) _current.Add(p);
+        if (_current is null || _touch is not null) return;
+        ExtendStroke(e.GetPosition(this));
         FinishStroke();
         e.Handled = true;
     }
@@ -167,15 +192,53 @@ public sealed class DrawingPad : ChartBase
     protected override void OnLostMouseCapture(MouseEventArgs e)
     {
         base.OnLostMouseCapture(e);
-        FinishStroke();   // capture taken away mid-stroke (a window switch): keep what was drawn
+        if (_touch is null) FinishStroke();   // capture taken away mid-stroke (a window switch): keep what was drawn
+    }
+
+    // Touch is handled as touch (captured, and the events marked handled), so a finger drawing on the pad is not promoted to
+    // a pan of a surrounding ScrollViewer. Only one finger draws at a time.
+    protected override void OnTouchDown(TouchEventArgs e)
+    {
+        base.OnTouchDown(e);
+        e.Handled = true;
+        var at = e.GetTouchPoint(this).Position;
+        if (_current is not null || !InsideSquare(at)) return;
+        _touch = e.TouchDevice;
+        CaptureTouch(e.TouchDevice);
+        StartStroke(at);
+    }
+
+    protected override void OnTouchMove(TouchEventArgs e)
+    {
+        base.OnTouchMove(e);
+        e.Handled = true;
+        if (e.TouchDevice == _touch) ExtendStroke(e.GetTouchPoint(this).Position);
+    }
+
+    protected override void OnTouchUp(TouchEventArgs e)
+    {
+        base.OnTouchUp(e);
+        e.Handled = true;
+        if (e.TouchDevice != _touch) return;
+        ExtendStroke(e.GetTouchPoint(this).Position);
+        FinishStroke();
+    }
+
+    protected override void OnLostTouchCapture(TouchEventArgs e)
+    {
+        base.OnLostTouchCapture(e);
+        if (e.TouchDevice == _touch) FinishStroke();
     }
 
     private void FinishStroke()
     {
         var stroke = _current;
-        if (stroke is null) return;
+        var touch = _touch;
         _current = null;
+        _touch = null;
         if (IsMouseCaptured) ReleaseMouseCapture();
+        if (touch is not null && touch.Captured == this) ReleaseTouchCapture(touch);
+        if (stroke is null) return;
         Strokes = [.. Strokes, stroke.ToArray()];
     }
 
