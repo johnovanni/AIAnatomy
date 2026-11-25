@@ -11,6 +11,9 @@ using AIAnatomy.Models.Transformers;
 // Builds the two models that ship with the app. Run in Release (about 120 ms per step):
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- fables --text content/texts/aesop-fables.txt --out content/models/fables-small.aimodel --steps 3000 --seed 1
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- induction --out content/models/induction-demo.aimodel --seed 1 [--steps 1500]
+// Builds the family networks that ship in content/models/family (Release; the memory network takes about 10 minutes, each diffusion network about 4):
+//   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- memory --text content/texts/aesop-fables.txt --model content/models/fables-small.aimodel --out content/models/family/memory.aimodel --seed 1
+//   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- diffusion --shape Spiral --out content/models/family/diffusion-spiral.aimodel --seed 1
 // Times training steps of a family network (Release, from the repository root), to choose sizes and steps:
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind memory --hidden 128 [--steps 50]
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- speed --kind diffusion --hidden 128 [--steps 50] [--shape Spiral]
@@ -20,6 +23,8 @@ const int WarmUpSteps = 30;   // speed: untimed steps first (see TimeSteps)
 const string Usage =
     "Usage: pretrain fables --text <file> --out <file> --steps <n> [--seed <n>]\n" +
     "       pretrain induction --out <file> [--steps <n>] [--seed <n>]\n" +
+    "       pretrain memory --text <file> --model <fables file> --out <file> [--steps <n>] [--seed <n>]\n" +
+    "       pretrain diffusion --shape <preset> --out <file> [--steps <n>] [--seed <n>]\n" +
     "       pretrain speed --kind memory --hidden <n> [--steps <n>] [--text <file>] [--model <file>]\n" +
     "       pretrain speed --kind diffusion --hidden <n> [--steps <n>] [--shape <preset>]";
 
@@ -31,6 +36,8 @@ try
     {
         "fables" => await TrainFablesAsync(options),
         "induction" => await TrainInductionAsync(options),
+        "memory" => await TrainMemoryAsync(options),
+        "diffusion" => TrainDiffusion(options),
         "speed" => await SpeedAsync(options),
         _ => Fail(Usage),
     };
@@ -105,6 +112,87 @@ static async Task<int> TrainInductionAsync(Dictionary<string, string> o)
 
     var info = new ModelInfo("Induction demo", "Repeated letter sequences", steps, null, seed, IsShipped: true);
     Save(new LanguageModel(transformer, InductionExperiment.Tokenizer, info), outPath);
+    return 0;
+}
+
+// The shipped memory network. Timed over the whole training loop with validation at step 1 and every 25 steps, exactly as
+// the Fables run's 517 s was (Trainer.RunAsync), so trainSeconds and charactersPerSecond compare like for like.
+static async Task<int> TrainMemoryAsync(Dictionary<string, string> o)
+{
+    string text = await File.ReadAllTextAsync(Required(o, "text"));
+    string outPath = Required(o, "out");
+    int steps = Number(o, "steps", MemoryTraining.ShippedSteps);
+    int seed = Number(o, "seed", 1);
+    if (steps < 25) throw new ArgumentException("--steps must be at least 25 (validation runs every 25 steps).");
+    LanguageModel fables;
+    using (var stream = File.OpenRead(Required(o, "model"))) fables = ModelFile.Load(stream);
+
+    var source = MemoryTraining.FablesSource(fables.Tokenizer, text);
+    var rnn = new ElmanRnn(MemoryTraining.Shipped(fables.Tokenizer.VocabularySize), new SeededRandom(seed));
+    var trainer = new RnnTrainer(rnn, source, steps, seed);
+    Console.WriteLine($"memory network: hidden {rnn.Config.Hidden}, {rnn.Config.CountParameters()} parameters, {steps} steps, batch 8, context {MemoryTraining.ContextLength}");
+
+    double validation = double.NaN;
+    var watch = Stopwatch.StartNew();
+    for (int step = 1; step <= steps; step++)
+    {
+        double loss = trainer.Step();
+        if (!double.IsFinite(loss)) throw new InvalidDataException(SteppedTraining.DivergedMessage);
+        if (step == 1 || step % 25 == 0) validation = trainer.ValidationLoss();
+        if (step % 100 == 0) Console.WriteLine($"step {step}: train {loss:F3}, validation {validation:F3}, {watch.Elapsed.TotalSeconds:F0} s");
+    }
+    double seconds = watch.Elapsed.TotalSeconds;
+    double charactersPerSecond = (double)steps * 8 * MemoryTraining.ContextLength / seconds;
+    Console.WriteLine($"done: {steps} steps in {seconds:F0} s ({charactersPerSecond:F0} characters per second), final validation loss {validation:F3}");
+
+    var info = new ModelInfo("Memory network", "Aesop's Fables (Townsend)", steps, validation, seed, IsShipped: true,
+        Results: new Dictionary<string, double>
+        {
+            ["validationLoss"] = validation,
+            ["trainSeconds"] = seconds,
+            ["charactersPerSecond"] = charactersPerSecond,
+        });
+    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outPath))!);
+    using (var stream = File.Create(outPath)) rnn.Save(stream, fables.Tokenizer, info);
+    Console.WriteLine($"saved {outPath} ({new FileInfo(outPath).Length / 1024} KB)");
+    return 0;
+}
+
+static int TrainDiffusion(Dictionary<string, string> o)
+{
+    string shapeName = Required(o, "shape");
+    string outPath = Required(o, "out");
+    int steps = Number(o, "steps", DiffusionTraining.ShippedSteps);
+    int seed = Number(o, "seed", 1);
+    var preset = Shapes.Presets.FirstOrDefault(p => p.Name == shapeName);
+    if (preset.Points is null)
+        throw new ArgumentException($"Unknown --shape '{shapeName}' (use {string.Join(", ", Shapes.Presets.Select(p => p.Name))}).");
+
+    var schedule = new NoiseSchedule();
+    var net = new DiffusionNet(DiffusionTraining.Shipped, new SeededRandom(seed));
+    var trainer = new DiffusionTrainer(net, schedule, preset.Points, steps, seed);
+    Console.WriteLine($"diffusion network ({shapeName}): hidden {net.Config.Hidden}, {net.Config.CountParameters()} parameters, {steps} steps");
+
+    var watch = Stopwatch.StartNew();
+    for (int step = 1; step <= steps; step++)
+    {
+        double loss = trainer.Step();
+        if (!double.IsFinite(loss)) throw new InvalidDataException(SteppedTraining.DivergedMessage);
+        if (step % 5000 == 0) Console.WriteLine($"step {step}: train {loss:F4}, {watch.Elapsed.TotalSeconds:F0} s");
+    }
+    double seconds = watch.Elapsed.TotalSeconds;
+
+    var result = DiffusionSampler.Sample(net, schedule, 500, new SeededRandom(1))[^1];
+    var samples = Enumerable.Range(0, result.GetLength(0)).Select(i => (result[i, 0], result[i, 1])).ToList();
+    double distance = Shapes.MeanDistanceToShape(samples, preset.Points);
+    double coverage = Shapes.Coverage(samples, preset.Points, 0.05);
+    Console.WriteLine($"done: {steps} steps in {seconds:F0} s, mean distance {distance:F4}, coverage at 0.05 {coverage:F3}");
+
+    var info = new ModelInfo($"{shapeName} diffusion network", $"Generated shape: {shapeName}", steps, null, seed, IsShipped: true,
+        Results: new Dictionary<string, double> { ["meanDistance"] = distance, ["coverage"] = coverage, ["trainSeconds"] = seconds });
+    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outPath))!);
+    using (var stream = File.Create(outPath)) net.Save(stream, schedule, shapeName, info);
+    Console.WriteLine($"saved {outPath} ({new FileInfo(outPath).Length / 1024} KB)");
     return 0;
 }
 
