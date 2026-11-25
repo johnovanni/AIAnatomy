@@ -79,6 +79,29 @@ public static class Shapes
         return total / samples.Count;
     }
 
+    /// <summary>
+    /// How much of the shape the samples cover: the fraction of the shape's points that have at least one sample within
+    /// <paramref name="radius"/> (inclusive). 1 when every part of the shape has samples nearby; samples piled on one spot
+    /// score low here even when <see cref="MeanDistanceToShape"/> calls them perfect.
+    /// </summary>
+    public static double Coverage(IReadOnlyList<(double X, double Y)> samples, IReadOnlyList<(double X, double Y)> shape, double radius)
+    {
+        ArgumentNullException.ThrowIfNull(samples);
+        ArgumentNullException.ThrowIfNull(shape);
+        if (!(radius > 0) || double.IsInfinity(radius)) throw new ArgumentOutOfRangeException(nameof(radius), "The radius must be a positive number.");
+        if (samples.Count == 0) throw new ArgumentException("Give at least one sample.", nameof(samples));
+        if (shape.Count == 0) throw new ArgumentException("The shape has no points.", nameof(shape));
+        double limit = radius * radius;
+        int covered = 0;
+        foreach (var p in shape)
+            foreach (var s in samples)
+            {
+                double dx = s.X - p.X, dy = s.Y - p.Y;
+                if (dx * dx + dy * dy <= limit) { covered++; break; }
+            }
+        return (double)covered / shape.Count;
+    }
+
     private static IReadOnlyList<(string, IReadOnlyList<(double X, double Y)>)> BuildPresets()
     {
         // Spiral: one and a half turns, r = 0.15 + 0.75 * theta / (3 pi), so the arms are 0.5 apart.

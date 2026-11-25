@@ -19,6 +19,7 @@ public sealed class NoiseSchedule
     private readonly double[] _alphaBar;           // index i = 0..Steps, [0] = 1
     private readonly int[] _timesteps;
 
+    /// <summary>A full schedule of linear betas; with <paramref name="steps"/> = 1, beta_1 = betaStart and betaEnd is not used.</summary>
     public NoiseSchedule(int steps = 100, double betaStart = 1e-4, double betaEnd = 0.1)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(steps, 1);
@@ -34,7 +35,8 @@ public sealed class NoiseSchedule
         _alphaBar[0] = 1;
         for (int t = 1; t <= steps; t++)
         {
-            // Linear from betaStart to betaEnd, like numpy.linspace(betaStart, betaEnd, steps) in Ho et al.'s code.
+            // Linear from betaStart to betaEnd, like numpy.linspace(betaStart, betaEnd, steps) in Ho et al.'s code. As with
+            // linspace, a one-step schedule has only beta_1 = betaStart: betaEnd is checked but otherwise ignored.
             _beta[t] = steps == 1 ? betaStart : betaStart + (betaEnd - betaStart) * (t - 1) / (steps - 1);
             _alphaBar[t] = _alphaBar[t - 1] * (1 - _beta[t]);
         }

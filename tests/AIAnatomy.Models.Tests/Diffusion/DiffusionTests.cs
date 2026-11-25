@@ -200,26 +200,45 @@ public class DiffusionTests
     }
 
     [Fact]
-    public void Sample_FollowsTheAncestralUpdate()
+    public void Sample_FollowsTheAncestralUpdateWithThePosteriorVariance()
     {
-        // With the network's output fixed at zero, x_{t-1} = x_t / sqrt(alpha_t) + sigma_t z, and no noise at the last step.
+        // Zero weights and output.bias = (1, -0.5): the network predicts e_hat = (1, -0.5) for every point and step. Then
+        // x_{i-1} = (x_i - beta'_i / sqrt(1 - abar'_i) e_hat) / sqrt(1 - beta'_i) + sigma'_i z, with
+        // sigma'_i^2 = beta'_i (1 - abar'_{i-1}) / (1 - abar'_i) from the respaced schedule's own AlphaBar, and no z at the last step.
         var net = new DiffusionNet(new DiffusionConfig(Hidden: 4), new SeededRandom(1));
         foreach (var p in net.Parameters()) Array.Clear(p.Value.Data);
-        var s = new NoiseSchedule().Respaced(4);
+        var bias = net.Parameters().Single(p => p.Name == "output.bias").Value.Data;
+        bias[0] = 1;
+        bias[1] = -0.5;
+        var full = new NoiseSchedule();
+        var s = full.Respaced(4);
+        Assert.Equal(new[] { 25, 50, 75, 100 }, s.Timesteps);
         var frames = DiffusionSampler.Sample(net, s, 2, new SeededRandom(5));
+        Assert.Equal(5, frames.Count);
 
+        // Worked from the full schedule at the original t values 25, 50, 75, 100 (t_0 = 0, AlphaBar 1).
+        int[] t = { 0, 25, 50, 75, 100 };
+        double[] eHat = { 1, -0.5 };
         var rng = new SeededRandom(5);
         var x = new double[2, 2];
         for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) x[i, j] = rng.NextGaussian();
         Assert.Equal(x, frames[0]);
-        for (int step = s.Steps, frame = 1; step >= 1; step--, frame++)
+        for (int step = 4, frame = 1; step >= 1; step--, frame++)
         {
-            double alpha = 1 - s.Beta(step), sigma = step > 1 ? Math.Sqrt(s.Beta(step)) : 0;
+            double abar = full.AlphaBar(t[step]), abarBefore = full.AlphaBar(t[step - 1]);
+            double beta = 1 - abar / abarBefore;
+            double coefficient = beta / Math.Sqrt(1 - abar);
+            double sigma = Math.Sqrt(beta * (1 - abarBefore) / (1 - abar));
             for (int i = 0; i < 2; i++)
                 for (int j = 0; j < 2; j++)
-                    x[i, j] = x[i, j] / Math.Sqrt(alpha) + (step > 1 ? sigma * rng.NextGaussian() : 0);
+                    x[i, j] = (x[i, j] - coefficient * eHat[j]) / Math.Sqrt(1 - beta) + (step > 1 ? sigma * rng.NextGaussian() : 0);
             for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) Assert.Equal(x[i, j], frames[frame][i, j], 12);
         }
+
+        // The first respaced step by hand: beta'_1 = 1 - abar(25), sigma'_1 = 0 (abar'_0 = 1), so with z unused the
+        // last move is a pure shift by -beta'_1 / sqrt(1 - abar(25)) * e_hat / sqrt(1 - beta'_1) = -sqrt(1 - abar(25)) / sqrt(abar(25)) * e_hat.
+        double a25 = full.AlphaBar(25);
+        Assert.Equal(frames[3][0, 0] / Math.Sqrt(a25) - Math.Sqrt(1 - a25) / Math.Sqrt(a25), frames[4][0, 0], 12);
     }
 
     // ---------- Shapes ----------
@@ -267,7 +286,7 @@ public class DiffusionTests
     [Fact]
     public void FromStroke_ResamplesEvenlyIntoTheSquare()
     {
-        // A quarter circle of radius 150 around the pad's centre, drawn with 60 uneven points, plus a straight tail.
+        // A quarter circle of radius 150 around the pad's centre, drawn with 60 unevenly spaced points.
         var stroke = new List<(double X, double Y)>();
         for (int i = 0; i <= 60; i++)
         {
@@ -316,6 +335,30 @@ public class DiffusionTests
         Assert.Equal(new DiffusionConfig(Hidden: 128), DiffusionTraining.Shipped);
         Assert.Equal(20_000, DiffusionTraining.RetrainSteps);
         Assert.Equal(60_000, DiffusionTraining.ShippedSteps);
+    }
+
+    [Fact]
+    public void Coverage_HandWorked()
+    {
+        var shape = new[] { (0.0, 0.0), (1.0, 0.0), (2.0, 0.0), (3.0, 0.0) };
+        var samples = new[] { (0.0, 0.04), (2.1, 0.0) };
+        Assert.Equal(0.25, Shapes.Coverage(samples, shape, 0.05), 12);   // only (0,0) has a sample within 0.05
+        Assert.Equal(0.5, Shapes.Coverage(samples, shape, 0.2), 12);     // (2,0) is 0.1 from a sample
+        Assert.Equal(1.0, Shapes.Coverage(shape, shape, 0.05));
+        Assert.Throws<ArgumentException>(() => Shapes.Coverage(Array.Empty<(double, double)>(), shape, 0.05));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Shapes.Coverage(samples, shape, 0));
+    }
+
+    [Fact]
+    public void Coverage_IsLowForSamplesCollapsedToOnePoint()
+    {
+        // Every sample on one point of the circle: the mean distance is a perfect 0, but almost none of the circle is covered.
+        var circle = Preset("Circle");
+        var collapsed = Enumerable.Repeat(circle[0], 500).ToList();
+        Assert.Equal(0, Shapes.MeanDistanceToShape(collapsed, circle));
+        double coverage = Shapes.Coverage(collapsed, circle, 0.05);
+        Assert.True(coverage < 0.03, $"coverage {coverage}");   // an arc of about 0.1 out of 5.03, so about 2%
+        Assert.True(coverage > 0);
     }
 
     // ---------- Saving ----------

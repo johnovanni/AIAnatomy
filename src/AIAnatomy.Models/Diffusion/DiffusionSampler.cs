@@ -33,9 +33,13 @@ public static class DiffusionSampler
     /// <summary>
     /// DDPM ancestral sampling of <paramref name="count"/> points. Frame 0 is pure noise x_T (unit normals, drawn point by
     /// point, x then y); each step i = Steps..1 then does
-    /// x_{i-1} = (x_i - beta_i / sqrt(1 - AlphaBar(i)) * e_hat) / sqrt(1 - beta_i) + sigma_i z, with sigma_i^2 = beta_i and
-    /// no noise at the last step, where e_hat is the network's predicted noise at the step's original t. So there are
-    /// Steps + 1 frames and the last is the result. The same generator state gives the same frames.
+    /// x_{i-1} = (x_i - beta_i / sqrt(1 - AlphaBar(i)) * e_hat) / sqrt(1 - beta_i) + sigma_i z, where e_hat is the network's
+    /// predicted noise at the step's original t, and no noise is added at the last step. The noise uses the posterior
+    /// variance sigma_i^2 = beta-tilde_i = beta_i (1 - AlphaBar(i-1)) / (1 - AlphaBar(i)) (Ho et al. 2020, section 3.2),
+    /// from this schedule's own AlphaBar, so a respaced schedule uses AlphaBar at its own previous step t_{i-1}. A 2-D
+    /// shape is a thin curve, close to the case of a fixed x_0 for which Ho et al. call beta-tilde the right choice;
+    /// sigma^2 = beta would leave extra noise near t = 0 (docs/decisions.md, Task 10 review). So there are Steps + 1 frames
+    /// and the last is the result. The same generator state gives the same frames.
     /// </summary>
     public static IReadOnlyList<double[,]> Sample(DiffusionNet net, NoiseSchedule s, int count, SeededRandom rng)
     {
@@ -55,11 +59,11 @@ public static class DiffusionSampler
             double beta = s.Beta(step);
             double noiseScale = beta / Math.Sqrt(1 - s.AlphaBar(step));
             double inverseRootAlpha = 1 / Math.Sqrt(1 - beta);
-            double sigma = Math.Sqrt(beta);
+            double sigma = Math.Sqrt(beta * (1 - s.AlphaBar(step - 1)) / (1 - s.AlphaBar(step)));
             for (int i = 0; i < x.Length; i++)
             {
                 x[i] = (x[i] - noiseScale * predicted[i]) * inverseRootAlpha;
-                if (step > 1) x[i] += sigma * rng.NextGaussian();
+                if (step > 1) x[i] += sigma * rng.NextGaussian();   // the last step adds no noise (sigma_1 is 0 anyway)
             }
             frames.Add(ToFrame(x, count));
         }
