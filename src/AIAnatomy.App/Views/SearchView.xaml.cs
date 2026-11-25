@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Automation.Peers;
+using System.Windows.Data;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AIAnatomy.Presentation.Labs;
@@ -55,6 +57,15 @@ public partial class SearchView : UserControl
         WinLine.Visibility = Visibility.Visible;
     }
 
+    // The status or the count changed: tell screen readers (a live region's changed Text alone is not announced). The
+    // text block is read with its own text, so it has no AutomationProperties.Name of its own.
+    private void OnLiveTextUpdated(object? sender, DataTransferEventArgs e)
+    {
+        if (sender is TextBlock { Text.Length: > 0 } text && AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
+            (UIElementAutomationPeer.FromElement(text) ?? UIElementAutomationPeer.CreatePeerForElement(text))
+                ?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+    }
+
     private void Arrange(bool stacked)
     {
         Gap.Width = new GridLength(stacked ? 0 : 16);
@@ -66,11 +77,17 @@ public partial class SearchView : UserControl
     }
 
     // A move's replies are searched when it first opens, so until then the item has no children and the TreeView's own
-    // Right arrow (and +) would not open it. These keys open such a move here; once it has children, WPF's keys work.
+    // Right arrow (and +) would not open it. These keys open such a move here; Enter and Space open or close any move that
+    // can open. Left arrow (WPF's own key) closes an open one.
     private void OnTreeKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key is not (Key.Right or Key.Add)) return;
-        if (Keyboard.FocusedElement is TreeViewItem { DataContext: LookAheadNode { CanExpand: true, IsExpanded: false } node })
+        if (Keyboard.FocusedElement is not TreeViewItem { DataContext: LookAheadNode { CanExpand: true } node }) return;
+        if (e.Key is Key.Enter or Key.Space)
+        {
+            node.IsExpanded = !node.IsExpanded;
+            e.Handled = true;
+        }
+        else if (e.Key is (Key.Right or Key.Add) && !node.IsExpanded)
         {
             node.IsExpanded = true;
             e.Handled = true;

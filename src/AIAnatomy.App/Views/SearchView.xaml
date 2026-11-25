@@ -116,9 +116,8 @@
             <c:Screen x:Name="BoardPanel" Grid.Column="0" ScreenName="board" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <StackPanel>
                     <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="The board" />
-                    <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="{Binding StatusText}"
-                               MaxWidth="354" HorizontalAlignment="Left" AutomationProperties.Name="Game status"
-                               AutomationProperties.LiveSetting="Polite" />
+                    <TextBlock Style="{StaticResource SubheadingText}" Margin="0,0,0,8" Text="{Binding StatusText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated"
+                               MaxWidth="354" HorizontalAlignment="Left" AutomationProperties.LiveSetting="Polite" />
                     <!-- Three squares of 112 plus their 3 px margins each way: 354 a side. A fixed size, so the line overlay
                          below cannot stretch the board. -->
                     <Grid HorizontalAlignment="Left" Width="354" Height="354">
@@ -146,13 +145,13 @@
             <c:Screen x:Name="LookAheadPanel" Grid.Column="2" ScreenName="lookahead" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <StackPanel>
                     <TextBlock Style="{StaticResource PaneTitle}" Margin="0,0,0,4" Text="Look-ahead: the options the computer weighed for its latest move" />
-                    <TextBlock x:Name="CountLine" Style="{StaticResource BodyText}" Margin="0,0,0,6" Text="{Binding CountText}" FontWeight="SemiBold"
-                               AutomationProperties.Name="Positions looked at" />
+                    <TextBlock x:Name="CountLine" Style="{StaticResource BodyText}" Margin="0,0,0,6" Text="{Binding CountText, NotifyOnTargetUpdated=True}" Binding.TargetUpdated="OnLiveTextUpdated" FontWeight="SemiBold"
+                               AutomationProperties.LiveSetting="Polite" />
                     <TextBlock x:Name="Waiting" Style="{StaticResource BodyText}" Margin="0,0,0,6"
                                Text="Nothing yet: the computer has not moved." />
                     <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,6" Foreground="{DynamicResource ScreenTextBrush}" Opacity="0.85"
                                FontSize="{DynamicResource SmallFontSize}"
-                               Text="Every score is from the computer's point of view. Open an option (click its arrow, or press the Right arrow key) to see your replies beneath it, and open a reply to see the computer's answers, up to four moves ahead." />
+                               Text="Every score is from the computer's point of view. Open an option to see your replies beneath it (click its arrow, or press Right arrow, Enter or Space; Left arrow, Enter or Space closes it again), and open a reply to see the computer's answers, up to four moves ahead." />
                     <TreeView x:Name="Tree" ItemsSource="{Binding LookAhead}" ItemContainerStyle="{StaticResource LookAheadItem}"
                               Background="Transparent" BorderThickness="0" Foreground="{DynamicResource ScreenTextBrush}"
                               KeyboardNavigation.TabNavigation="Once" AutomationProperties.Name="Look-ahead"

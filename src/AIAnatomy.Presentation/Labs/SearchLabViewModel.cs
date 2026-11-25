@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using AIAnatomy.Models.Search;
+using AIAnatomy.Presentation.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -83,7 +84,8 @@ public sealed partial class LookAheadNode : ObservableObject
 
     /// <summary>
     /// Expanding fills <see cref="Children"/> the first time, by searching the position after this move (small, so it is
-    /// done at once); later expansions reuse them. A node that cannot expand stays closed.
+    /// done at once); later expansions reuse them. A node that cannot expand stays closed, and so does one whose search
+    /// fails (the failure is reported in the background, and the next try searches again).
     /// </summary>
     public bool IsExpanded
     {
@@ -91,7 +93,7 @@ public sealed partial class LookAheadNode : ObservableObject
         set
         {
             if (value && !CanExpand) value = false;
-            if (value && !_filled) Fill();
+            if (value && !_filled && !TryFill()) value = false;
             SetProperty(ref _isExpanded, value);
         }
     }
@@ -99,16 +101,26 @@ public sealed partial class LookAheadNode : ObservableObject
     /// <summary>The replies to this move, each scored from the computer's point of view; empty until first expanded.</summary>
     public ObservableCollection<LookAheadNode> Children { get; } = new();
 
-    private void Fill()
+    private bool TryFill()
     {
-        _filled = true;
-        var result = _search(_after, CancellationToken.None);
+        SearchResult result;
+        try
+        {
+            result = _search(_after, CancellationToken.None);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            ErrorLog.ReportBackground(e);
+            return false;
+        }
         bool computerToMove = _after.ToMove == _computer;
         foreach (var move in result.Moves)
         {
             var outcome = computerToMove ? move.Outcome : (Outcome)(-(int)move.Outcome);
             Children.Add(new LookAheadNode(move.Cell, outcome, move.PositionsLookedAt, false, Depth + 1, _after.Play(move.Cell), _computer, _search));
         }
+        _filled = true;   // only after a whole, successful fill
+        return true;
     }
 
     private static string Capitalised(string s) => char.ToUpperInvariant(s[0]) + s[1..];
@@ -133,6 +145,9 @@ public sealed partial class SearchLabViewModel : LabViewModel
 
     private const string BoardScreen = "board", LookAheadScreen = "lookahead";
 
+    /// <summary>The status after the computer's search failed (the failure itself goes to the error log).</summary>
+    public const string FailedText = "The computer could not choose its move. Start a new game.";
+
     private static readonly string[] CellNames =
         ["top left", "top middle", "top right", "middle left", "centre", "middle right", "bottom left", "bottom middle", "bottom right"];
 
@@ -140,6 +155,7 @@ public sealed partial class SearchLabViewModel : LabViewModel
     private CancellationTokenSource _cancel = new();
     private IDisposable? _run;
     private int _generation;
+    private bool _failed;
     private Task _work = Task.CompletedTask;
 
     /// <param name="search">The search to use (a test can hold it); <see cref="Minimax.Search"/> when not given.</param>
@@ -255,6 +271,17 @@ public sealed partial class SearchLabViewModel : LabViewModel
         {
             return;   // cancelled by a new game, Reset or leaving the lab
         }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // Nobody awaits a button's command, so the failure is logged and shown in words, and the lab stops thinking.
+            if (generation != _generation) return;
+            ErrorLog.ReportBackground(e);
+            _failed = true;
+            IsThinking = false;
+            Refresh();
+            EndRun();
+            return;
+        }
         if (generation != _generation) return;   // a late result from a search that was cancelled: thrown away
 
         var computer = Computer;
@@ -273,6 +300,7 @@ public sealed partial class SearchLabViewModel : LabViewModel
     private void StopSearch()
     {
         _generation++;
+        _failed = false;
         _cancel.Cancel();
         _cancel.Dispose();
         _cancel = new CancellationTokenSource();
@@ -293,6 +321,7 @@ public sealed partial class SearchLabViewModel : LabViewModel
         var line = Board.WinningLine;
         Cells = Enumerable.Range(0, 9).Select(i => new BoardCell(i, Board[i], line?.Contains(i) ?? false)).ToList();
         StatusText = IsThinking ? "The computer is thinking…"
+            : _failed ? FailedText
             : Board.Winner != Mark.None ? $"{Board.Winner} wins: {LineName(line!)}."
             : Board.IsOver ? "A draw."
             : $"Your move (you are {Human}).";

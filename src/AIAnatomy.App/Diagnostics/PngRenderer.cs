@@ -70,8 +70,14 @@ public static class PngRenderer
             await search.PlayAsync(4);   // you (X) in the centre; the computer replies
             search.LookAhead[0].IsExpanded = true;   // its first option opened: your replies beneath it
         }
+        if (view == DiagnosticOptions.SearchWon)
+        {
+            await viewModel.NavigateToLesson("search");
+            if (viewModel.CurrentLab is not SearchLabViewModel search) throw new InvalidOperationException("The search lesson did not open its lab.");
+            while (!search.Board.IsOver) await search.PlayAsync(search.Board.EmptyCells[0]);   // you take the lowest free square
+        }
         var map = view is DiagnosticOptions.RulesVsLearningTrained or DiagnosticOptions.FamilyTreeChosen or DiagnosticOptions.ExpertSystemEdited
-            or DiagnosticOptions.SearchMidgame ? null : Show(window, viewModel, services, view);
+            or DiagnosticOptions.SearchMidgame or DiagnosticOptions.SearchWon ? null : Show(window, viewModel, services, view);
 
         if (viewModel.CurrentLab != null) await viewModel.CurrentLab.WorkCompleted;   // e.g. the Tokens lab learning its BPE
 

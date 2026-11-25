@@ -200,6 +200,15 @@ public class CommandLineTests
     }
 
     [Fact]
+    public void SearchWon_IsARenderViewThatTakesFullLab()
+    {
+        var o = DiagnosticOptions.Parse(["--render-png", "search-midgame," + DiagnosticOptions.SearchWon, "t.png", "--full-lab"]);
+        Assert.Null(o.Error);
+        Assert.Equal(new[] { "search-midgame", "search-won" }, o.Views);
+        Assert.True(o.FullLab);
+    }
+
+    [Fact]
     public void ContentsView_IsAKnownView_ButNotForFullLab()
     {
         var ok = DiagnosticOptions.Parse(["--render-png", "contents,tokens", "c.png"]);

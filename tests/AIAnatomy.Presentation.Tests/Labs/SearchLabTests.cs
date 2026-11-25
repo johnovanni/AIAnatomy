@@ -318,6 +318,37 @@ public class SearchLabTests
     }
 
     [Fact]
+    public async Task ASearchThatFails_StopsThinking_AndSaysSo()
+    {
+        var lab = new SearchLabViewModel((_, _) => throw new InvalidOperationException("test failure"));
+        await lab.PlayAsync(4);   // does not throw: the failure is reported in the background and shown in words
+        Assert.False(lab.IsThinking);
+        Assert.Equal("....X....", Cells(lab.Board));
+        Assert.Equal("The computer could not choose its move. Start a new game.", lab.StatusText);
+        await lab.PlayAsync(0);   // not your turn: ignored
+        Assert.Equal("....X....", Cells(lab.Board));
+        await lab.NewGameAsync(Mark.X);
+        Assert.Equal("Your move (you are X).", lab.StatusText);
+    }
+
+    [Fact]
+    public async Task AFailedExpansion_StaysClosed_AndCanBeTriedAgain()
+    {
+        bool fail = false;
+        var lab = new SearchLabViewModel((b, t) => fail ? throw new InvalidOperationException("test failure") : Minimax.Search(b, t));
+        await lab.PlayAsync(4);
+        var node = lab.LookAhead[0];
+        fail = true;
+        node.IsExpanded = true;
+        Assert.False(node.IsExpanded);
+        Assert.Empty(node.Children);
+        fail = false;
+        node.IsExpanded = true;   // tried again
+        Assert.True(node.IsExpanded);
+        Assert.Equal(7, node.Children.Count);
+    }
+
+    [Fact]
     public async Task WorkCompleted_CoversTheOpeningSearch()
     {
         var lab = new SearchLabViewModel();

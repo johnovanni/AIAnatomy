@@ -6,7 +6,7 @@ public enum DiagnosticMode { Normal, RenderPng, SelfTest }
 
 /// <summary>
 /// The app's command line, for checks and diagnostics only:
-/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning|ideamap-radial-progress|rules-vs-learning-trained|family-tree-chosen|expert-system-edited|search-midgame|check-answered|check-skipped|branch-anchor|settings-reset-question&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
+/// <c>--render-png &lt;lessonId|contents|gallery|sources|settings|ideamap-radial|ideamap-loop|ideamap-radial-chosen|ideamap-loop-chosen|ideamap-loop-learning|ideamap-radial-progress|rules-vs-learning-trained|family-tree-chosen|expert-system-edited|search-midgame|search-won|check-answered|check-skipped|branch-anchor|settings-reset-question&gt; &lt;file.png&gt; [--theme Light|Dark] [--text-size N] [--width 1600] [--height 1000] [--full-lab]</c>
 /// or <c>--selftest &lt;all-labs|train&gt;</c>. No arguments means a normal start. A render uses Light at 13 pt unless
 /// told otherwise, so pictures do not depend on the user's own settings. Several views may be given as
 /// <c>gallery,sources,settings</c>; each then goes to "file-view.png". <c>--full-lab</c> (lesson ids only) draws the lab
@@ -60,6 +60,9 @@ public sealed record DiagnosticOptions(
     /// <summary>The search lesson in mid-game: you (X) in the centre, the computer's reply made, and the first option of its
     /// look-ahead opened, so the replies beneath it show (a render cannot click).</summary>
     public const string SearchMidgame = "search-midgame";
+    /// <summary>The search lesson after a finished game: you (X) always took the lowest free square, and the computer (O)
+    /// completed the diagonal from top right to bottom left, so the winning line and the status naming it show.</summary>
+    public const string SearchWon = "search-won";
     public const string AllLabsTest = "all-labs";
     public const string TrainTest = "train";
 
