@@ -81,7 +81,8 @@ public class HeatMapTextSizeTests
     // 0.4 em from their neighbours; the text never shrinks.
     [Theory]
     [InlineData(1.0)]      // −0.860 and 0.253: lesson 4.6 with its preset filters
-    [InlineData(29.8)]     // up to about ±27: weights typed up to ±10 (−25.628)
+    [InlineData(29.8)]     // about ±26 (−25.628)
+    [InlineData(104.6)]    // about ±90, the widest lesson 4.6 allows: nine weights typed up to ±10 on ink of at most 1 (−89.956)
     [InlineData(0.0001)]   // tiny values: fixed-point "0.000", not 1.2e−4
     public void WrittenNumbers_FitTheirSquares_WithAGapThatGrowsWithTheFont(double scale)
     {

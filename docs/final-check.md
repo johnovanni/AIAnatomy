@@ -297,8 +297,9 @@ screen. They are in `.superpowers/sdd/2026-11-25-aianatomy-stage-2-part-b/final/
 - **Check yourself** names the answer chosen ("Not quite: you chose …"), so a second wrong answer is read out too.
 - **The connection-chip sentence** is polite live text (ruling 4).
 - **Still not heard with a screen reader:** every live-text change of Part B needs an owner Narrator pass.
-- Renders of this wave: `render-fixwave-light13.png` and `render-fixwave-dark24.png` in the Part B folder (what was
-  seen is in `fixwave-report.md` there).
+- Renders of this wave: `render-fixwave-light13-<id>.png` and `render-fixwave-dark24-<id>.png` in the Part B folder,
+  where `<id>` is `attention`, `filters-learned`, `image-filters` and `image-network` (what was seen is in
+  `fixwave-report.md` there).
 
 ## Try these yourself (section 4, Part B)
 

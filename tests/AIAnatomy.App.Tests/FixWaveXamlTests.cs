@@ -123,12 +123,15 @@ public class FixWaveXamlTests
     }
 
     // Triage (Task 12a): the faint target rings of the point-cloud plots are the only view of the shape on the plot, so
-    // their colour (the muted text colour) must reach 3:1 against the pane and the screen in both themes.
+    // their colour must reach 3:1 against the pane and the screen in both themes. AA-043: they are drawn in TargetRingBrush
+    // (checked in ThemeContrastTests) with no opacity pushed on top, which would lower the contrast below what is checked.
     [Fact]
-    public void TargetRings_UseTheMutedBrush()
+    public void TargetRings_UseTheRingBrushAtFullStrength()
     {
         string source = File.ReadAllText(Path.Combine(ViewsFolder(), "..", "Controls", "PointCloudPlot.cs"));
-        Assert.Contains("new Pen(MutedBrush, 1), Markers(target.", source);
+        Assert.Contains("new Pen(TargetRingBrush, 1), Markers(target.", source);
+        Assert.Contains("new Pen(TargetRingBrush, 1), Markers([at with", source);
+        Assert.DoesNotContain("PushOpacity", source);
     }
 
     // Final review M15: lesson 4.10's captions say that arrows past the ±2 plot are cut off, and why β hugs the axis.

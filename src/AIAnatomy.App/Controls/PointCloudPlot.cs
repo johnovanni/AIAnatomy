@@ -37,14 +37,21 @@ public sealed class PointCloudPlot : ChartBase
     public static readonly DependencyProperty AxisLimitProperty = Register(nameof(AxisLimit), 3.0);
     public static readonly DependencyProperty FitToDataProperty = Register(nameof(FitToData), false);
     public static readonly DependencyProperty PreferredPlotSideProperty = Register(nameof(PreferredPlotSide), UnboundedSide);
+    public static readonly DependencyProperty TargetRingBrushProperty = DependencyProperty.Register(nameof(TargetRingBrush), typeof(Brush),
+        typeof(PointCloudPlot), new FrameworkPropertyMetadata(Brushes.Gray, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public PointCloudPlot()
     {
+        SetResourceReference(TargetRingBrushProperty, "TargetRingBrush");
         Focusable = true;
         ToolTipService.SetInitialShowDelay(this, 200);
         AutomationProperties.SetName(this, "Point cloud");   // a lab may set its own name
         AutomationProperties.SetHelpText(this, SummaryText());
     }
+
+    /// <summary>The colour of the target shape's rings: a solid theme colour, lighter than the points but at least 3:1 on every
+    /// background (AA-043; it used to be the muted text colour at 55% opacity, which fell to about 2.6:1 in Light).</summary>
+    public Brush TargetRingBrush { get => (Brush)GetValue(TargetRingBrushProperty); set => SetValue(TargetRingBrushProperty, value); }
 
     /// <summary>The current points, drawn as solid squares.</summary>
     public IReadOnlyList<Point>? Points { get => (IReadOnlyList<Point>?)GetValue(PointsProperty); set => SetValue(PointsProperty, value); }
@@ -175,9 +182,7 @@ public sealed class PointCloudPlot : ChartBase
         dc.PushClip(new RectangleGeometry(frame.Plot));
         if (TargetPoints is { Count: > 0 } target)
         {
-            dc.PushOpacity(0.55);
-            dc.DrawGeometry(null, new Pen(MutedBrush, 1), Markers(target.Select(p => frame.Map(p.X, p.Y)), r, ring: true));
-            dc.Pop();
+            dc.DrawGeometry(null, new Pen(TargetRingBrush, 1), Markers(target.Select(p => frame.Map(p.X, p.Y)), r, ring: true));
         }
         if (Points is { Count: > 0 } points)
             dc.DrawGeometry(Series1Brush, null, Markers(points.Select(p => frame.Map(p.X, p.Y)), r, ring: false));
@@ -290,11 +295,7 @@ public sealed class PointCloudPlot : ChartBase
         var items = new List<(string Text, Action<DrawingContext, Point> Key)>();
         if (TargetPoints is { Count: > 0 })
             items.Add(($"{TargetLabel} (faint rings)", (d, at) =>
-            {
-                d.PushOpacity(0.55);
-                d.DrawGeometry(null, new Pen(MutedBrush, 1), Markers([at with { X = at.X - r * 2.5 }, at, at with { X = at.X + r * 2.5 }], r, ring: true));
-                d.Pop();
-            }));
+                d.DrawGeometry(null, new Pen(TargetRingBrush, 1), Markers([at with { X = at.X - r * 2.5 }, at, at with { X = at.X + r * 2.5 }], r, ring: true))));
         if (Points is { Count: > 0 })
             items.Add(($"{PointsLabel} (solid squares)", (d, at) =>
                 d.DrawGeometry(Series1Brush, null, Markers([at with { X = at.X - r * 2.5 }, at, at with { X = at.X + r * 2.5 }], r, ring: false))));

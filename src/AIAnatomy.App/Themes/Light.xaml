@@ -22,6 +22,8 @@
     <SolidColorBrush x:Key="Series3Brush" Color="#2E7D32" />
     <SolidColorBrush x:Key="Series4Brush" Color="#6A3D9A" />
     <SolidColorBrush x:Key="AxisBrush" Color="#5F5C56" />
+    <!-- The point-cloud plots' target rings: lighter than the points, at least 3.2:1 on Window, Surface and Screen (AA-043). -->
+    <SolidColorBrush x:Key="TargetRingBrush" Color="#858380" />
     <SolidColorBrush x:Key="BlockedBrush" Color="#C9C9C9" />
     <SolidColorBrush x:Key="BlockedLineBrush" Color="#6E6E6E" />
     <SolidColorBrush x:Key="ScrollTrackBrush" Color="#E9E7E2" />

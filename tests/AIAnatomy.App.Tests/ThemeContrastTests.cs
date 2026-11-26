@@ -100,15 +100,16 @@ public class ThemeContrastTests
             Assert.True(Contrast(theme, fg, bg) >= 4.5, $"{theme} {fg} on {bg}: {Contrast(theme, fg, bg):F2}");
     }
 
-    // Triage (Task 12a): the point-cloud plots draw the target shape as faint rings in the muted text colour (a pin in
-    // FixWaveXamlTests checks the control still does); as a graphic they need 3:1 on the pane and on a screen.
+    // Triage (Task 12a), AA-043: the point-cloud plots draw the target shape as faint rings in TargetRingBrush, solid, with no
+    // opacity on top (a pin in FixWaveXamlTests checks the control still does), so the colour checked here is the colour
+    // drawn; as a graphic the rings need 3:1 on the pane and on a screen.
     [Theory]
     [InlineData("Dark")]
     [InlineData("Light")]
     public void TargetRings_MeetThree(string theme)
     {
         foreach (var bg in new[] { "SurfaceBrush", "ScreenBrush", "WindowBrush" })
-            Assert.True(Contrast(theme, "MutedTextBrush", bg) >= 3.0, $"{theme} rings on {bg}: {Contrast(theme, "MutedTextBrush", bg):F2}");
+            Assert.True(Contrast(theme, "TargetRingBrush", bg) >= 3.0, $"{theme} rings on {bg}: {Contrast(theme, "TargetRingBrush", bg):F2}");
     }
 
     [Theory]
