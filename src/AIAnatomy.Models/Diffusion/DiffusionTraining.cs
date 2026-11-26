@@ -17,8 +17,8 @@ public static class DiffusionTraining
 
     /// <summary>
     /// The shipped network, trained offline (about 4 minutes): the same size, more steps. Mean distance to the shape
-    /// (500 samples, seed 1, 100 sampling steps): Spiral 0.032, Circle 0.008, Two moons 0.017, Letter S 0.016, every one
-    /// under 0.04, with coverage at radius 0.05 of 0.96 to 1.00 (docs/decisions.md, Task 10 review).
+    /// (500 samples, seed 1, 100 sampling steps): Spiral 0.0315, Circle 0.0082, Two moons 0.0174, Letter S 0.0162, every one
+    /// under 0.04, with coverage at radius 0.05 of 0.96 to 1.00 (docs/decisions.md, Task 11, as recorded in the files).
     /// </summary>
     public static DiffusionConfig Shipped { get; } = new(Hidden: 128);
     public const int ShippedSteps = 60_000;

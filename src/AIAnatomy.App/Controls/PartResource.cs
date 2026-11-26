@@ -49,9 +49,9 @@ public static class PartResource
         ["search"] = "\uE721",       // Search: looking through the options
         ["classic"] = "\uE71C",      // Filter: classic machine learning, sorting points into groups
         ["reward"] = "\uE734",       // FavoriteStar: the reward that learning chases
-        ["vision"] = "",      // Camera: seeing images
-        ["memory"] = "",      // Save: storing and recalling
-        ["diffusion"] = "",   // Color: an image painted out of noise
+        ["vision"] = "\uE722",       // Camera: seeing images
+        ["memory"] = "\uE74E",       // Save: storing and recalling
+        ["diffusion"] = "\uE790",    // Color: an image painted out of noise
     };
 
     /// <summary>The icon glyph for a part key; a neutral dot for no part.</summary>

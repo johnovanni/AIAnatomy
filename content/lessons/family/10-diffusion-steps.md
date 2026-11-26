@@ -5,7 +5,7 @@ order: 10
 title: Diffusion: the steps
 lab: DiffusionStepsLab
 sources: ho2020, nichol2021, textbook
-idea: Each step takes away a share of the network's guess of the noise; with fewer, bigger steps the points land further from the shape.
+idea: Each step removes a share of the network's guess of the noise; in this lab, fewer, bigger steps land points further from the shape.
 part: diffusion
 ---
 **Adding noise.** The lab spoils the spiral with a straight-line schedule like the one Ho, Jain and Abbeel (2020) used, but with 100 steps instead of their 1,000. β, the noise each step adds, grows from 0.0001 at step 1 to 0.1 at step 100. ᾱ says how much of the shape is left: it falls from 1 to 0.006. Training never walks through the steps one by one: the formula below takes a point to any step t in one jump.
@@ -14,7 +14,7 @@ part: diffusion
 
 **Taking noise out.** Making points runs the other way, from pure noise. Each step takes away a share of the guessed noise, scales the points up and, at every step but the last, adds some fresh randomness. Nichol and Dhariwal (2021) describe how to sample in fewer steps by skipping steps of the schedule: with 10 steps, each one jumps 10 of the 100. The network stays the same; only the jumps change.
 
-**What fewer steps cost.** In the lab, with seed 1, fewer steps land further from the spiral: 0.031 from it on average after 100 steps, against 0.142 after 5, and the 5-step points cover much less of it. With very few steps, how much fresh randomness each step adds matters too; Nichol and Dhariwal report that learning that amount lets a network sample in far fewer steps with little loss of quality.
+**What fewer steps cost.** In the lab, with seed 1, fewer steps land further from the spiral: 0.031 from it on average after 100 steps, against 0.142 after 5, and the 5-step points cover much less of it (coverage is the share of the spiral with a point of the cloud within 0.05). With very few steps, how much fresh randomness each step adds matters too; Nichol and Dhariwal report that learning that amount lets a network sample in far fewer steps with little loss of quality.
 
 *Sources: Ho et al. (2020) for the noise schedule, the network that guesses the noise and the reverse step; Nichol and Dhariwal (2021) for sampling in fewer steps by skipping steps of the schedule, and for learning how much randomness to add. The mean squared error is standard textbook material.*
 
@@ -29,7 +29,7 @@ part: diffusion
 - Closer to it: 0.031 on average, against 0.142
 - The same distance: both runs use the same network
 * Further from it: 0.142 on average, against 0.031
-why: Each of the 5 steps jumps 20 steps of the schedule. The 5-step points land further from the spiral and cover only 28% of it, against 96% after 100 steps, as the lab measures and the app's tests work out again.
+why: Each of the 5 steps jumps 20 steps of the schedule. The 5-step points land further from the spiral and cover only 28% of it, against 96% after 100 steps, as the lab measures and the app checks again.
 see: lab
 checked-by-code: DiffusionSteps_FewerStepsLandFurtherFromTheShape
 

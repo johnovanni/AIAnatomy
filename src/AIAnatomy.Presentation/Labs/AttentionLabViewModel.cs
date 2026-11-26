@@ -16,7 +16,15 @@ public sealed partial class AttentionLabViewModel : LabViewModel
     public const string DefaultLetters = "ABCDEFABCDE";
 
     public const string FutureNote =
-        "Each row is one token looking back; its squares add up to 1. Hatched squares are blocked: a token cannot look at positions after it.";
+        "Each row is one token looking back; its squares add up to 1 (100%). Hatched squares are blocked: a token cannot look at positions after it.";
+
+    /// <summary>How to read the numbers in the attention maps' squares (final fix wave, ruling 2). The weights of a row
+    /// add up to exactly 1, but whole percentages are rounded, so the numbers shown can add up to 99 or 101 (three equal
+    /// weights show as 33, 33 and 33), and a 0 can be a weight under half a percent.</summary>
+    public const string PercentNote =
+        "The number in a square, when there is room for it, is that square's share of its row's attention as a whole percentage. " +
+        "Each row's shares add up to 100; the numbers shown add up to about 100, because of rounding (a 0 can be a share under half a percent). " +
+        "Click a square, or use the arrow keys, for its exact value.";
 
     private readonly IActiveModelService _models;
     private string _lastDefault;

@@ -35,7 +35,7 @@ public sealed partial class DigitNetworkLabViewModel : LabViewModel
     public const double MinDigitSize = DigitImage.MinMark;
 
     public const string EmptyMessage = "Draw a digit first, or pick a sample.";
-    public const string DotMessage = "That's a dot, not a digit yet. Draw the whole digit, or pick a sample.";
+    public const string DotMessage = "That's too small to read as a digit: draw it bigger, or pick a sample.";
     public const string LoadingMessage = "Loading the digits and the network…";
     public const string LoadFailedMessage = "The digits network could not be loaded because of an unexpected problem. Reinstalling the app may fix it.";
 
@@ -189,7 +189,7 @@ public sealed partial class DigitNetworkLabViewModel : LabViewModel
     public string TrainingNote =>
         $"Train it again trains a new network of the same shape from random starting numbers, with the seed, for {N0(DigitTraining.RetrainSteps)} steps " +
         $"(about 11 to 18 seconds on the PC that built the app). The shipped one was trained for {N0(DigitTraining.ShippedSteps)} steps, twice as long, " +
-        "so expect it to be right a little less often: in checks with seeds 1, 2 and 3 it was right on 96.5% to 97.1% of the test digits.";
+        "so expect your network to be right a little less often: in checks with seeds 1, 2 and 3 a retrained network was right on 96.5% to 97.1% of the test digits.";
 
     /// <summary>"It reads this as a 7 (91%)." The percentage is whole, but never rounded up to 100% or down to 0%.</summary>
     public static string PredictionFor(int digit, double probability)
@@ -330,6 +330,7 @@ public sealed partial class DigitNetworkLabViewModel : LabViewModel
         _run?.Dispose();   // never leave an older scope open: the screens would stop lighting
         _run = BeginRun();
         IsTraining = true;
+        TrainingResult = "";   // the last run's result is not this run's (final review M13)
         try
         {
             await Runner.StartAsync(seed);

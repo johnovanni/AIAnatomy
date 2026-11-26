@@ -21,12 +21,14 @@ public sealed class DigitSet
     {
         ImageSize = imageSize;
         _labels = labels;
+        Labels = Array.AsReadOnly(labels);
         _pixels = pixels;
     }
 
     public int Count => _labels.Length;
     public int ImageSize { get; }
-    public IReadOnlyList<int> Labels => _labels;
+    /// <summary>The labels, read-only: the loaded sets are shared across labs (final review M14).</summary>
+    public IReadOnlyList<int> Labels { get; }
 
     public int Label(int index) => _labels[CheckIndex(index)];
 

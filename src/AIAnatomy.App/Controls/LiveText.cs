@@ -95,9 +95,19 @@ public static class LiveText
     public static void Announce(TextBlock text)
     {
         ArgumentNullException.ThrowIfNull(text);
-        if (string.IsNullOrEmpty(text.Text) || !AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged)) return;
+        Announce(text, AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged));
+    }
+
+    /// <summary><see cref="Announce(TextBlock)"/> with whether a screen reader is listening given (so tests can check the
+    /// rule); true when the event was raised.</summary>
+    public static bool Announce(TextBlock text, bool listening)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        if (string.IsNullOrEmpty(text.Text) || !listening) return false;
         // The peer may not exist yet (the block may only just have become visible), so create it.
-        (UIElementAutomationPeer.FromElement(text) ?? UIElementAutomationPeer.CreatePeerForElement(text))
-            ?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        var peer = UIElementAutomationPeer.FromElement(text) ?? UIElementAutomationPeer.CreatePeerForElement(text);
+        if (peer == null) return false;
+        peer.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        return true;
     }
 }

@@ -113,7 +113,8 @@
         <c:Screen ScreenName="real-heads" HorizontalAlignment="Stretch">
             <StackPanel>
                 <TextBlock Style="{StaticResource MutedText}" Text="{Binding RealCaption}" />
-                <c:HeatMap Values="{Binding RealWeights}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}"
+                <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:AttentionLabViewModel.PercentNote}" />
+                <c:HeatMap Values="{Binding RealWeights}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}" CellFormat="Percent"
                            RowAxisTitle="the token that is looking" ColumnAxisTitle="the token it looks at" Minimum="0" Maximum="1"
                            AutomationProperties.Name="Attention weights of the chosen head" />
             </StackPanel>
@@ -192,9 +193,12 @@
                 <ComboBox MinWidth="80" Margin="0,0,16,4" ItemsSource="{Binding HeadNumbers}" SelectedItem="{Binding Head}" AutomationProperties.Name="Induction head" />
             </WrapPanel>
             <c:Screen ScreenName="heat" HorizontalAlignment="Stretch">
-                <c:HeatMap Values="{Binding HeatMap}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}" OutlinedCells="{Binding OutlinedCells}"
+                <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" Text="{x:Static labs:AttentionLabViewModel.PercentNote}" />
+                <c:HeatMap Values="{Binding HeatMap}" RowLabels="{Binding TokenLabels}" ColumnLabels="{Binding TokenLabels}" OutlinedCells="{Binding OutlinedCells}" CellFormat="Percent"
                            RowAxisTitle="the letter that is looking" ColumnAxisTitle="the letter it looks at" Minimum="0" Maximum="1"
                            AutomationProperties.Name="Attention of one head on the example sequence" />
+                </StackPanel>
             </c:Screen>
             <TextBlock Style="{StaticResource MutedText}" Text="{x:Static labs:InductionPanelViewModel.OutlineNote}" />
         </StackPanel>

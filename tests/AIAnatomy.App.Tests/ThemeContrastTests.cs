@@ -100,6 +100,17 @@ public class ThemeContrastTests
             Assert.True(Contrast(theme, fg, bg) >= 4.5, $"{theme} {fg} on {bg}: {Contrast(theme, fg, bg):F2}");
     }
 
+    // Triage (Task 12a): the point-cloud plots draw the target shape as faint rings in the muted text colour (a pin in
+    // FixWaveXamlTests checks the control still does); as a graphic they need 3:1 on the pane and on a screen.
+    [Theory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public void TargetRings_MeetThree(string theme)
+    {
+        foreach (var bg in new[] { "SurfaceBrush", "ScreenBrush", "WindowBrush" })
+            Assert.True(Contrast(theme, "MutedTextBrush", bg) >= 3.0, $"{theme} rings on {bg}: {Contrast(theme, "MutedTextBrush", bg):F2}");
+    }
+
     [Theory]
     [InlineData("Dark")]
     [InlineData("Light")]
@@ -234,7 +245,7 @@ public class ThemeContrastTests
     public void EveryPartKeyHasItsOwnGlyph()
     {
         var glyphs = Parts.All.Select(AIAnatomy.App.Controls.PartResource.Glyph).ToList();
-        Assert.All(glyphs, g => Assert.NotEqual("", g));
+        Assert.All(glyphs, g => Assert.NotEqual("\uE91F", g));
         Assert.Equal(Parts.All.Count, glyphs.Distinct().Count());
     }
 }

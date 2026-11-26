@@ -9,7 +9,7 @@ using AIAnatomy.Models.Training;
 using AIAnatomy.Models.Vision;
 using AIAnatomy.Models.Transformers;
 
-// Builds the two models that ship with the app. Run in Release (about 120 ms per step):
+// Builds the two models that ship with the app. Run in Release (the fables model: 3,000 steps in 517 s with its validation checks, about 0.17 s a step, D20):
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- fables --text content/texts/aesop-fables.txt --out content/models/fables-small.aimodel --steps 3000 --seed 1
 //   dotnet run -c Release --project tools/AIAnatomy.Pretrain -- induction --out content/models/induction-demo.aimodel --seed 1 [--steps 1500]
 // Builds the family networks that ship in content/models/family (Release; the memory network takes about 5 minutes, each diffusion network about 4):

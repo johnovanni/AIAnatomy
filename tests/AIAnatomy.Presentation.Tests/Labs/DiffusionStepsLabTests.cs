@@ -312,6 +312,25 @@ public sealed class DiffusionStepsLabTests
         Assert.Contains("seed 1", lab.MeasuredText);
     }
 
+    // Triage (Task 17): leaving the lab while a run is being worked out drops it: nothing of it is shown afterwards.
+    [Fact]
+    public async Task Deactivate_DuringARun_ShowsNothingOfIt()
+    {
+        var lab = await NewLab();
+        using var reached = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        lab.BeforeSampling = steps => { if (steps == 5) { reached.Set(); release.Wait(); } };
+        var run = lab.ChooseStepsAsync(5);
+        await Task.Run(() => reached.Wait());
+        lab.Deactivate();
+        release.Set();
+        await run;
+        await lab.WorkCompleted;
+        Assert.Empty(lab.Frames);
+        Assert.Equal("", lab.ResultText);
+        Assert.DoesNotContain("5 steps", lab.MeasuredText);
+    }
+
     // ---- screens ----
 
     [Fact]

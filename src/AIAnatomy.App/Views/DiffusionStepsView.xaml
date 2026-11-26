@@ -52,14 +52,14 @@
                 <c:LineChart Series="{Binding ScheduleSeries}" XAxisTitle="step t" YAxisTitle="value" LastValueLabel="ends at"
                              AutomationProperties.Name="Chart of the noise schedule: alpha bar, how much of the shape is left, and beta, the noise each step adds, with the step shown marked" />
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0"
-                           Text="ᾱ (alpha bar) falls from 1, all of the shape, to 0.006 at step 100. β (beta), the noise each step adds, rises in a straight line from 0.0001 to 0.1. The dotted line, t, marks the step shown and rises from the axis to ᾱ there; the legend gives the value each line ends at." />
+                           Text="ᾱ (alpha bar) falls from 1, all of the shape, to 0.006 at step 100. β (beta), the noise each step adds, rises in a straight line from 0.0001 to 0.1: it is small, at most 0.1, so on this 0 to 1 scale its line stays close to the axis. The dotted line, t, marks the step shown and rises from the axis to ᾱ there; the legend gives the value each line ends at." />
             </StackPanel>
         </c:Screen>
 
         <!-- 2. Prediction: the network's guess of the noise, at the same step. -->
         <TextBlock Style="{StaticResource SubheadingText}" Margin="0,16,0,4" Text="2. The network's guess of the noise" />
         <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,6"
-                   Text="At the same step t, the network is shown each noisy point and t, and guesses the noise that was added. For 20 marked points (large circles), two arrows start at the point and show the noise as it is, its x and y, not scaled: solid with open heads for the noise really added, dashed with filled heads for the network's guess. The closer the two arrows, the better the guess." />
+                   Text="At the same step t, the network is shown each noisy point and t, and guesses the noise that was added. For 20 marked points (large circles), two arrows start at the point and show the noise as it is, its x and y, not scaled: solid with open heads for the noise really added, dashed with filled heads for the network's guess. The closer the two arrows, the better the guess. An arrow that runs past the edge of the plot is cut off there, without its head." />
         <c:Screen ScreenName="prediction" HorizontalAlignment="Stretch">
             <StackPanel>
                 <c:PointCloudPlot MaxWidth="600" PreferredPlotSide="600" AxisLimit="2" HorizontalAlignment="Stretch"

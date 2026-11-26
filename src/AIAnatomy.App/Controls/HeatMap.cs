@@ -6,6 +6,15 @@ using AIAnatomy.Presentation.Visuals;
 
 namespace AIAnatomy.App.Controls;
 
+/// <summary>How the numbers inside a heat map's squares are written.</summary>
+public enum HeatMapCellFormat
+{
+    /// <summary>Decimals (three, two or one, as many as fit).</summary>
+    Decimal,
+    /// <summary>Shares from 0 to 1 as whole percentages without the % sign ("35"), such as attention weights.</summary>
+    Percent,
+}
+
 /// <summary>
 /// A grid of numbers drawn as squares on a single-hue ramp (light = small, dark = large), with row and column labels,
 /// a scale, and a readout giving the selected square's exact value. Squares that are −∞ or not a number are
@@ -26,6 +35,7 @@ public sealed class HeatMap : ChartBase
     public static readonly DependencyProperty MinimumProperty = Register(nameof(Minimum), double.NaN);
     public static readonly DependencyProperty MaximumProperty = Register(nameof(Maximum), double.NaN);
     public static readonly DependencyProperty ShowCellValuesProperty = Register(nameof(ShowCellValues), true);
+    public static readonly DependencyProperty CellFormatProperty = Register(nameof(CellFormat), HeatMapCellFormat.Decimal);
 
     public static readonly DependencyProperty OutlinedCellsProperty = Register<IReadOnlyList<GridCell>?>(nameof(OutlinedCells), null);
 
@@ -64,6 +74,8 @@ public sealed class HeatMap : ChartBase
     public double Maximum { get => (double)GetValue(MaximumProperty); set => SetValue(MaximumProperty, value); }
     /// <summary>Write a short value inside each square when there is room.</summary>
     public bool ShowCellValues { get => (bool)GetValue(ShowCellValuesProperty); set => SetValue(ShowCellValuesProperty, value); }
+    /// <summary>How the numbers in the squares are written: decimals (the default) or whole percentages.</summary>
+    public HeatMapCellFormat CellFormat { get => (HeatMapCellFormat)GetValue(CellFormatProperty); set => SetValue(CellFormatProperty, value); }
     /// <summary>Squares to draw with a heavy outline (a shape, not a colour), such as the cells a lesson is pointing at. Cells outside the grid are ignored.</summary>
     public IReadOnlyList<GridCell>? OutlinedCells { get => (IReadOnlyList<GridCell>?)GetValue(OutlinedCellsProperty); set => SetValue(OutlinedCellsProperty, value); }
     public GridCell? SelectedCell { get => (GridCell?)GetValue(SelectedCellProperty); set => SetValue(SelectedCellProperty, value); }
@@ -105,7 +117,7 @@ public sealed class HeatMap : ChartBase
         double captionHeight = caption == null ? 0 : caption.Height + Gap;
         double rowLabelWidth = Enumerable.Range(0, rows).Max(r => Text(RowName(r), label, Foreground, BoldFace).Width) + 12;
         // The largest square grows with the text, so the numbers inside still fit at large text sizes.
-        double valueRoom = ShowCellValues ? ValueWidth(3) + 8 : 0;
+        double valueRoom = ShowCellValues ? RoomFor(Metrics()[0]) : 0;
         double maxCell = Math.Max(MaxCell, valueRoom);
         double cell = double.IsFinite(width) ? Math.Clamp((width - rowLabelWidth - 2) / cols, 4, maxCell) : Math.Max(UnboundedCell, valueRoom);
         double columnLabelWidth = Enumerable.Range(0, cols).Max(c => Text(ColumnName(c), label, Foreground, BoldFace).Width);
@@ -172,9 +184,10 @@ public sealed class HeatMap : ChartBase
 
         // The squares.
         double valueSize = ValueSize;
-        // Three decimals if they fit, else two, else one; otherwise no numbers in the squares (the readout always has the exact value).
-        int decimals = Decimals(l.Cell);
-        bool writeValues = ShowCellValues && decimals >= 0;
+        // Three decimals if they fit, else two, else one (or whole percentages if they fit); otherwise no numbers in the
+        // squares (the readout always has the exact value).
+        int decimals = ShowCellValues ? Decimals(l.Cell) : -1;
+        bool writeValues = decimals >= 0;
         for (int r = 0; r < rows; r++)
         for (int c = 0; c < cols; c++)
         {
@@ -185,7 +198,7 @@ public sealed class HeatMap : ChartBase
             dc.DrawRectangle(new SolidColorBrush(colour), null, rect);
             if (writeValues)
             {
-                var text = Number(NumberText.ShortWithDecimals(v, decimals), valueSize, ChartMath.TextOn(colour));
+                var text = Number(CellString(v, decimals), valueSize, ChartMath.TextOn(colour));
                 dc.DrawText(text, new Point(rect.X + (rect.Width - text.Width) / 2, rect.Y + (rect.Height - text.Height) / 2));
             }
         }
@@ -223,8 +236,8 @@ public sealed class HeatMap : ChartBase
         double top = l.GridTop + values.GetLength(0) * l.Cell + Gap;
         bool wraps = LegendWraps(ActualWidth, values);
         double barHeight = (wraps ? l.LegendHeight / 2 : l.LegendHeight) - 8;
-        var minText = Number(NumberText.Short(min), label, Foreground);
-        var maxText = Number(NumberText.Short(max), label, Foreground);
+        var minText = Number(LegendNumber(min), label, Foreground);
+        var maxText = Number(LegendNumber(max), label, Foreground);
         double x = 0;
         dc.DrawText(minText, new Point(x, top + (barHeight - minText.Height) / 2));
         x += minText.Width + 8;
@@ -263,8 +276,8 @@ public sealed class HeatMap : ChartBase
         if (!AnyBlocked(values) || !double.IsFinite(width)) return false;
         var (min, max) = Range(values);
         double label = LabelSize;
-        double needed = Number(NumberText.Short(min), label, Foreground).Width + 8 + RampBarWidth(width) + 8
-                        + Number(NumberText.Short(max), label, Foreground).Width + 24 + (Text("Ag", label, Foreground).Height + 8)
+        double needed = Number(LegendNumber(min), label, Foreground).Width + 8 + RampBarWidth(width) + 8
+                        + Number(LegendNumber(max), label, Foreground).Width + 24 + (Text("Ag", label, Foreground).Height + 8)
                         + Text(BlockedText, label, Foreground).Width;
         return needed > width;
     }
@@ -306,15 +319,116 @@ public sealed class HeatMap : ChartBase
     /// <summary>The size of the readout line under the grid: the body text size, never under <see cref="MinValueTextSize"/>.</summary>
     public double ReadoutTextSize => Math.Max(MinValueTextSize, FontSize);
 
-    /// <summary>How many decimals the numbers in the squares have at the present width (3, 2 or 1), or −1 when no
-    /// numbers are written there (the readout still gives every value).</summary>
+    /// <summary>How many decimals the numbers in the squares have at the present width (3, 2 or 1; 0 for whole
+    /// percentages), or -1 when no numbers are written there (the readout still gives every value).</summary>
     public int CellDecimals => HasData && ShowCellValues ? Decimals(ComputeLayout(ActualWidth).Cell) : -1;
 
-    private int Decimals(double cell) =>
-        ValueWidth(3) + 6 <= cell ? 3 : ValueWidth(2) + 6 <= cell ? 2 : ValueWidth(1) + 6 <= cell ? 1 : -1;
+    /// <summary>The side of a square at the present width, in DIPs.</summary>
+    public double CellSize => HasData ? ComputeLayout(ActualWidth).Cell : 0;
 
-    /// <summary>Width of a typical number written in a square with this many decimals (a negative one, the widest).</summary>
-    private double ValueWidth(int decimals) => Number(NumberText.ShortWithDecimals(-0.5, decimals), ValueSize, Foreground).Width;
+    /// <summary>The width of the widest number written in a square now (0 when none are written).</summary>
+    public double WidestCellNumber => CellDecimals is var d and >= 0 ? Metrics()[OptionIndex(d)].Widest : 0;
+
+    /// <summary>The smallest gap now between numbers written in neighbouring squares, across and down (infinity when no
+    /// two written numbers are neighbours, or none are written).</summary>
+    public double NarrowestNumberGap => CellDecimals is var d and >= 0 ? Gaps(Metrics()[OptionIndex(d)], CellSize) : double.PositiveInfinity;
+
+    /// <summary>The number written in a square now, or null when none is (blocked, or no room).</summary>
+    public string? CellNumberText(int row, int column)
+    {
+        int d = CellDecimals;
+        if (d < 0) return null;
+        double v = Values![row, column];
+        return IsBlocked(v) ? null : CellString(v, d);
+    }
+
+    // The gap between numbers in neighbouring squares grows with the text: 0.4 em (final fix wave, ruling 1). A fixed
+    // 6 px let "−0.860−0.253" read as one number at 24 pt (AA-036).
+    private double NumberGap => 0.4 * ValueSize;
+
+    private string CellString(double v, int decimals) =>
+        CellFormat == HeatMapCellFormat.Percent ? NumberText.WholePercent(v) : NumberText.Cell(v, decimals);
+
+    private string LegendNumber(double v) =>
+        CellFormat == HeatMapCellFormat.Percent ? NumberText.WholePercent(v) + "%" : NumberText.Short(v);
+
+    // The ways of writing the numbers, best first: three, two, one decimal; or whole percentages.
+    private int[] Options => CellFormat == HeatMapCellFormat.Percent ? [0] : [3, 2, 1];
+    private int OptionIndex(int decimals) => Array.IndexOf(Options, decimals);
+
+    /// <summary>What the numbers of the map take up when written one way, measured from the values actually in the map
+    /// (final review I3): the widest number, the widest two side by side, the tallest ink, and whether any two written
+    /// numbers are neighbours across or down.</summary>
+    private sealed record NumberMetrics(double Widest, double WidestPair, double Height, bool AnyAcross, bool AnyDown);
+
+    private (double[,] Values, long Fingerprint, double Size, HeatMapCellFormat Format, double Dip, NumberMetrics[] Metrics)? _metrics;
+
+    private NumberMetrics[] Metrics()
+    {
+        var values = Values!;
+        long fingerprint = 17;
+        foreach (double v in values) fingerprint = unchecked(fingerprint * 31 + BitConverter.DoubleToInt64Bits(v));
+        double dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        if (_metrics is { } m && ReferenceEquals(m.Values, values) && m.Fingerprint == fingerprint && m.Size == ValueSize
+            && m.Format == CellFormat && m.Dip == dip)
+            return m.Metrics;
+        var result = Options.Select(d => MeasureNumbers(values, d)).ToArray();
+        _metrics = (values, fingerprint, ValueSize, CellFormat, dip, result);
+        return result;
+    }
+
+    private NumberMetrics MeasureNumbers(double[,] values, int decimals)
+    {
+        int rows = values.GetLength(0), cols = values.GetLength(1);
+        var sizes = new Dictionary<string, (double Width, double Height)>();
+        var w = new double[rows, cols];
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+            {
+                double v = values[r, c];
+                if (IsBlocked(v)) { w[r, c] = -1; continue; }
+                string s = CellString(v, decimals);
+                if (!sizes.TryGetValue(s, out var size))
+                {
+                    var text = Number(s, ValueSize, Foreground);
+                    sizes[s] = size = (text.Width, text.Extent);
+                }
+                w[r, c] = size.Width;
+            }
+        double widest = 0, pair = 0;
+        bool across = false, down = false;
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+            {
+                if (w[r, c] < 0) continue;
+                widest = Math.Max(widest, w[r, c]);
+                if (c > 0 && w[r, c - 1] >= 0) { across = true; pair = Math.Max(pair, w[r, c - 1] + w[r, c]); }
+                if (r > 0 && w[r - 1, c] >= 0) down = true;
+            }
+        double height = sizes.Count == 0 ? 0 : sizes.Values.Max(x => x.Height);
+        return new NumberMetrics(widest, pair, height, across, down);
+    }
+
+    // The smallest gap between neighbouring numbers in squares of this size. Across: each number is centred in its own
+    // square, so two neighbours are a square apart centre to centre, less half of each. Down: the ink of one number
+    // above the next.
+    private static double Gaps(NumberMetrics m, double cell) =>
+        Math.Min(m.AnyAcross ? cell - m.WidestPair / 2 : double.PositiveInfinity, m.AnyDown ? cell - m.Height : double.PositiveInfinity);
+
+    // Each number stays inside its own square (a pixel to spare each side) and keeps the gap from its neighbours.
+    private bool Fits(NumberMetrics m, double cell) => m.Widest + 2 <= cell && Gaps(m, cell) >= NumberGap;
+
+    // The square size at which numbers written this way just fit.
+    private double RoomFor(NumberMetrics m) =>
+        Math.Max(m.Widest + 2, Math.Max(m.AnyAcross ? m.WidestPair / 2 + NumberGap : 0, m.AnyDown ? m.Height + NumberGap : 0));
+
+    private int Decimals(double cell)
+    {
+        var metrics = Metrics();
+        for (int i = 0; i < metrics.Length; i++)
+            if (Fits(metrics[i], cell)) return Options[i];
+        return -1;
+    }
 
     private (double Min, double Max) Range(double[,] values)
     {

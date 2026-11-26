@@ -470,4 +470,12 @@ public sealed class MemoryNetworkLabTests : IDisposable
         Assert.Equal("", lab.RnnSample);
         Assert.Equal(2, lab.Comparison.Count);
     }
+
+    // Final review M11: the live speed note names the retrained network's size from the code, not a copy of the number.
+    [Fact]
+    public void LiveSpeedNote_NamesTheRetrainedHiddenSize()
+    {
+        Assert.Contains($"(hidden size {MemoryTraining.RetrainHidden})", MemoryNetworkLabViewModel.LiveSpeedNote);
+        Assert.True(MemoryTraining.RetrainHidden < MemoryTraining.ShippedHidden, "the note says the retrained network is smaller");
+    }
 }

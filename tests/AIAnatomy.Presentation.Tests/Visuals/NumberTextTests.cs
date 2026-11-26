@@ -40,6 +40,31 @@ public class NumberTextTests
     public void ShortWithDecimals_CanUseFewerDecimals(double value, int decimals, string text) =>
         Assert.Equal(text, NumberText.ShortWithDecimals(value, decimals));
 
+    // Final review I3: the numbers in heat-map squares are fixed-point (never 1.2e−4), and a value that rounds to zero
+    // carries no minus sign (never "−0.000").
+    [Theory]
+    [InlineData(0.00012, 3, "0.000")]
+    [InlineData(-0.00012, 3, "0.000")]
+    [InlineData(0.00012, 1, "0.0")]
+    [InlineData(-25.625, 3, "−25.625")]
+    [InlineData(-25.625, 2, "−25.63")]
+    [InlineData(90, 3, "90")]
+    [InlineData(0, 2, "0")]
+    [InlineData(0.41273849201, 2, "0.41")]
+    [InlineData(12345.6, 3, "12,346")]
+    public void Cell_IsFixedPoint(double value, int decimals, string text) => Assert.Equal(text, NumberText.Cell(value, decimals));
+
+    // Final review I3 / ruling 2: attention weights as whole percentages, without the % sign (the caption says so).
+    [Theory]
+    [InlineData(0.35, "35")]
+    [InlineData(1.0, "100")]
+    [InlineData(0.004, "0")]
+    [InlineData(0.005, "1")]
+    [InlineData(0.125, "13")]
+    [InlineData(0.0, "0")]
+    public void WholePercent_RoundsToAWholeNumber(double probability, string text) =>
+        Assert.Equal(text, NumberText.WholePercent(probability));
+
     [Fact]
     public void Short_AsAMethodGroup_IgnoresTheIndex()
     {
@@ -60,7 +85,12 @@ public class NumberTextTests
     [Theory]
     [InlineData(0.41273849201, "41.27%")]
     [InlineData(1, "100.00%")]
-    [InlineData(0.00001, "0.00%")]
+    [InlineData(0, "0.00%")]
+    // Final review M12: never "100.00%" for a chance under 1 nor "0.00%" for one over 0, the rule lesson 4.7's prediction
+    // line follows too ("over 99%"), so the bars and the line never seem to disagree.
+    [InlineData(0.99996, ">99.99%")]
+    [InlineData(0.00001, "<0.01%")]
+    [InlineData(0.99994, "99.99%")]
     public void Percent_HasTwoDecimals(double value, string text) => Assert.Equal(text, NumberText.Percent(value));
 
     [Fact]

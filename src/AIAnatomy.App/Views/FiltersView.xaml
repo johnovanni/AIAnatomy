@@ -87,7 +87,7 @@
 
         <!-- The filter: presets (hand-made and learned) and the nine editable numbers. -->
         <TextBlock Style="{StaticResource SubheadingText}" Margin="0,12,0,4" Text="The filter" />
-        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,4"
+        <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4"
                    Text="Each square of a filter is red above zero (+), blue below zero (−) and near-white about zero, scaled to that filter's largest number. Point at a filter to read its numbers." />
         <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,4,0,4" Text="Made by hand" />
         <ItemsControl ItemsSource="{x:Static labs:FiltersLabViewModel.HandMadePresets}" ItemTemplate="{StaticResource PresetButton}" Focusable="False"
@@ -128,6 +128,7 @@
                     <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4" Text="{Binding ImageCaption}"
                                MaxWidth="{Binding ActualWidth, ElementName=ImageMap}" HorizontalAlignment="Left" />
                     <c:HeatMap x:Name="ImageMap" Values="{Binding Image}" Minimum="0" Maximum="1" HorizontalAlignment="Left"
+                               RampLowColor="{DynamicResource InkLowColor}" RampMidColor="{DynamicResource InkMidColor}" RampHighColor="{DynamicResource InkHighColor}"
                                RowLabels="{x:Static labs:FiltersLabViewModel.PositionLabels}" ColumnLabels="{x:Static labs:FiltersLabViewModel.PositionLabels}"
                                RowAxisTitle="row" ColumnAxisTitle="column"
                                AutomationProperties.Name="The picture: how much ink in each pixel, from 0 to 1" />
@@ -146,8 +147,8 @@
                                AutomationProperties.Name="The feature map: the filter's sum centred on each pixel" />
                     <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,6,0,0" Text="{x:Static labs:FiltersLabViewModel.CountText}"
                                MaxWidth="{Binding ActualWidth, ElementName=FeatureMap}" HorizontalAlignment="Left" />
-                    <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0"
-                               Text="Red is above zero, blue below zero and near-white about zero; the number is written in each square. Pixels beyond the edge count as 0."
+                    <TextBlock Style="{StaticResource BodyText}" Margin="0,4,0,0"
+                               Text="Red is above zero, blue below zero and near-white about zero; the number is written in each square when there is room (point at a square for its number). Pixels beyond the edge count as 0."
                                MaxWidth="{Binding ActualWidth, ElementName=FeatureMap}" HorizontalAlignment="Left" />
                     <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0" Text="{x:Static labs:FiltersLabViewModel.MapNote}"
                                MaxWidth="{Binding ActualWidth, ElementName=FeatureMap}" HorizontalAlignment="Left" />

@@ -197,7 +197,8 @@ public sealed class DigitNetworkLabTests
         // The shipped network reads a lone dot as a 4 (0.37), so the lab says it is not a digit instead.
         var lab = await NewLab();
         lab.UseDrawing([[(0.4, 0.6)]]);
-        Assert.Equal("That's a dot, not a digit yet. Draw the whole digit, or pick a sample.", lab.Message);
+        // Triage (Task 14): one message for a dot and for a tiny real digit.
+        Assert.Equal("That's too small to read as a digit: draw it bigger, or pick a sample.", lab.Message);
         Assert.Equal(DigitNetworkLabViewModel.DotMessage, lab.PredictionText);
         Assert.False(lab.HasPrediction);
         Assert.Empty(lab.Probabilities);
@@ -279,6 +280,9 @@ public sealed class DigitNetworkLabTests
         Assert.Contains("4,000", lab.TrainingNote);
         Assert.Contains("same", lab.TrainingNote);
         Assert.DoesNotContain("smaller", lab.TrainingNote);
+        // Final review I2: the weaker one is the learner's retrained network, not the shipped one; "it" read as the shipped one.
+        Assert.Contains("so expect your network to be right a little less often: in checks with seeds 1, 2 and 3 a retrained network " +
+                        "was right on 96.5% to 97.1% of the test digits.", lab.TrainingNote);
         Assert.Equal(DigitTraining.RetrainSteps, new DigitNetworkLabViewModel(new FamilyModels(TestEnvironment.Content)).RetrainSteps);
     }
 
@@ -382,6 +386,43 @@ public sealed class DigitNetworkLabTests
         Assert.False(lab.UsingTrainedNetwork);
         Assert.False(lab.Runner.IsRunning);
         Assert.Equal(7, lab.Seed);
+    }
+
+    // Final review M13: a second run does not leave the first run's result on screen while it trains.
+    [Fact]
+    public async Task ASecondRun_ClearsTheFirstRunsResult_WhileItTrains()
+    {
+        var lab = await NewLab(retrainSteps: 3);
+        await lab.TrainAgainCommand.ExecuteAsync(null);
+        Assert.NotEqual("", lab.TrainingResult);
+        string during = "not looked at";
+        await WhileTraining(lab, () => during = lab.TrainingResult);
+        Assert.Equal("", during);
+        Assert.StartsWith("Trained again with seed 1", lab.TrainingResult);
+    }
+
+    // Triage (Task 14): Reset while the trained network is being measured, after the steps and before the result, keeps
+    // the shipped network and shows no result for the abandoned run.
+    [Fact]
+    public async Task Reset_DuringMeasurement_KeepsTheShippedNetwork_AndShowsNoResult()
+    {
+        var lab = await NewLab(retrainSteps: 3);
+        var shipped = lab.Probabilities;
+        using var reached = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        lab.BeforeMeasuringTrained = () => { reached.Set(); release.Wait(); };
+        var run = lab.TrainAgainCommand.ExecuteAsync(null);
+        await Task.Run(() => reached.Wait());
+        lab.Reset();
+        release.Set();
+        await run;
+        await lab.WorkCompleted;
+        Assert.False(lab.UsingTrainedNetwork);
+        Assert.Null(lab.TrainedAccuracy);
+        Assert.Equal("", lab.TrainingResult);
+        Assert.Equal(shipped, lab.Probabilities);
+        Assert.False(lab.IsTraining);
+        Assert.True(lab.TrainAgainCommand.CanExecute(null));
     }
 
     [Fact]

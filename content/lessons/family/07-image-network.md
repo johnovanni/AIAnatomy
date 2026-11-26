@@ -5,7 +5,7 @@ order: 7
 title: Image networks: the whole network
 lab: DigitNetworkLab
 sources: lecun1998, alpaydin1998, textbook
-idea: An image network stacks layers of learned filters and pooling; a fully connected layer then turns what they found into probabilities.
+idea: An image network stacks layers of learned filters and pooling; fully connected layers and softmax then turn what they found into probabilities.
 part: vision
 ---
 The lab's network reads a digit in stages, following the pattern LeCun and colleagues (1998) described for reading handwritten digits: layers of learned filters, each followed by a step that shrinks the maps, then fully connected layers.
@@ -29,7 +29,7 @@ The digits come from Alpaydin and Kaynak (1998). They are coarse: each pixel is 
 - Right on 1,392 of 1,740, about 80%
 * Right on 1,705 of 1,740, about 98%
 - Right on 1,740 of 1,740, every one
-why: Its most probable digit matched the label on 1,705 of the 1,740 test digits (98.0%), as recorded when it was built and worked out again by the app's tests. That is new handwriting of the same coarse 8 by 8 kind; on drawings unlike its training digits it can do worse.
+why: Its most probable digit matched the label on 1,705 of the 1,740 test digits (98.0%), as recorded when it was built and checked again by the app. That is new handwriting of the same coarse 8 by 8 kind; on drawings unlike its training digits it can do worse.
 see: lab
 checked-by-code: DigitNetwork_ShippedAccuracyOnTheTestDigits
 

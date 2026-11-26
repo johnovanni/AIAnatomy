@@ -200,9 +200,11 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 <!-- The sentence for the chip under the mouse or the keyboard, in words on the page (a tooltip alone would need a mouse).
-                     Not live (Stage 2B ruling X): each chip already carries the sentence as its HelpText, which a screen reader
-                     reads with the chip, so a live copy here would say it twice. -->
-                <TextBlock x:Name="ConnectionNote" Style="{StaticResource BodyText}" Margin="2,4,0,0" MinHeight="{DynamicResource BodyFontSize}" />
+                     A polite live region (final fix wave, ruling 4): a chip the mouse moves to is not read by a screen reader, so
+                     without it the sentence would not be said at all. With the keyboard it may be said twice (the chip's HelpText
+                     carries it too); that is the smaller harm. -->
+                <TextBlock x:Name="ConnectionNote" Style="{StaticResource BodyText}" Margin="2,4,0,0" MinHeight="{DynamicResource BodyFontSize}"
+                           c:LiveText.IsLive="True" />
             </StackPanel>
 
             <!-- 7. Back and Next follow the contents order. -->

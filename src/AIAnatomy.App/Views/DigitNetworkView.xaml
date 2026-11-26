@@ -82,6 +82,7 @@
                         <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,4" Text="{Binding ImageCaption}"
                                    MaxWidth="{Binding ActualWidth, ElementName=ImageMap}" HorizontalAlignment="Left" />
                         <c:HeatMap x:Name="ImageMap" Values="{Binding Image}" Minimum="0" Maximum="1" HorizontalAlignment="Left"
+                                   RampLowColor="{DynamicResource InkLowColor}" RampMidColor="{DynamicResource InkMidColor}" RampHighColor="{DynamicResource InkHighColor}"
                                    RowLabels="{x:Static labs:DigitNetworkLabViewModel.PositionLabels}" ColumnLabels="{x:Static labs:DigitNetworkLabViewModel.PositionLabels}"
                                    RowAxisTitle="row" ColumnAxisTitle="column"
                                    AutomationProperties.Name="The picture the network reads: how much ink in each pixel, from 0 to 1" />

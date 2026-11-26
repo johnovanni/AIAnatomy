@@ -14,9 +14,9 @@ Both networks learned from the same fables with the same training budget, and we
 
 **How far back it remembers** is measured live when the lab opens: the loss at each position of those windows. Both curves fall steeply over the first few characters, then stay about level. At this size, neither network gets much help from characters more than about 8 back.
 
-So why did attention largely replace recurrence for language? Vaswani and colleagues (2017) pointed to two things. A recurrent network passes information through every step in between, and Bengio, Simard and Frasconi (1994) showed that learning long-range links that way by gradient descent gets harder as the gap grows; attention links any two positions in one step. And a recurrent network must go one character after another, while a transformer trains on every position of a window at once, which suits parallel hardware such as graphics chips. This app runs on the processor (CPU), so its speed numbers can't show that.
+So why did attention largely replace recurrence for language? Vaswani and colleagues (2017) weighed three things, including these two. A recurrent network passes information through every step between, and Bengio, Simard and Frasconi (1994) showed that learning long-range links that way by gradient descent gets harder as the gap grows; attention links any two positions in one step. And a recurrent network must go one character after another, while a transformer trains on every position of a window at once, which suits parallel hardware such as graphics chips. This app runs on the processor (CPU), so its speed numbers can't show that.
 
-Recurrent networks are still used in places, among them the LSTM of Hochreiter and Schmidhuber (1997), a memory network built to keep information for longer.
+Recurrent networks are still in use, among them the LSTM of Hochreiter and Schmidhuber (1997), a memory network built to keep information for longer.
 
 *Sources: Elman (1990) for the simple recurrent network; Bengio, Simard and Frasconi (1994) for why long-range links are hard to learn this way; Vaswani et al. (2017) for both reasons; Hochreiter and Schmidhuber (1997) for the LSTM. The history is standard textbook material.*
 

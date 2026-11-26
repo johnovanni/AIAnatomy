@@ -4,7 +4,7 @@
              xmlns:c="clr-namespace:AIAnatomy.App.Controls"
              xmlns:v="clr-namespace:AIAnatomy.App.Views">
     <!-- DataContext: CheckYourselfViewModel. Answers are buttons (keyboard: Tab and Enter or Space). Right or wrong is said in
-         words ("Right." / "Not quite."), never by colour alone, and the feedback is a polite live region. No sound, no score. -->
+         words ("Right: you chose …" / "Not quite: you chose …"), never by colour alone, and the feedback is a polite live region. No sound, no score. -->
     <UserControl.Resources>
         <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
         <BooleanToVisibilityConverter x:Key="BoolToVisible" />
@@ -66,7 +66,7 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <!-- "Right." or "Not quite." and why, as words on the page. The text block is the live region (read out politely). -->
+                            <!-- "Right" or "Not quite", the answer chosen, and why, as words on the page. The text block is the live region (read out politely). -->
                             <StackPanel Visibility="{Binding Feedback, Converter={StaticResource VisibleIfSet}}">
                                 <TextBlock Style="{StaticResource BodyText}" Margin="0,2,0,4"
                                            c:LiveText.IsLive="True" Text="{Binding Feedback}" />

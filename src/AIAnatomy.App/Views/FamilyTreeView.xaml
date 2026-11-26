@@ -33,9 +33,12 @@
 
         <TextBlock Style="{StaticResource BodyText}"
                    Text="Each line joins a member of the family to the branch it belongs to. Choose a bubble to see what it is." />
-        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,8" Text="Enter on the chosen bubble opens its lesson." />
-        <TextBlock Style="{StaticResource MutedText}" Margin="0,-8,0,8" Text="A bubble marked later is a lesson not built yet."
-                   Visibility="{Binding HasLaterBubbles, Converter={StaticResource VisibleIfTrue}}" />
+        <!-- The two hints as one block: no gap between them, 8 below (the "later" one shows only when a bubble is later). -->
+        <StackPanel Margin="0,0,0,8">
+            <TextBlock Style="{StaticResource MutedText}" Margin="0" Text="Enter on the chosen bubble opens its lesson." />
+            <TextBlock Style="{StaticResource MutedText}" Margin="0" Text="A bubble marked later is a lesson not built yet."
+                       Visibility="{Binding HasLaterBubbles, Converter={StaticResource VisibleIfTrue}}" />
+        </StackPanel>
 
         <Border Style="{StaticResource ScreenFrame}" Padding="0">
             <ScrollViewer x:Name="TreeScroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"

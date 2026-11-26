@@ -109,6 +109,13 @@ public sealed class FeatureMapGrid : UserControl
     /// <summary>A number with its sign always written: +0.42, −0.42, 0.</summary>
     public static string Signed(string text, double v) => v > 0 && double.IsFinite(v) ? "+" + text : text;
 
+    /// <summary>The size of each map's range line: the body text size, never under 12 DIPs (triage, Task 12a: it was 0.9 of
+    /// the label size, too small for an older reader).</summary>
+    public double RangeTextSize => Math.Max(12, FontSize);
+
+    /// <summary>At this width, the room from the end of the widest range line to the next map's left edge (for tests).</summary>
+    public double RangeLineSpacing(double width) => _surface.RangeLineSpacing(width);
+
     /// <summary>A map's smallest and largest value, for the line under its caption.</summary>
     internal string RangeText(int map)
     {
@@ -243,7 +250,11 @@ internal sealed class FeatureMapSurface : ChartBase
         public int Rows(int count) => (count + Columns - 1) / Columns;
     }
 
-    private double RangeSize => LabelSize * 0.9;
+    private double RangeSize => _owner.RangeTextSize;
+
+    // Between one map's caption and range line and the next map: at least 1.2 em of the range text (at body size a fixed
+    // 14 px let "0 to +1.35 0 to +1.57" run together).
+    private double TextGap => Math.Max(Gap, RangeSize * 1.2);
 
     private Layout ComputeLayout(double width)
     {
@@ -252,12 +263,19 @@ internal sealed class FeatureMapSurface : ChartBase
         tile = Math.Max(tile, Shown.Max(i => Math.Max(_owner.Maps![i].GetLength(0), _owner.Maps[i].GetLength(1))) * 2);   // at least 2 pixels a square
         double widestText = Shown.Max(i => Math.Max(Text(_owner.Caption(i), LabelSize, Foreground, BoldFace).Width,
             Number(_owner.RangeText(i), RangeSize, MutedBrush).Width));
-        double itemWidth = Math.Max(tile, Math.Min(widestText, tile * 2)) + Gap;
+        double itemWidth = Math.Max(tile + Gap, Math.Min(widestText, tile * 2) + TextGap);
         int columns = double.IsFinite(width) ? Math.Max(1, (int)Math.Floor((width + Gap) / itemWidth)) : Math.Min(8, Shown.Count);
         // Long captions wrap within the item; every item is as tall as the tallest caption and range line.
-        double textHeight = Shown.Max(i => Text(_owner.Caption(i), LabelSize, Foreground, BoldFace, itemWidth - Gap).Height
-                                           + RangeFormatted(i, itemWidth - Gap).Height);
+        double textHeight = Shown.Max(i => Text(_owner.Caption(i), LabelSize, Foreground, BoldFace, itemWidth - TextGap).Height
+                                           + RangeFormatted(i, itemWidth - TextGap).Height);
         return new Layout(tile, columns, itemWidth, tile + 4 + textHeight + Gap);
+    }
+
+    internal double RangeLineSpacing(double width)
+    {
+        if (!_owner.HasData) return double.PositiveInfinity;
+        var l = ComputeLayout(width);
+        return l.ItemWidth - Shown.Max(i => Number(_owner.RangeText(i), RangeSize, MutedBrush).Width);
     }
 
     private FormattedText RangeFormatted(int map, double maxWidth)
@@ -311,9 +329,9 @@ internal sealed class FeatureMapSurface : ChartBase
             dc.DrawImage(Bitmap(map, limit), area);
             bool current = IsKeyboardFocused && slot == _slot;
             dc.DrawRectangle(null, current ? new Pen(Foreground, 3) : outline, area);
-            var caption = Text(_owner.Caption(index), LabelSize, Foreground, current ? BoldFace : TextFace, l.ItemWidth - Gap);
+            var caption = Text(_owner.Caption(index), LabelSize, Foreground, current ? BoldFace : TextFace, l.ItemWidth - TextGap);
             dc.DrawText(caption, new Point(tile.X, tile.Bottom + 4));
-            dc.DrawText(RangeFormatted(index, l.ItemWidth - Gap), new Point(tile.X, tile.Bottom + 4 + caption.Height));
+            dc.DrawText(RangeFormatted(index, l.ItemWidth - TextGap), new Point(tile.X, tile.Bottom + 4 + caption.Height));
 
             if (_hover is { } h && h.Slot == slot) DrawCellMark(dc, area, cell, h.Cell, false);
             if (current) DrawCellMark(dc, area, cell, _cell, true);

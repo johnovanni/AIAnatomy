@@ -26,7 +26,7 @@ Choose a bubble to see what it is, what it is good and bad at, and a real exampl
 1. Choose the Transformer bubble (click it, or Tab to it and press Space): its card says what it is and offers lesson 1.2.
 2. Follow the lines up from the Transformer: Neural networks, then Learned from examples, then the top of the tree.
 3. Choose Rules, then Q-learning, and compare where each one's behaviour comes from.
-4. Press Enter on the chosen bubble to open its lesson. A bubble marked later is a lesson not built yet.
+4. Press Enter on the chosen bubble to open its lesson.
 
 ## Check yourself
 ? On the family tree, which of the three main branches is the transformer on?

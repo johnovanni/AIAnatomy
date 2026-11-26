@@ -4,14 +4,20 @@ using AIAnatomy.Presentation.Services;
 
 namespace AIAnatomy.Presentation.Tests.Labs;
 
+/// <summary>One test sets the static ErrorLog.BackgroundFailed, so the class runs apart from the others (triage, Task 5).</summary>
+[Collection(ErrorLogCollection.Name)]
 public class RetrainRunnerTests
 {
     // xUnit gives each test its own SynchronizationContext, which would queue the runner's UI posts; with none (as in
     // a plain test run) each report is applied right where it is made, so the tests need no pumping and no waiting.
+    // The runner reads the context when it starts, so the test's own context is put back at once (triage, Task 5: a
+    // context left changed could reach a later test on the same thread).
     private static Task Start(RetrainRunner runner, int seed)
     {
+        var before = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(null);
-        return runner.StartAsync(seed);
+        try { return runner.StartAsync(seed); }
+        finally { SynchronizationContext.SetSynchronizationContext(before); }
     }
 
     /// <summary>A trainer whose steps wait on a gate when one is set, so no test depends on timing.</summary>
@@ -87,6 +93,36 @@ public class RetrainRunnerTests
         Assert.False(runner.IsRunning);
         Assert.Equal("Stopped after 120 steps.", runner.StatusText);
         Assert.NotEmpty(runner.LossSeries);
+    }
+
+    // Final review M10: "1 step", not "1 steps".
+    [Fact]
+    public async Task Stop_AfterOneStep_SaysStepInTheSingular()
+    {
+        var trainer = new Gated(600, gateAfter: 1);
+        var runner = Runner(_ => trainer);
+        var run = Start(runner, 1);
+        trainer.InStep.Wait();
+        runner.Stop();
+        trainer.Release.Set();
+        await run;
+        Assert.Equal("Stopped after 1 step.", runner.StatusText);
+    }
+
+    [Fact]
+    public void Start_PutsTheTestsSynchronizationContextBack()
+    {
+        var mine = new SynchronizationContext();
+        var before = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(mine);
+        try
+        {
+            var runner = Runner(_ => new Gated(10));
+            var run = Start(runner, 1);
+            Assert.Same(mine, SynchronizationContext.Current);
+            run.GetAwaiter().GetResult();
+        }
+        finally { SynchronizationContext.SetSynchronizationContext(before); }
     }
 
     [Fact]

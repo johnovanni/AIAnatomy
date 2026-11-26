@@ -29,7 +29,7 @@ The lab's networks are tiny: a point's x and y go in, and two numbers for its no
 - About 0.31, around 15% of the square's width
 * About 0.031, under 2% of the square's width
 - About 0.0031, under 0.2% of the square's width
-why: For every point the lab measures the distance to the nearest point of the spiral, then averages: 0.031, as recorded when the network was built and worked out again by the app's tests. It says how close the points land, not whether they cover the whole spiral.
+why: For every point the lab measures the distance to the nearest point of the spiral, then averages: 0.031, as recorded when the network was built and checked again by the app. It says how close the points land, not whether they cover the whole spiral.
 see: lab
 checked-by-code: DiffusionShapes_ShippedSpiralIsCloseToItsShape
 

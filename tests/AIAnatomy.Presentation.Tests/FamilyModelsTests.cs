@@ -46,6 +46,8 @@ public sealed class FamilyModelsTests : IDisposable
         var (net, info) = await models.DigitsAsync();
         Assert.True(info.IsShipped);
         Assert.Equal(8, net.Config.ImageSize);
+        // Triage (Task 11b): the shipped file holds the network lesson 4.7's notes describe, so they cannot drift apart.
+        Assert.Equal(AIAnatomy.Models.Vision.DigitTraining.Shipped, net.Config);
         DigitNet direct;
         using (var stream = File.OpenRead(FamilyFile("digits.aimodel"))) direct = DigitNet.Load(stream).Net;
         var test = await models.DigitTestSetAsync();
@@ -64,6 +66,8 @@ public sealed class FamilyModelsTests : IDisposable
         var secondWeights = second.Parameters().First().Value.Data;
         double before = secondWeights[0];
         firstWeights[0] += 1.0;
+        // Triage (Task 12b): the change really reached the first network (so the check below cannot pass for nothing).
+        Assert.Equal(before + 1.0, first.Parameters().First().Value.Data[0]);
         Assert.Equal(before, secondWeights[0]);
     }
 
@@ -91,6 +95,10 @@ public sealed class FamilyModelsTests : IDisposable
         var set = await Assert.ThrowsAsync<InvalidDataException>(() => models.DigitTestSetAsync());
         Assert.Contains("digits-test.bin.gz", set.Message);
         Assert.DoesNotContain(_content, set.Message);
+        // Final review M16: a set of digits is a data file, not a network file.
+        Assert.Contains("data file", set.Message);
+        Assert.DoesNotContain("network", set.Message);
+        Assert.Contains("network file", net.Message);
         Assert.Equal(3760, (await models.DigitTrainSetAsync()).Count);
     }
 
@@ -203,6 +211,8 @@ public sealed class FamilyModelsTests : IDisposable
         var secondWeights = second.Parameters().First().Value.Data;
         double before = secondWeights[0];
         firstWeights[0] += 1.0;
+        // Triage (Task 12b): the change really reached the first network (so the check below cannot pass for nothing).
+        Assert.Equal(before + 1.0, first.Parameters().First().Value.Data[0]);
         Assert.Equal(before, secondWeights[0]);
     }
 

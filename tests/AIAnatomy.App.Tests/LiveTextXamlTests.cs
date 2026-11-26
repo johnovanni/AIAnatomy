@@ -85,8 +85,8 @@ public class LiveTextXamlTests
     public void ConvertedResultLinesCarryLiveText(string file, int expected)
     {
         string text = File.ReadAllText(Path.Combine(AppFolder(), file));
-        Assert.True(Regex.Matches(text, @"c:LiveText\.IsLive=""True""").Count >= expected,
-            $"{file} should have {expected} c:LiveText.IsLive=\"True\" result lines.");
+        // Exactly (Task 18 review minor): a line that lost its live text cannot hide behind one added elsewhere.
+        Assert.Equal(expected, Regex.Matches(text, @"c:LiveText\.IsLive=""True""").Count);
     }
 
     /// <summary>Lesson 4.7: with an empty pad or a dot, the lab's Message and PredictionText hold the same words, so only the
@@ -142,17 +142,20 @@ public class LiveTextXamlTests
     }
 
     /// <summary>Ruling X: a hand-set LiveSetting does nothing unless something raises LiveRegionChanged, so a TextBlock may
-    /// carry one only where its view raises the event itself (named here, each checked in its code-behind).</summary>
+    /// carry one only where its view raises the event for that very block (Task 18 review minor: checked per block, not
+    /// just "the code-behind raises something"). Each entry is a pattern its code-behind must match; a block announced
+    /// from a TargetUpdated handler must also name that handler in its XAML.</summary>
     [Fact]
     public void HandSetLiveSettings_AreRaisedByTheirView()
     {
-        var raisedByHand = new Dictionary<string, string>
+        var raisedByHand = new Dictionary<string, (string Pattern, string? Handler)>
         {
-            ["ClassicMlView.xaml/ActionLine"] = "RaiseAutomationEvent",
-            ["RewardView.xaml/Readout"] = "RaiseAutomationEvent",
-            ["RewardView.xaml/EpisodesLine"] = "RaiseAutomationEvent",
-            ["SettingsView.xaml/ResetQuestionText"] = "LiveText.Announce(ResetQuestionText)",
+            ["ClassicMlView.xaml/ActionLine"] = (@"FromElement\(ActionLine\)[\s\S]{0,200}RaiseAutomationEvent\(AutomationEvents\.LiveRegionChanged\)", null),
+            ["RewardView.xaml/Readout"] = (@"void OnReadoutUpdated\([^)]*\)\s*\{[^}]*Announce\(sender as TextBlock\)", "OnReadoutUpdated"),
+            ["RewardView.xaml/EpisodesLine"] = (@"Announce\(EpisodesLine\)", null),
+            ["SettingsView.xaml/ResetQuestionText"] = (@"LiveText\.Announce\(ResetQuestionText\)", null),
         };
+        XName targetUpdated = "Binding.TargetUpdated";
         XName name = XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml");
         var bad = new List<string>();
         foreach (var file in AllXaml())
@@ -161,7 +164,8 @@ public class LiveTextXamlTests
             foreach (var tb in doc.Descendants(Wpf + "TextBlock").Where(t => t.Attribute("AutomationProperties.LiveSetting") != null))
             {
                 string key = $"{Path.GetFileName(file)}/{(string?)tb.Attribute(name)}";
-                if (!raisedByHand.TryGetValue(key, out string? call) || !File.ReadAllText(file + ".cs").Contains(call, StringComparison.Ordinal))
+                if (!raisedByHand.TryGetValue(key, out var raised) || !Regex.IsMatch(File.ReadAllText(file + ".cs"), raised.Pattern)
+                    || (raised.Handler != null && (string?)tb.Attribute(targetUpdated) != raised.Handler))
                     bad.Add($"{Path.GetFileName(file)} line {((IXmlLineInfo)tb).LineNumber}");
             }
         }

@@ -103,7 +103,7 @@ public sealed partial class RetrainRunner : ObservableObject
             Finished = trainer;
             Completed?.Invoke(this, EventArgs.Empty);
         }
-        else StatusText = $"Stopped after {NumberText.Short(trainer.StepsTaken)} steps.";
+        else StatusText = $"Stopped after {NumberText.Short(trainer.StepsTaken)} {(trainer.StepsTaken == 1 ? "step" : "steps")}.";
     }
 
     /// <summary>Ends the run early, keeping what was trained so far; <see cref="Finished"/> stays null.</summary>

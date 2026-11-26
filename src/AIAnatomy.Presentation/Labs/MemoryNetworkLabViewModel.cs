@@ -90,9 +90,9 @@ public sealed partial class MemoryNetworkLabViewModel : LabViewModel
         "hardware such as graphics chips it trains on every position of a window at once, while a memory network must go one " +
         "character after another.";
 
-    public const string LiveSpeedNote =
+    public static string LiveSpeedNote { get; } =
         "Your run is timed over its training steps only, with no validation checks along the way, so it is not timed the same way " +
-        "as the recorded speeds. Its network is also smaller (hidden size 128), so each step does less arithmetic.";
+        $"as the recorded speeds. Its network is also smaller (hidden size {MemoryTraining.RetrainHidden}), so each step does less arithmetic.";
 
     public const string MemoryNote =
         "Each point is the average loss over the same 32 windows of the fables (the ones both networks were checked on), so " +

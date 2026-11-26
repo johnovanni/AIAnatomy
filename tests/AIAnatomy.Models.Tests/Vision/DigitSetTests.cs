@@ -65,6 +65,11 @@ public class DigitSetTests : IDisposable
             Assert.Equal(images[i].Pixels.Select(b => b / 255.0), set.Pixels(i));
         }
         Assert.Equal(images.Select(x => (int)x.Label), set.Labels);
+        // Final review M14: the sets are shared across labs, so the labels cannot be changed through this list.
+        Assert.False(set.Labels is int[], "Labels hands out the set's own array");
+        Assert.True(((ICollection<int>)set.Labels).IsReadOnly);
+        Assert.Throws<NotSupportedException>(() => ((IList<int>)set.Labels)[0] = 9);
+        Assert.Equal(images[0].Label, set.Label(0));
     }
 
     [Fact]

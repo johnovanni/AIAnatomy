@@ -18,6 +18,8 @@ The window has a **contents tree** on the left, numbered like a book (1 The big 
 
 **Text size and colours.** Settings has one slider for the text size, 10 to 24 pt (13 pt by default), and a Dark or Light theme (Dark by default for a new install). Titles are twice the body size, section headings 1.15 times, small text 0.85 times and never under 9 pt. From 18 pt the explanation goes under the lab instead of beside it. Every message is shown on screen; nothing depends on sound.
 
+**Screen readers.** Result lines, warnings, questions and the Check yourself feedback are live text, so a screen reader can read them out when they change (warnings and questions interrupt; the rest wait their turn). This is tested in code only: it has **not yet been checked with a screen reader**, and a pass with Narrator is still needed.
+
 ## Running the tests
 
 The default run is fast and works in Debug; the slow induction-head training test is skipped there:

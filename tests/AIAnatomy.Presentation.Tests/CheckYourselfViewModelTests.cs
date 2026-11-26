@@ -32,10 +32,26 @@ public class CheckYourselfViewModelTests : IDisposable
         Assert.Null(q.Feedback);
         q.ChooseCommand.Execute(0);
         Assert.False(q.IsRight);
-        Assert.Equal("Not quite. Attention blends information from other tokens.", q.Feedback);
+        Assert.Equal("Not quite: you chose “Colours”. Attention blends information from other tokens.", q.Feedback);
         q.ChooseCommand.Execute(1);
         Assert.True(q.IsRight);
         Assert.Equal(1, q.ChosenIndex);
+    }
+
+    // Final review I1: the feedback is a live region that speaks only when its text changes, so a second, different wrong
+    // answer must change the text (it names the answer chosen); otherwise a screen reader would say nothing.
+    [Fact]
+    public void TwoDifferentWrongAnswers_GiveDifferentFeedback()
+    {
+        var (vm, _, _, _) = New();
+        var q = vm.Questions[0];
+        var seen = new List<string?>();
+        q.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(QuestionViewModel.Feedback)) seen.Add(q.Feedback); };
+        q.ChooseCommand.Execute(0);
+        q.ChooseCommand.Execute(2);
+        Assert.Equal(2, seen.Count);
+        Assert.NotEqual(seen[0], seen[1]);
+        Assert.Contains("“Sounds”", seen[1]);
     }
 
     [Fact]
@@ -58,7 +74,7 @@ public class CheckYourselfViewModelTests : IDisposable
         var (vm, _, _, _) = New();
         vm.Questions[1].ChooseCommand.Execute(0);
         Assert.True(vm.Questions[1].IsRight);
-        Assert.Equal("Right. Tokens become vectors before anything else.", vm.Questions[1].Feedback);
+        Assert.Equal("Right: you chose “Embedding”. Tokens become vectors before anything else.", vm.Questions[1].Feedback);
     }
 
     [Fact]

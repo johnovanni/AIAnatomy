@@ -231,10 +231,12 @@ screen. They are in `.superpowers/sdd/2026-11-25-aianatomy-stage-2-part-b/final/
   β at step 20 is 0.0001 + 19 × 0.0999 / 99 = 0.0193. The two arrow sets differ by line and head (solid with open heads,
   dashed with filled heads), not by colour alone, in both themes.
 - **Heat maps after cde40f0:** 4.6's 8 × 8 picture and feature map show three decimals at 10, 13 and 24 pt; at 24 pt the
-  negative numbers nearly touch (AA-036). The attention, multi-head and position maps lay out well in both checks; their
-  squares are too narrow for numbers (19 or 16 columns, 64 for position), so no numbers are written and the readout
-  under each gives every value. 4.7's input picture drops its numbers in the 900 px window (squares too narrow), as the
-  rule says.
+  negative numbers nearly touch (AA-036). The attention, multi-head and position maps lay out well in both checks.
+  *Corrected in the final fix wave:* the multi-head, position and hidden-state maps never write numbers
+  (`ShowCellValues="False"`, by design, before and after cde40f0); only lesson 2.4's two attention maps (AttentionView)
+  lost their numbers with cde40f0, because their squares (about 33 px) were too narrow for "−0.500" at body size. The
+  readout under each gives every value. 4.7's input picture drops its numbers in the 900 px window (squares too narrow),
+  as the rule says. Both the attention numbers and AA-036 were fixed in the final fix wave (see the end of this part).
 - **The family tree:** no bubble says "later" any more (every section 4 lesson in the tree is built); the idea maps
   mark only section 5 "later". The hint about "later" bubbles now shows only when there is one (fixed below).
 - **The Radial map** is 1393 × 874 px at 13 pt (1383 × 869 in Part A); the centre box is about a third of the way
@@ -245,9 +247,15 @@ screen. They are in `.superpowers/sdd/2026-11-25-aianatomy-stage-2-part-b/final/
 - **The narrow lesson column** (measured in the Light 24 pt, 900 px page): the contents column is about 464 px and the
   lesson page about 355 px. The cause is the contents column's minimum width at 24 pt (464 px), not the title; the
   title itself breaks inside a word ("networ / ks"). Logged as AA-035.
-- **Readability:** nothing was clipped and no text overlapped in any picture, in either theme, apart from the small
-  crowding items logged as AA-038 and AA-039. Body text, captions and numbers were readable at 13 and 24 pt; colour is
-  never the only signal (the chosen digit is marked "chosen", filters carry + and −, the arrows differ in style).
+- **Readability:** in the tiles looked at, nothing was clipped and no text overlapped, in either theme, apart from the
+  small crowding items logged as AA-038 and AA-039 (and AA-036, above). Body text, captions and numbers were readable
+  at 13 and 24 pt in those tiles; colour is never the only signal (the chosen digit is marked "chosen", filters carry
+  + and −, the arrows differ in style).
+- **Not inspected tile by tile** (judged from tiles of the same layout seen elsewhere, so not checked): the lower
+  tiles of pictures that show the same lab state as another (`image-filters` against `filters-learned` below the
+  filter; `image-network` against `digit-network-sample`, the same picture); most 10 pt tiles below the first; and the
+  Light 24 pt, 900 px strips from the third onwards. The bottom of 4.6 and 4.7 in the 900 px Light 24 render was not
+  seen at all (the renderer's 12,000 px cap; see AA-035).
 
 ## Fixed in this check
 
@@ -257,7 +265,8 @@ screen. They are in `.superpowers/sdd/2026-11-25-aianatomy-stage-2-part-b/final/
   paste note are cleared before being set, so the same words twice are said twice. Tests: `LiveTextXamlTests` (the
   lines, a new test that every hand-set LiveSetting is raised by its view, and the assertive setting in either order),
   `Main_SameStatusMessageTwice_IsClearedInBetween_SoItIsReadAgain`,
-  `RefusedPasteTwice_ClearsTheNoteInBetween_SoItIsReadAgain`. Not heard with a screen reader.
+  `RefusedPasteTwice_ClearsTheNoteInBetween_SoItIsReadAgain`. **Not heard with a screen reader:** these live-text
+  changes are tested in code only, and an owner Narrator pass is needed before ruling X can be called done.
 - **Light memory colour** #3C264C → #4B2A66 (theme contrast and colour-distance tests pass).
 - **Family tree hint:** "A bubble marked later is a lesson not built yet." is shown only when a bubble is marked later
   (`HasLaterBubbles`, tested).
@@ -267,7 +276,7 @@ screen. They are in `.superpowers/sdd/2026-11-25-aianatomy-stage-2-part-b/final/
 
 - **AA-035** (Minor, Medium): at 24 pt in a 900 px window the lesson column is squeezed to its 360 px minimum.
 - **AA-036** (Minor, Medium): three-decimal heat-map numbers nearly touch at 24 pt (a fix would reverse the Task 13
-  fix's pinned three decimals at 24 pt).
+  fix's pinned three decimals at 24 pt). *Fixed in the final fix wave.*
 - **AA-037** (Trivial, Low): the memory lab's map shows a scroll bar that scrolls a pixel or two at 13 pt.
 - **AA-038** (Trivial, Low): in 4.7 the chosen bar's percentage sits left of the others, and two map captions nearly
   touch at 24 pt.
@@ -276,6 +285,20 @@ screen. They are in `.superpowers/sdd/2026-11-25-aianatomy-stage-2-part-b/final/
 ## For the final review (lesson text, not changed)
 
 - Lesson 4.1's Try this step 4 still says "A bubble marked later is a lesson not built yet.", though no bubble is now.
+  *Removed in the final fix wave.*
+
+## Final fix wave (after the whole-branch review)
+
+- **Heat-map numbers:** the number of decimals now comes from the numbers actually in the map (3, then 2, then 1, then
+  none), with a gap of 0.4 em between neighbours that grows with the text; numbers in squares are never in e-notation.
+  8 × 8 maps keep three decimals at 13 pt and drop to two at 24 pt in a 900 px pane (AA-036 fixed).
+- **Lesson 2.4's attention maps** write each weight as a whole percentage ("35"), with a note that each row's shares add
+  up to 100 and the rounded numbers to about 100. The multi-head, position and hidden-state maps are unchanged.
+- **Check yourself** names the answer chosen ("Not quite: you chose …"), so a second wrong answer is read out too.
+- **The connection-chip sentence** is polite live text (ruling 4).
+- **Still not heard with a screen reader:** every live-text change of Part B needs an owner Narrator pass.
+- Renders of this wave: `render-fixwave-light13.png` and `render-fixwave-dark24.png` in the Part B folder (what was
+  seen is in `fixwave-report.md` there).
 
 ## Try these yourself (section 4, Part B)
 

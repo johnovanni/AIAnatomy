@@ -112,23 +112,25 @@ public sealed class FamilyModels
         lock (_gate)
         {
             if (_files.TryGetValue(file, out var cached) && !cached.IsFaulted && !cached.IsCanceled) return cached;
-            var read = Task.Run(() => ReadBytes(file, folder ?? _folder));
+            // The digit sets are data files; everything else here is a network (final review M16).
+            string kind = folder == null ? "network file" : "data file";
+            var read = Task.Run(() => ReadBytes(file, folder ?? _folder, kind));
             _files[file] = read;
             return read;
         }
     }
 
-    private byte[] ReadBytes(string file, string folder)
+    private byte[] ReadBytes(string file, string folder, string kind)
     {
         try { return _readAllBytes(Path.Combine(folder, file)); }
         catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
         {
-            throw new InvalidDataException($"The network file '{file}' is missing from AI Anatomy's content folder. Reinstalling the app puts it back.", e);
+            throw new InvalidDataException($"The {kind} '{file}' is missing from AI Anatomy's content folder. Reinstalling the app puts it back.", e);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
         {
             // The system's message may hold the full path; the plain message names only the file.
-            throw new InvalidDataException($"The network file '{file}' cannot be read. Check that AI Anatomy's content folder can be opened, or reinstall the app.", e);
+            throw new InvalidDataException($"The {kind} '{file}' cannot be read. Check that AI Anatomy's content folder can be opened, or reinstall the app.", e);
         }
     }
 

@@ -69,13 +69,11 @@ public sealed partial class QuestionViewModel : ObservableObject
     /// not quite)"), not by colour alone.</summary>
     public IReadOnlyList<AnswerOption> Options { get; }
 
-    /// <summary>"Right. " or "Not quite. " followed by the reason; words, so it never relies on colour or sound.</summary>
-    public string? Feedback => IsRight switch
-    {
-        null => null,
-        true => "Right. " + _question.Why,
-        false => "Not quite. " + _question.Why,
-    };
+    /// <summary>"Right" or "Not quite", the answer chosen, then the reason; words, so it never relies on colour or sound.
+    /// Naming the answer makes the text differ for each choice, so the live region speaks again when the learner picks a
+    /// second wrong answer (final review I1; it speaks only when its text changes).</summary>
+    public string? Feedback => ChosenIndex is not { } chosen ? null
+        : $"{(IsRight == true ? "Right" : "Not quite")}: you chose “{Answers[chosen]}”. {_question.Why}";
 
     [RelayCommand]
     private void Choose(int index)
