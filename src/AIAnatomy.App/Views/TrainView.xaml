@@ -42,7 +42,7 @@
                      MinHeight="120" MaxHeight="300" VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Your own text"
                      Visibility="{Binding Settings.UseOwnText, Converter={StaticResource VisibleIfTrue}}" />
         </StackPanel>
-        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Settings.PasteNote}" AutomationProperties.LiveSetting="Assertive"
+        <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Text="{Binding Settings.PasteNote}" c:LiveText.IsLive="True" c:LiveText.IsAssertive="True"
                    Visibility="{Binding Settings.PasteNote, Converter={StaticResource VisibleIfSet}}" />
         <TextBlock Style="{StaticResource MutedText}" Text="{Binding Settings.TextSummary}" Visibility="{Binding Settings.TextSummary, Converter={StaticResource VisibleIfSet}}" />
 
@@ -108,7 +108,7 @@
         </Border>
         <c:Screen ScreenName="training" Margin="0,4,0,0" HorizontalAlignment="Stretch">
             <StackPanel>
-                <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" AutomationProperties.LiveSetting="Assertive"
+                <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" c:LiveText.IsLive="True" c:LiveText.IsAssertive="True"
                            Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
                 <TextBlock Style="{StaticResource BodyText}" c:LiveText.IsLive="True" Text="{Binding Status}"
                            Visibility="{Binding Status, Converter={StaticResource VisibleIfSet}}" />
@@ -145,7 +145,7 @@
         <Border Style="{StaticResource Pane}" Padding="12" Margin="0,0,0,4" Visibility="{Binding OverwriteQuestion, Converter={StaticResource VisibleIfSet}}">
             <WrapPanel>
                 <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,4" Text="{Binding OverwriteQuestion}"
-                           AutomationProperties.LiveSetting="Assertive" />
+                           c:LiveText.IsLive="True" c:LiveText.IsAssertive="True" />
                 <Button Content="Yes" Command="{Binding ConfirmOverwriteCommand}" Margin="0,0,8,4" />
                 <Button Content="No" Command="{Binding CancelOverwriteCommand}" Margin="0,0,8,4" />
             </WrapPanel>

@@ -50,13 +50,13 @@ public sealed partial class MainViewModel : ObservableObject
         _models.Changed += (_, _) => OnActiveModelChanged();
         SettingsPage.Applied += (_, _) => OnPropertyChanged(nameof(UseStackedLayout));
         settings.SaveFailed += (_, _) =>
-            StatusMessage = $"Your settings couldn't be saved: {settings.LastSaveProblem}. They'll apply until you close the app.";
+            ShowStatus($"Your settings couldn't be saved: {settings.LastSaveProblem}. They'll apply until you close the app.");
         // Said once (final review M1): a failing disk would otherwise repeat it on every lesson opened.
         progress.SaveFailed += (_, _) =>
         {
             if (_progressProblemShown) return;
             _progressProblemShown = true;
-            StatusMessage = $"Your progress marks couldn't be saved: {progress.LastSaveProblem}. They'll be kept until you close the app.";
+            ShowStatus($"Your progress marks couldn't be saved: {progress.LastSaveProblem}. They'll be kept until you close the app.");
         };
 
         // The lesson open when the app was last closed (final review M13); a placeholder or an id no longer in the
@@ -123,6 +123,14 @@ public sealed partial class MainViewModel : ObservableObject
     public bool IsShowingLesson => !IsShowingSources && !IsShowingSettings && !IsShowingIdeaMap;
     [ObservableProperty] private string? statusMessage;
 
+    /// <summary>Shows a status line. It is cleared first, so the same words again (a second link that cannot be opened, say)
+    /// are a change and are read out again (Stage 2B ruling X: the line is assertive live text).</summary>
+    private void ShowStatus(string text)
+    {
+        StatusMessage = null;
+        StatusMessage = text;
+    }
+
     /// <summary>
     /// A silent line in the header about a Train lab run while the lab is out of sight (another lesson is open, or the Sources
     /// or Settings page covers it), such as "Training in the background: step 340 of 600." (R35), or how a run that ended
@@ -147,7 +155,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>What the status line says when a source's web page could not be opened (no browser set up, or blocked).</summary>
     public void ShowLinkNotOpened(string url) =>
-        StatusMessage = $"The web page could not be opened from here. You can type its address into your web browser: {url}";
+        ShowStatus($"The web page could not be opened from here. You can type its address into your web browser: {url}");
 
     /// <summary>Stops every lab's background work, the kept Train lab's too. The window calls this when it closes.</summary>
     public void Shutdown()
@@ -294,7 +302,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (InvalidOperationException e)
         {
-            StatusMessage = e.Message;
+            ShowStatus(e.Message);
             _revertingModel = true;
             try { SelectedModelEntry = ActiveEntry(); }
             finally { _revertingModel = false; }

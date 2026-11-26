@@ -154,6 +154,21 @@ public class TrainTests : IDisposable
         Assert.Null(lab.Settings.PasteNote);
     }
 
+    /// <summary>Ruling X: the paste note is live text, read only when its words change, so a second refusal in the same
+    /// words is cleared first and is read again.</summary>
+    [Fact]
+    public void RefusedPasteTwice_ClearsTheNoteInBetween_SoItIsReadAgain()
+    {
+        var lab = NewLab();
+        lab.Settings.UseOwnText = true;
+        var seen = new List<string?>();
+        lab.Settings.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(lab.Settings.PasteNote)) seen.Add(lab.Settings.PasteNote); };
+        lab.Settings.RefusePaste(CorpusValidator.MaxCharacters + 5);
+        lab.Settings.RefusePaste(CorpusValidator.MaxCharacters + 5);
+        string note = "That text was not pasted. " + CorpusValidator.ProblemForLength(CorpusValidator.MaxCharacters + 5, 16);
+        Assert.Equal(new[] { note, null, note }, seen);
+    }
+
     [Fact]
     public void CarryingOn_DescribesTheActiveModelsOwnFeedForwardAndSeed()
     {

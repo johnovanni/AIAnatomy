@@ -312,6 +312,21 @@ public class MainViewModelTests : IDisposable
             vm.StatusMessage);
     }
 
+    /// <summary>Ruling X: the status line is live text, which is read only when its words change, so the same message
+    /// again is cleared first (a change) and is read again.</summary>
+    [Fact]
+    public void Main_SameStatusMessageTwice_IsClearedInBetween_SoItIsReadAgain()
+    {
+        var vm = _env.NewMain();
+        var seen = new List<string?>();
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainViewModel.StatusMessage)) seen.Add(vm.StatusMessage); };
+        vm.ShowLinkNotOpened("https://arxiv.org/abs/1706.03762");
+        vm.ShowLinkNotOpened("https://arxiv.org/abs/1706.03762");
+        string said = "The web page could not be opened from here. You can type its address into your web browser: https://arxiv.org/abs/1706.03762";
+        Assert.Equal(new[] { said, null, said }, seen.SkipWhile(s => s == null));
+        Assert.Equal(said, vm.StatusMessage);
+    }
+
     [Fact]
     public void LabFactory_UnknownId_Throws()
     {

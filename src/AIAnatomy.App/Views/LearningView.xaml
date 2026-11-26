@@ -97,7 +97,7 @@
             </Grid>
             <c:Screen ScreenName="surface" Margin="0,4,0,0" HorizontalAlignment="Stretch">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" AutomationProperties.LiveSetting="Assertive"
+                    <TextBlock Style="{StaticResource BodyText}" FontWeight="Bold" Text="{Binding Message}" c:LiveText.IsLive="True" c:LiveText.IsAssertive="True"
                                Visibility="{Binding Message, Converter={StaticResource VisibleIfSet}}" />
                     <c:ContourPlot Values="{Binding Grid}" XMin="-5" XMax="5" YMin="-2" YMax="2" Levels="{x:Static labs:LossPanelViewModel.Levels}" Path="{Binding Path}"
                                    XAxisTitle="w1" YAxisTitle="w2" Height="{DynamicResource DiagramHeight}" Margin="0,8,0,0" AutomationProperties.Name="Loss surface with the path of gradient descent" />

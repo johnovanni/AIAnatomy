@@ -71,16 +71,17 @@ public class LiveTextXamlTests
     /// <summary>The result lines converted to the shared behaviour (so a renamed copy of the old handler cannot pass): the number of
     /// <c>c:LiveText.IsLive="True"</c> each file must carry.</summary>
     [Theory]
-    [InlineData("MainWindow.xaml", 1)]
+    [InlineData("MainWindow.xaml", 2)]
     [InlineData("Views/CheckYourselfView.xaml", 1)]
     [InlineData("Views/ClassicMlView.xaml", 2)]
     [InlineData("Views/ExpertSystemView.xaml", 1)]
     [InlineData("Views/RewardView.xaml", 2)]
     [InlineData("Views/SearchView.xaml", 2)]
     [InlineData("Views/SamplingView.xaml", 1)]
-    [InlineData("Views/LearningView.xaml", 1)]
-    [InlineData("Views/TrainView.xaml", 3)]
+    [InlineData("Views/LearningView.xaml", 2)]
+    [InlineData("Views/TrainView.xaml", 6)]
     [InlineData("Views/TokensView.xaml", 1)]
+    [InlineData("Views/SettingsView.xaml", 1)]
     public void ConvertedResultLinesCarryLiveText(string file, int expected)
     {
         string text = File.ReadAllText(Path.Combine(AppFolder(), file));
@@ -119,6 +120,82 @@ public class LiveTextXamlTests
         Assert.False(bound["{Binding PredictionText}"], "The prediction error follows the forward slider.");
         Assert.False(bound["{Binding FrameText}"], "The frame line follows a slider.");
         Assert.False(bound["{Binding MeasuredText}"], "The list of runs repeats the result line's numbers.");
+    }
+
+    private static readonly XName Live = XName.Get("LiveText.IsLive", "clr-namespace:AIAnatomy.App.Controls");
+    private static readonly XName Assertive = XName.Get("LiveText.IsAssertive", "clr-namespace:AIAnatomy.App.Controls");
+
+    /// <summary>Ruling X: the warnings and questions that once had a hand-set Assertive LiveSetting, which was never raised,
+    /// are assertive live text now, so they are read out when they appear or change.</summary>
+    [Theory]
+    [InlineData("MainWindow.xaml", "{Binding StatusMessage}")]
+    [InlineData("Views/TrainView.xaml", "{Binding Settings.PasteNote}")]
+    [InlineData("Views/TrainView.xaml", "{Binding Message}")]
+    [InlineData("Views/TrainView.xaml", "{Binding OverwriteQuestion}")]
+    [InlineData("Views/LearningView.xaml", "{Binding Message}")]
+    public void WarningsAndQuestions_AreAssertiveLiveText(string file, string binding)
+    {
+        var doc = XDocument.Load(Path.Combine(AppFolder(), file));
+        // (LearningView has a second, unrelated {Binding Message} in another panel, so look for one line that is both.)
+        Assert.Contains(doc.Descendants(Wpf + "TextBlock"), t => (string?)t.Attribute("Text") == binding
+            && (string?)t.Attribute(Live) == "True" && (string?)t.Attribute(Assertive) == "True");
+    }
+
+    /// <summary>Ruling X: a hand-set LiveSetting does nothing unless something raises LiveRegionChanged, so a TextBlock may
+    /// carry one only where its view raises the event itself (named here, each checked in its code-behind).</summary>
+    [Fact]
+    public void HandSetLiveSettings_AreRaisedByTheirView()
+    {
+        var raisedByHand = new Dictionary<string, string>
+        {
+            ["ClassicMlView.xaml/ActionLine"] = "RaiseAutomationEvent",
+            ["RewardView.xaml/Readout"] = "RaiseAutomationEvent",
+            ["RewardView.xaml/EpisodesLine"] = "RaiseAutomationEvent",
+            ["SettingsView.xaml/ResetQuestionText"] = "LiveText.Announce(ResetQuestionText)",
+        };
+        XName name = XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml");
+        var bad = new List<string>();
+        foreach (var file in AllXaml())
+        {
+            var doc = XDocument.Load(file, LoadOptions.SetLineInfo);
+            foreach (var tb in doc.Descendants(Wpf + "TextBlock").Where(t => t.Attribute("AutomationProperties.LiveSetting") != null))
+            {
+                string key = $"{Path.GetFileName(file)}/{(string?)tb.Attribute(name)}";
+                if (!raisedByHand.TryGetValue(key, out string? call) || !File.ReadAllText(file + ".cs").Contains(call, StringComparison.Ordinal))
+                    bad.Add($"{Path.GetFileName(file)} line {((IXmlLineInfo)tb).LineNumber}");
+            }
+        }
+        Assert.True(bad.Count == 0, "TextBlocks with a LiveSetting that nothing raises (use c:LiveText.IsLive): " + string.Join("; ", bad));
+    }
+
+    [Fact]
+    public void LiveTextIsAssertive_MakesTheRegionAssertive_InEitherOrder()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var first = new System.Windows.Controls.TextBlock();
+                AIAnatomy.App.Controls.LiveText.SetIsLive(first, true);
+                AIAnatomy.App.Controls.LiveText.SetIsAssertive(first, true);
+                var second = new System.Windows.Controls.TextBlock();
+                AIAnatomy.App.Controls.LiveText.SetIsAssertive(second, true);
+                AIAnatomy.App.Controls.LiveText.SetIsLive(second, true);
+                foreach (var t in new[] { first, second })
+                    Assert.Equal(System.Windows.Automation.AutomationLiveSetting.Assertive, System.Windows.Automation.AutomationProperties.GetLiveSetting(t));
+                AIAnatomy.App.Controls.LiveText.SetIsAssertive(first, false);
+                Assert.Equal(System.Windows.Automation.AutomationLiveSetting.Polite, System.Windows.Automation.AutomationProperties.GetLiveSetting(first));
+                var notLive = new System.Windows.Controls.TextBlock();
+                AIAnatomy.App.Controls.LiveText.SetIsAssertive(notLive, true);   // without IsLive it changes nothing
+                Assert.Equal(System.Windows.Automation.AutomationLiveSetting.Off, System.Windows.Automation.AutomationProperties.GetLiveSetting(notLive));
+            }
+            catch (Exception e) { failure = e; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        if (failure != null) throw new InvalidOperationException("The STA work failed.", failure);
     }
 
     [Fact]

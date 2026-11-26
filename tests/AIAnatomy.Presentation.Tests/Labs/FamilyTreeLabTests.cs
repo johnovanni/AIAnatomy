@@ -67,6 +67,7 @@ public class FamilyTreeLabTests
         var later = lab.Bubbles.Single(b => b.Id == node.Id);
         string number = Catalog.NumberOf(Catalog.Get(node.LessonId!));
         Assert.True(later.IsLater);
+        Assert.True(lab.HasLaterBubbles);   // so the hint explaining "later" shows
         Assert.Equal($"{number} {node.Label}, not built yet", later.AutomationName);
         Assert.Equal($"{number}  later", later.HeadText);   // "later" in words, not colour alone
         // A built section 4 lesson's bubble is not later.
@@ -82,6 +83,8 @@ public class FamilyTreeLabTests
         // In the shipped tree, diffusion's bubble (lesson 4.9, built in Stage 2B Task 16) is not later.
         Assert.False(Catalog.Get("diffusion-shapes").IsPlaceholder);
         Assert.False(Bubble(NewLab(), "diffusion-shapes").IsLater);
+        // Stage 2B: every lesson in the shipped tree is built, so no bubble is later and the "later" hint is hidden.
+        Assert.False(NewLab().HasLaterBubbles);
     }
 
     [Fact]

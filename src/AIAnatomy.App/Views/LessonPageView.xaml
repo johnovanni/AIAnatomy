@@ -199,9 +199,10 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <!-- The sentence for the chip under the mouse or the keyboard, in words on the page (a tooltip alone would need a mouse). -->
-                <TextBlock x:Name="ConnectionNote" Style="{StaticResource BodyText}" Margin="2,4,0,0" MinHeight="{DynamicResource BodyFontSize}"
-                           AutomationProperties.LiveSetting="Polite" />
+                <!-- The sentence for the chip under the mouse or the keyboard, in words on the page (a tooltip alone would need a mouse).
+                     Not live (Stage 2B ruling X): each chip already carries the sentence as its HelpText, which a screen reader
+                     reads with the chip, so a live copy here would say it twice. -->
+                <TextBlock x:Name="ConnectionNote" Style="{StaticResource BodyText}" Margin="2,4,0,0" MinHeight="{DynamicResource BodyFontSize}" />
             </StackPanel>
 
             <!-- 7. Back and Next follow the contents order. -->

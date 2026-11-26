@@ -151,9 +151,13 @@ public sealed partial class TrainSettingsPanelViewModel : ObservableObject
             ReadDouble(LearningRateText)!.Value, ReadInt(StepsText, 1, MaxSteps)!.Value, ReadInt(BatchText, 1, MaxBatch)!.Value);
     }
 
-    /// <summary>Called by the view when a paste would make the text longer than <see cref="CorpusValidator.MaxCharacters"/>: the paste is refused.</summary>
-    public void RefusePaste(int resultingLength) =>
+    /// <summary>Called by the view when a paste would make the text longer than <see cref="CorpusValidator.MaxCharacters"/>: the paste is refused.
+    /// The note is cleared first, so a second refusal in the same words is a change and is read out again (Stage 2B ruling X).</summary>
+    public void RefusePaste(int resultingLength)
+    {
+        PasteNote = null;
         PasteNote = "That text was not pasted. " + CorpusValidator.ProblemForLength(resultingLength, MinContext);
+    }
 
     public void Reset()
     {

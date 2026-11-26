@@ -72,6 +72,10 @@ public sealed partial class FamilyTreeLabViewModel : LabViewModel
     /// <summary>The bubbles in file order (the root first), which is the view's Tab order.</summary>
     public IReadOnlyList<FamilyBubble> Bubbles { get; }
 
+    /// <summary>True when some bubble is marked later, so the hint explaining "later" is shown only when there is one
+    /// (since Stage 2B every section 4 lesson in the tree is built, and the hint would describe nothing on screen).</summary>
+    public bool HasLaterBubbles => Bubbles.Any(b => b.IsLater);
+
     [ObservableProperty] private GraphLayoutResult? _layout;
     [ObservableProperty] private string? _chosenId;
     [ObservableProperty] private FamilyCard? _card;

@@ -172,3 +172,115 @@ Nothing was clipped and no text overlapped in any picture.
    and k = 9.
 5. **Learning by reward:** press **Run** and watch the arrows form from the goal backwards; then add a wall on the
    path and run again.
+
+# Stage 2 Part B final check
+
+Date: 2026-11-25. Branch `stage2-part-b`, after commit 82f5b11 ("Stage 2B: lesson 4.9 review fixes"), with the changes
+of this check (live text for warnings and questions, the Light memory colour and the family tree hint).
+
+## Tests
+
+`dotnet test AIAnatomy.slnx` (Debug), output saved to `.superpowers/sdd/2026-11-25-aianatomy-stage-2-part-b/test-task-18.log`:
+
+| Project | Passed | Failed | Skipped |
+|---|---:|---:|---:|
+| AIAnatomy.Core.Tests | 78 | 0 | 0 |
+| AIAnatomy.Lessons.Tests | 112 | 0 | 0 |
+| AIAnatomy.App.Tests | 59 | 0 | 0 |
+| AIAnatomy.Models.Tests | 376 | 0 | 1 |
+| AIAnatomy.Presentation.Tests | 840 | 0 | 0 |
+| **Total** | **1465** | **0** | **1** |
+
+The skipped test is the slow induction-head training test, which runs only in Release. The known slow test
+`Main_EveryRegisteredLab_ResetsAndDeactivatesWithoutThrowing` passed in this run.
+
+## Self-test
+
+`AIAnatomy.App.exe --selftest all-labs` (Debug): exit 0, before and after the changes of this check. All 25 labs were
+created, reset and deactivated, with all ten section 4 lessons built: image filters (screens `feature-map`, `image`),
+the whole image network (`maps`, `probabilities`, `training`), memory networks (`compare`, `hidden`, `memory`,
+`samples`, `training`), diffusion shapes (`cloud`, `training`) and diffusion steps (`forward`, `prediction`,
+`reverse`). Only section 5's lesson is still a placeholder.
+
+## What was rendered
+
+All pictures were made with `--render-png`, which draws the window into a PNG without showing it or capturing the
+screen. They are in `.superpowers/sdd/2026-11-25-aianatomy-stage-2-part-b/final/`. Nine launches:
+
+- **The five Part B lessons and their render views, Dark and Light at 10, 13 and 24 pt** (six launches, `--full-lab`):
+  `image-filters`, `filters-learned`, `image-network`, `digit-network-sample`, `memory-networks`,
+  `memory-network-measured`, `diffusion-shapes` (step 0), `diffusion-shapes-done`, `diffusion-steps`,
+  `diffusion-steps-five`. Width 1600, except Light 24 pt at 900 (`light24-narrow-*`), to see a narrow window.
+- **Also in those launches:** the family tree at Dark 13 pt; the earlier heat-map lessons `attention`, `multi-head`
+  and `position` at Light 13 and Dark 24 pt (their in-square numbers became body size in cde40f0 and had not been seen
+  since).
+- **The idea maps** `ideamap-radial,ideamap-loop` in Dark at 13 pt, and in Light at 24 pt with a 900 px window, where
+  the launch also drew the `image-network` lesson page (not `--full-lab`) to measure the lesson column.
+- **One re-check** in Light at 13 pt after the fixes: `memory-networks` and `family-tree` as lesson pages, and
+  `ideamap-radial`.
+
+## What was checked by eye
+
+- **Lesson 4.9 at step 0** (not seen before): the plot runs from −2 to 2 on both axes and the line under it says
+  "48 points are outside the plot" (for 500 standard-normal points about 45 are expected beyond ±2). At step 100 the
+  spiral is clearly formed; "0.031" matches the recorded 0.0315.
+- **Lesson 4.7's bottom** at Dark 24 pt and 1600 px (7,239 px tall, under the renderer's 12,000 px cap): the end of
+  layer 2 (maps 25 to 32 and their scale), the pooling and fully connected sentences ("71 of the 128 numbers are above
+  zero") and Train it again are all there. In the 900 px Light 24 render 4.6 and 4.7 still reach the cap (see AA-035).
+- **Lesson 4.10's numbers checked by hand:** at step 20, ᾱ = 0.823, √0.823 = 0.907 and √0.177 = 0.421 as the line says;
+  β at step 20 is 0.0001 + 19 × 0.0999 / 99 = 0.0193. The two arrow sets differ by line and head (solid with open heads,
+  dashed with filled heads), not by colour alone, in both themes.
+- **Heat maps after cde40f0:** 4.6's 8 × 8 picture and feature map show three decimals at 10, 13 and 24 pt; at 24 pt the
+  negative numbers nearly touch (AA-036). The attention, multi-head and position maps lay out well in both checks; their
+  squares are too narrow for numbers (19 or 16 columns, 64 for position), so no numbers are written and the readout
+  under each gives every value. 4.7's input picture drops its numbers in the 900 px window (squares too narrow), as the
+  rule says.
+- **The family tree:** no bubble says "later" any more (every section 4 lesson in the tree is built); the idea maps
+  mark only section 5 "later". The hint about "later" bubbles now shows only when there is one (fixed below).
+- **The Radial map** is 1393 × 874 px at 13 pt (1383 × 869 in Part A); the centre box is about a third of the way
+  across, as before, and 4.6 to 4.10 sit in order round "4 The family of AI". The layout tests pass, so the Task 11
+  centre rule was not needed.
+- **The Light memory colour** #3C264C read as black: the 4.8 bubble on the Light idea map looked like the black 1.2
+  bubbles. Changed (below) and re-checked: the 4.8 bubble and the lesson header band are a clear violet.
+- **The narrow lesson column** (measured in the Light 24 pt, 900 px page): the contents column is about 464 px and the
+  lesson page about 355 px. The cause is the contents column's minimum width at 24 pt (464 px), not the title; the
+  title itself breaks inside a word ("networ / ks"). Logged as AA-035.
+- **Readability:** nothing was clipped and no text overlapped in any picture, in either theme, apart from the small
+  crowding items logged as AA-038 and AA-039. Body text, captions and numbers were readable at 13 and 24 pt; colour is
+  never the only signal (the chosen digit is marked "chosen", filters carry + and −, the arrows differ in style).
+
+## Fixed in this check
+
+- **Live text that never spoke (controller ruling X):** the status line, Train's paste note, message and overwrite
+  question, and Learning's "too large" message are now assertive live text (`c:LiveText.IsAssertive`); Settings'
+  "Progress forgotten." is live text and the reset question is announced when it appears. The status line and the
+  paste note are cleared before being set, so the same words twice are said twice. Tests: `LiveTextXamlTests` (the
+  lines, a new test that every hand-set LiveSetting is raised by its view, and the assertive setting in either order),
+  `Main_SameStatusMessageTwice_IsClearedInBetween_SoItIsReadAgain`,
+  `RefusedPasteTwice_ClearsTheNoteInBetween_SoItIsReadAgain`. Not heard with a screen reader.
+- **Light memory colour** #3C264C → #4B2A66 (theme contrast and colour-distance tests pass).
+- **Family tree hint:** "A bubble marked later is a lesson not built yet." is shown only when a bubble is marked later
+  (`HasLaterBubbles`, tested).
+- **Records:** README section 4 complete; the Task 14 and Task 13 fix entries in `docs/decisions.md` separated.
+
+## Sent to the issues sheet (not fixed)
+
+- **AA-035** (Minor, Medium): at 24 pt in a 900 px window the lesson column is squeezed to its 360 px minimum.
+- **AA-036** (Minor, Medium): three-decimal heat-map numbers nearly touch at 24 pt (a fix would reverse the Task 13
+  fix's pinned three decimals at 24 pt).
+- **AA-037** (Trivial, Low): the memory lab's map shows a scroll bar that scrolls a pixel or two at 13 pt.
+- **AA-038** (Trivial, Low): in 4.7 the chosen bar's percentage sits left of the others, and two map captions nearly
+  touch at 24 pt.
+- **AA-039** (Trivial, Low): the two "−2" axis labels crowd the corner of the point-cloud plots.
+
+## For the final review (lesson text, not changed)
+
+- Lesson 4.1's Try this step 4 still says "A bubble marked later is a lesson not built yet.", though no bubble is now.
+
+## Try these yourself (section 4, Part B)
+
+1. **Image filters:** pick Vertical edge, then Learned 14, and compare the feature maps; draw a digit on the pad.
+2. **The whole network:** pick a few test digits, then draw a strongly slanted 7 and see what it reads.
+3. **Memory networks:** type a word in the text box above the memory map and change its first letter; watch every row after it change.
+4. **Diffusion shapes:** press Play on the spiral, then pick Two moons; draw a line, press Train it again, then Play.
+5. **Diffusion steps:** move the noise step slider, then take the noise out in 100 and then 5 steps and compare.

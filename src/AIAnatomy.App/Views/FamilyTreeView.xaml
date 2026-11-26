@@ -6,6 +6,7 @@
     <!-- DataContext: FamilyTreeLabViewModel. The bubbles and lines are built in the code-behind (they depend on measured sizes). -->
     <UserControl.Resources>
         <v:NullToCollapsedConverter x:Key="VisibleIfSet" />
+        <BooleanToVisibilityConverter x:Key="VisibleIfTrue" />
 
         <!-- A bubble: a rounded box edged in its part's colour. The chosen one is filled and has a thicker edge (the code-behind
              trades padding for edge, so the bubble keeps its size). -->
@@ -32,8 +33,9 @@
 
         <TextBlock Style="{StaticResource BodyText}"
                    Text="Each line joins a member of the family to the branch it belongs to. Choose a bubble to see what it is." />
-        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,8"
-                   Text="Enter on the chosen bubble opens its lesson. A bubble marked later is a lesson not built yet." />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,8" Text="Enter on the chosen bubble opens its lesson." />
+        <TextBlock Style="{StaticResource MutedText}" Margin="0,-8,0,8" Text="A bubble marked later is a lesson not built yet."
+                   Visibility="{Binding HasLaterBubbles, Converter={StaticResource VisibleIfTrue}}" />
 
         <Border Style="{StaticResource ScreenFrame}" Padding="0">
             <ScrollViewer x:Name="TreeScroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"

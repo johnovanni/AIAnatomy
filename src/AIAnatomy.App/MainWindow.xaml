@@ -105,7 +105,7 @@
                 BorderThickness="0,0,0,1" Padding="16,8"
                 Visibility="{Binding StatusMessage, Converter={StaticResource VisibleIfSet}}">
             <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource StatusTextBrush}" TextWrapping="Wrap"
-                       FontWeight="SemiBold" AutomationProperties.LiveSetting="Assertive" />
+                       FontWeight="SemiBold" c:LiveText.IsLive="True" c:LiveText.IsAssertive="True" />
         </Border>
 
         <!-- R35: a Train lab run that carries on while another lesson is open is shown here, in words (never as a sound). -->

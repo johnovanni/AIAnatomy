@@ -49,7 +49,7 @@
     <SolidColorBrush x:Key="PartClassicBrush" Color="#46931F" />
     <SolidColorBrush x:Key="PartRewardBrush" Color="#AC3999" />
     <SolidColorBrush x:Key="PartVisionBrush" Color="#CC2200" />
-    <SolidColorBrush x:Key="PartMemoryBrush" Color="#3C264C" />
+    <SolidColorBrush x:Key="PartMemoryBrush" Color="#4B2A66" />
     <SolidColorBrush x:Key="PartDiffusionBrush" Color="#858C54" />
     <!-- The classic machine learning lab's classes A, B and C (Okabe-Ito blue, orange and reddish purple; each at least 3:1 on Surface and Screen and, among themselves, at least 15 CIE76 DeltaE apart, 8 under protanopia and deuteranopia). Points also differ in shape: circle, square, triangle. -->
     <SolidColorBrush x:Key="ClassABrush" Color="#0072B2" />
