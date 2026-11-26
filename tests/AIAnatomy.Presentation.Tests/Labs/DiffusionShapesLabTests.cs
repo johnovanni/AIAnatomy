@@ -147,6 +147,35 @@ public sealed class DiffusionShapesLabTests
     }
 
     [Fact]
+    public async Task ASeedChange_WhileAPresetIsLoading_IsUsedForItsCloud()
+    {
+        // Review fix 1: the seed is set before the preset's network has loaded and its cloud been worked out.
+        var (lab, _) = await NewLab();
+        var choosing = lab.ChoosePresetAsync("Circle");
+        lab.Seed = 9;
+        await choosing;
+        await lab.WorkCompleted;
+        Assert.Equal("Circle", lab.ShapeName);
+        Assert.Equal(9, lab.Seed);
+        var (net, schedule, _, _) = await Shipped("Circle");
+        var expected = DiffusionSampler.Sample(net, schedule, 500, new SeededRandom(9));
+        AssertSameFrames(expected, lab.Frames);
+        Assert.Equal(Quality(Shapes.MeanDistanceToShape(Points(expected[^1]), Shapes.Presets[1].Points)), lab.QualityText);
+    }
+
+    [Fact]
+    public async Task ASeedChange_WhileTheLabFirstLoads_IsUsedForTheSpiralsCloud()
+    {
+        SynchronizationContext.SetSynchronizationContext(null);
+        var lab = new DiffusionShapesLabViewModel(new FamilyModels(TestEnvironment.Content), new ManualClock());
+        lab.Seed = 2;
+        await lab.WorkCompleted;
+        Assert.True(lab.IsReady, lab.LoadMessage);
+        var (net, schedule, _, _) = await Shipped("Spiral");
+        AssertSameFrames(DiffusionSampler.Sample(net, schedule, 500, new SeededRandom(2)), lab.Frames);
+    }
+
+    [Fact]
     public async Task StepText_SaysTheStepInWords()
     {
         var (lab, _) = await NewLab();

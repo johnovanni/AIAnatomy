@@ -51,6 +51,7 @@ public sealed partial class DiffusionShapesLabViewModel : LabViewModel
     private Task _work = Task.CompletedTask;
 
     private DiffusionNet? _net;
+    private string? _loadingPreset;   // the preset whose network is being loaded and whose cloud is being worked out
     private NoiseSchedule? _schedule;
     private int _shippedSteps, _trainedSteps, _trainedSeed;
     private int _step;
@@ -232,6 +233,7 @@ public sealed partial class DiffusionShapesLabViewModel : LabViewModel
         var run = DetachRun();   // a new shape abandons a run under way
         StopPlaying();
         _sampleGeneration++;     // and any cloud still being worked out
+        _loadingPreset = null;
         _net = null;
         _schedule = null;
         IsDrawnShape = true;
@@ -281,6 +283,7 @@ public sealed partial class DiffusionShapesLabViewModel : LabViewModel
         DetachRun()?.Dispose();
         StopPlaying();
         _sampleGeneration++;
+        _loadingPreset = null;
     }
 
     protected override void OnSeedEdited()
@@ -288,7 +291,13 @@ public sealed partial class DiffusionShapesLabViewModel : LabViewModel
         if (_quiet) return;
         var run = DetachRun();   // a new seed abandons a run under way
         StopPlaying();
-        if (_net is { } net && _schedule is { } schedule)
+        if (_loadingPreset is { } loading)
+        {
+            // The preset's network is still loading or its cloud is being worked out with the old seed: start again with
+            // the new one, so the cloud always matches the seed box.
+            _work = ShowPresetAsync(loading);
+        }
+        else if (_net is { } net && _schedule is { } schedule)
         {
             int generation = ++_sampleGeneration;
             ClearCloud(SamplingMessage);
@@ -333,6 +342,7 @@ public sealed partial class DiffusionShapesLabViewModel : LabViewModel
                 });
                 if (generation != _trainGeneration) return;
                 _sampleGeneration++;   // a cloud still being worked out for the old network is not shown
+                _loadingPreset = null;
                 StopPlaying();
                 _net = net;
                 _schedule = schedule;
@@ -437,6 +447,7 @@ public sealed partial class DiffusionShapesLabViewModel : LabViewModel
         var shape = Shapes.Presets.First(p => p.Name == name).Points;
         _net = null;
         _schedule = null;
+        _loadingPreset = name;
         IsDrawnShape = false;
         ShapeName = name;
         TargetPoints = shape;
@@ -459,6 +470,7 @@ public sealed partial class DiffusionShapesLabViewModel : LabViewModel
                 throw new InvalidDataException($"The network file for the {name} learned a different shape ({shapeName}). Reinstalling the app puts it back.");
             var (frames, distance) = await Task.Run(() => SampleAndMeasure(net, schedule, shape, seed));
             if (generation != _sampleGeneration) return;
+            _loadingPreset = null;
             _net = net;
             _schedule = schedule;
             _shippedSteps = info.StepsTrained;
@@ -472,6 +484,7 @@ public sealed partial class DiffusionShapesLabViewModel : LabViewModel
         catch (InvalidDataException e)
         {
             if (generation != _sampleGeneration) return;
+            _loadingPreset = null;
             LoadMessage = e.Message;
             CloudNote = null;
         }
@@ -480,6 +493,7 @@ public sealed partial class DiffusionShapesLabViewModel : LabViewModel
             // Anything else must not leave "Loading…" on screen for ever.
             ErrorLog.ReportBackground(e);
             if (generation != _sampleGeneration) return;
+            _loadingPreset = null;
             LoadMessage = LoadFailedMessage;
             CloudNote = null;
         }

@@ -64,29 +64,36 @@
                 <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,0,0,6" Text="{Binding CloudNote}"
                            Visibility="{Binding CloudNote, Converter={StaticResource VisibleIfSet}}" />
                 <StackPanel Visibility="{Binding HasCloud, Converter={StaticResource VisibleIfTrue}}">
-                    <WrapPanel Margin="0,0,0,4">
-                        <Button Content="{Binding PlayButtonText}" Command="{Binding TogglePlayCommand}" MinWidth="90" Margin="0,0,12,6" VerticalAlignment="Center"
-                                ToolTip="Step through all 100 steps, one about every twentieth of a second; press again to pause" />
-                        <TextBlock Style="{StaticResource BodyText}" VerticalAlignment="Center" Margin="0,0,8,6" Text="Step" />
-                        <Slider Width="320" VerticalAlignment="Center" Margin="0,0,0,6"
+                    <Button Content="{Binding PlayButtonText}" Command="{Binding TogglePlayCommand}" MinWidth="90" Margin="0,0,0,6" HorizontalAlignment="Left"
+                            ToolTip="Step through all 100 steps, one about every twentieth of a second; press again to pause" />
+                    <!-- The label sits above the slider, so at a large text size in a narrow pane the slider keeps its width; the slider
+                         stretches with the column, from 160 up to 520 (as in lesson 4.10). -->
+                    <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,2" Text="Step" />
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="160" MaxWidth="520" />
+                        </Grid.ColumnDefinitions>
+                        <Slider MinWidth="160" HorizontalAlignment="Stretch" VerticalAlignment="Center"
                                 Minimum="0" Maximum="{Binding MaxStep}" SmallChange="1" LargeChange="10" TickFrequency="1" IsSnapToTickEnabled="True"
                                 Value="{Binding Step, Mode=TwoWay}" AutomationProperties.Name="Step, from 0 (pure noise) to 100 (the finished cloud)"
                                 ToolTip="Which step to show: the arrow keys move one step, Page Up and Page Down ten" />
-                    </WrapPanel>
+                    </Grid>
                     <!-- Live only while Play is not running (IsStepLineLive), so it is not announced at every step of Play;
                          Play stops before it shows the last step, so that step is announced. -->
                     <TextBlock Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,0,0,6" TextWrapping="Wrap"
                                c:LiveText.IsLive="{Binding IsStepLineLive}" Text="{Binding StepText}" />
                 </StackPanel>
-                <!-- The axes run from −3 to 3 to hold the starting noise, so the plot asks to be as wide as it may (up to 640) for the
-                     finished shape, which spans −1 to 1, to be large enough to see. -->
-                <c:PointCloudPlot x:Name="Cloud" MaxWidth="640" PreferredPlotSide="640" HorizontalAlignment="Stretch"
+                <!-- The axes run from −2 to 2 for the whole run (never fitted to each step, which would make the noise and the
+                     finished shape look the same size), so the finished shape, −1 to 1, fills half the plot. About one starting point
+                     in eleven lies outside; the line under the plot says how many. Up to 520 wide, as in lesson 4.10, so the quality
+                     line stays near Play. -->
+                <c:PointCloudPlot x:Name="Cloud" MaxWidth="520" PreferredPlotSide="520" AxisLimit="2" HorizontalAlignment="Stretch"
                                   Points="{Binding CurrentPoints, Converter={StaticResource ToPoints}}"
                                   TargetPoints="{Binding TargetPoints, Converter={StaticResource ToPoints}}"
                                   PointsLabel="points of the cloud" TargetLabel="shape being made"
                                   AutomationProperties.Name="The cloud of points and the shape it is becoming" />
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0"
-                           Text="At each step the network predicts the noise in every point; a share of that prediction is taken away, and a little fresh randomness is added back at every step but the last. The shapes sit in the square from −1 to 1, 2 across." />
+                           Text="At each step the network predicts the noise in every point; a share of that prediction is taken away, and a little fresh randomness is added back at every step but the last. The shapes sit in the square from −1 to 1, 2 across. The axes stay at −2 to 2 for every step, so at the start some of the noise lies outside the plot; the line under the plot says how many points." />
                 <TextBlock Style="{StaticResource SubheadingText}" Margin="0,8,0,2" TextWrapping="Wrap" c:LiveText.IsLive="True" Text="{Binding QualityText}"
                            Visibility="{Binding QualityText, Converter={StaticResource VisibleIfSet}}" />
                 <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,2"
