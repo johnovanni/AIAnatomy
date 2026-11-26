@@ -20,6 +20,16 @@ The window has a **contents tree** on the left, numbered like a book (1 The big 
 
 **Screen readers.** Result lines, warnings, questions and the Check yourself feedback are live text, so a screen reader can read them out when they change (warnings and questions interrupt; the rest wait their turn). This is tested in code only: it has **not yet been checked with a screen reader**, and a pass with Narrator is still needed.
 
+## Install
+
+Download `AIAnatomy-Setup.exe` from the [latest release](https://github.com/johnovanni/AIAnatomy/releases/latest/download/AIAnatomy-Setup.exe) and run it. It is signed by John Apolloni, installs to `C:\Program Files\Qapow\AIAnatomy` by default (you can pick another folder) and adds "Qapow > AI Anatomy" to the Start menu. Progress and settings stay in `%LOCALAPPDATA%\AIAnatomy`. A zip (`AIAnatomy-win-x64.zip`) is there too for people who'd rather not install.
+
+## Releasing
+
+Push a version tag, for example `git tag v0.1.0 && git push origin v0.1.0`. `.github/workflows/release.yml` runs the tests (without the slow ones), publishes the app self-contained for win-x64, signs it and the installer with Azure Artifact Signing (account `JohnApolloni`, profile `JohnApolloniPublic`) and attaches the installer, the zip and their `.sha256` files to a GitHub Release. The version comes from the tag.
+
+One-time set-up: the `release` environment and the `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` repository variables (the same values as the other QAPOW apps), and an Entra federated credential with the subject `repo:johnovanni@11181099/AIAnatomy@1468848301:environment:release`.
+
 ## Running the tests
 
 The default run is fast and works in Debug; the slow induction-head training test is skipped there:

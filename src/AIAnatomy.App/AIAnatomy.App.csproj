@@ -6,6 +6,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>AIAnatomy.App</AssemblyName>
     <RootNamespace>AIAnatomy.App</RootNamespace>
+    <ApplicationIcon>AIAnatomy.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AIAnatomy.Presentation\AIAnatomy.Presentation.csproj" />
